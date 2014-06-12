@@ -1,0 +1,177 @@
+\chapter{Install structure}\label{cha:INSTALLSTRUCT}
+In this chapter we'll look at the PostgreSQL installation.
+Whatever installation method you did, the PostgreSQL binaries are the same.
+The packaged version comes with few extra utilities we'll take a look later as
+those present some caveats to be aware.
+
+The source installation puts all the binaries into the bin sub directory in the target location 
+specified by the --prefix parameter.
+
+The packaged install puts the binaries into a folder organised per major PostgreSQL version.
+
+\textbf{e.g. /usr/lib/postgresql/9.3/bin/}
+
+\section{The core binaries}
+We'll look first at the core binaries like postgres or psql.
+
+A separate section is dedicated to wrappers and the contributed modules.
+
+
+\subsection{postgres}\index{postgres}
+Is the database itself. It's possible to start it directly or using the pg\_ctl
+utility.
+
+The latter is the best way to control the instance except in case of the XID
+wraparound failure\index{XID wraparound failure}. 
+In this case the only way to run the instance is executing postgres in
+single user mode.
+
+For historical reason there's usually also the postmaster symbolic link
+to postgres.
+
+
+\subsection{pg\_ctl}\index{pg\_ctl}
+\label{sub:PGCTL}
+As mentioned before this is the utility for managing the PostgreSQL instance. 
+
+It can start,stop, reload the postgres process.
+It's also capable to send kill signals to the running instance. 
+
+pg\_ctl accepts on the command line various options. The most important are the
+-D or --pgdata= to specify the database storage area and the -m to specify the
+shutdown mode. Check the section \ref{sec:SHUTDOWN_SEQ} for details. 
+
+pg\_ctl also requires the action to perform on the instance.
+
+The supported actions are
+
+\begin{itemize}
+ \item \textbf{init[db]} initialises a directory as PostgreSQL data area
+ \item \textbf{start} starts a PostgreSQL instance
+ \item \textbf{stop} shutdowns a PostgreSQL instance
+ \item \textbf{reload} reloads the configuration's files
+ \item \textbf{status} checks the PostgreSQL instance running status
+ \item \textbf{promote} promotes a standby server 
+ \item \textbf{kill} sends a custom signal to the running instance
+\end{itemize}
+
+
+\subsection{initdb}\index{initdb}
+Is the binary which initialises the PostgreSQL data area. 
+initdb requires an empty directory to initialise. 
+Various options can be specified on the command line, like the character enconding or the collation order. 
+
+
+\subsection{psql}\index{psql}
+Is the PostgreSQL command line client. 
+Despite his look very essential is one of the most flexible tools available to interact with the server.
+As is part of the core distribution is always present.
+
+\subsection{pg\_dump}\index{pg\_dump}
+Is the binary dedicated to the backup. Generates consistent backups in various formats. The default is plain text. 
+Supports the parallel dump implemented using the snapshot exports. 
+
+The switch to set is -F followed by a letter to indicate the wanted output format.
+
+\begin{itemize}
+ \item \textbf{p} saves the sql statements to reconstruct the schema and/or data in plain text with no compression.
+ \item \textbf{c} is the custom PostgreSQL format. Supports parallel restore, compression and object search.
+ \item \textbf{d} the dump is saved in a directory. With this format is possible to dump in parallel.
+ \item \textbf{t} saves the dump in the standard tar format.
+ \end{itemize}
+
+Please on't be confused by the pg\_dumpall \index{pg\_dumpall}. This does look more like a wrapper for pg\_dump rather a dedicated program.
+
+As pg\_dumpall doesn't support all the pg\_dump features is still very useful to save the cluster wide objects like the users with the switch --globals-only.
+
+
+
+\subsection{pg\_restore}\index{pg\_restore}
+As the name suggests this is used to restore the database's dump.
+It can read the backups generated in all formats by pg\_dump. 
+The restore target can be a PostgreSQL connection or a file. 
+If the backup's format is directory or custom then pg\_restore can run the data load and
+index/key creations in multiple jobs.
+
+\subsection{pg\_controldata}\index{pg\_controldata}\label{sub:PGCONTROLDATA}
+The program query the pg\_control file where instance's vital informations are stored.
+The pg\_control is one of the most important cluster's files.
+With a corrupted pg\_control the instance cannot start. 
+
+\subsection{pg\_resetxlog}\index{pg\_resetxlog}
+
+If the WAL files or the get corrupted the instance cannot perform a crash recovery.
+pg\_resetxlog can solve the problem and make the instance startable but keep in mind 
+this must the last chance, after trying any other possible solution.
+
+The reset removes the WAL files and creates a new pg\_control.
+The XID are also restarted. 
+
+The instance becomes startable at the cost of losing any reference between the transactions 
+and the data files. All the physical data integrity is lost and
+any attempt to run DML queries results in data corruption. 
+
+The on line manual is absolutely clear on this point.
+
+After running pg\_resetxlog the database must start without user access, 
+the entire content must be dumped, the data directory must be dropped and recreated 
+from scratch using initdb and then the dump file can be restored using psql or pg\_restore
+
+\section{Wrappers and contributed modules}
+In this section we'll take a brief look to the contributed binaries and the sql wrappers.
+
+\subsection{create/drop binaries}
+These binaries, createdb createlang createuser and dropdb droplang dropuser, are wrappers for the corresponding SQL functions. 
+Each binary can create/drop a database an user or a procedural language.
+The command line parameters are quite the same as psql for the connection part.
+
+\subsection{clusterdb}\index{clusterdb}
+Performs a database wide cluster on previously clustered tables. 
+The binary can run on single tables specified on the command line.
+The word cluster can be confusing as the PostgreSQL implementation is very peculiar.
+Check the chapter \ref{cha:MAINTENANCE} for further readings.
+
+\subsection{reindexdb}\index{reindexdb}
+Performs a database wide reindex. 
+It's possible to specify on the command line the target table or the target index.
+In chapter \ref{cha:MAINTENANCE} we'll look deeply to the index maintenance,
+how this can affect the performances.
+
+\subsection{vacuumdb}\index{vacuumdb}
+This binary is a wrapper for the VACUUM \index{VACUUM} SQL command.
+The VACUUM is the most important maintenance task and is required every 2 billion transactions to avoid the XID wraparound failure \index{XID wraparound failure}
+Similar to reindexdb and clusterdb, vacuumdb performs a database wide normal VACUUM.
+It's possible to specify a target table on the command line, plus various options to have a VACUUM FULL \index{VACUUM FULL} or an ANALYZE \index{ANALYZE}.
+
+\subsection{vacuumlo}\index{vacuumlo}
+Despite the name this binary doesn't perform any vacuum, its purpose is to remove orphaned large
+object from the pg\_largeobject. The pg\_largeobject is a system table where the database stores
+the binary objects. Usually is used when the size of the large object is bigger than 1GB.
+The theoretical limit for the large object is now 4 TB. Before the version 9.3 the limit were 2 GB.
+
+\section{Debian's specific utilities}
+The debian packaged install ships with some other, not official, utilities, mostly written in PERL.
+
+\subsection{pg\_createcluster}\index{pg\_createcluster}
+Creates a new PostgreSQL cluster naming the configuration's directory in /etc/postgresql after the
+major version and the cluster's name. 
+It's possible to specify the data directory and the initd options.
+
+\subsection{pg\_dropcluster}\index{pg\_dropcluster}
+Removes a PostgreSQL cluster created previously with pg\_createcluster. The cluster must be stopped before the drop.
+
+
+\subsection{pg\_lscluster}\index{pg\_lscluster}
+Lists the clusters created with pg\_createcluster.
+
+\subsection{pg\_ctlcluster}\index{pg\_ctlcluster}
+\label{sub:PGCTLDEB}
+Controls the cluster in an almost similar way pg\_ctl does. 
+Using this wrapper for the shutdown is not a good idea as there's no way to tell 
+the script which shutdown mode to use. For further readings on the shutdown 
+sequence check the section \ref{sec:SHUTDOWN_SEQ} 
+By default pg\_ctlcluster performs a \textit{smart} shutdown mode.
+Using the --force option the script first try a \textit{fast} shutdown mode.
+If the database doesn't shutdown in a \textit{reasonable time} the script then try an \textit{immediate} shutdown.
+If the the instance is still up the script then sends a \textbf{kill -9} on the postgres process.
+

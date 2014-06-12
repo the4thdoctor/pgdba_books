@@ -1,0 +1,121 @@
+\chapter{Database installation}
+\label{cha:DB_INSTALL}
+This chapter will cover the install procedure, on Debian Gnu linux compiling from source and using the packaged install from the pgdg archive.
+\index{pgdg}
+
+\section{Install from source}
+Installing from source, using the default configuration settings requires the root access as the default install location is in /usr/local/. 
+To simplify things I've created a procedure with minimal need for root access.
+This of course is still required but only for the os user creation and to install the dependencies. 
+
+Before starting with the postgresql part, ask your sysadmin, or do it by yourself, to do the following
+
+\begin{itemize}
+
+ \item Create a postgres group and a postgres user
+ \item Add the postgres user to the postgres group
+ \item Install the packages
+ \item build-essential
+ \item libreadline6-dev
+ \item zlib1g-dev
+ 
+\end{itemize}
+
+
+When everything is in place login as postgres user and download the source's tarball.
+
+\textbf{
+mkdir download
+cd download
+wget http://ftp.postgresql.org/pub/source/v9.3.4/postgresql-9.3.4.tar.bz2
+}
+
+Extract the tarbal with
+
+\textit{tar xfj postgresql-9.3.4.tar.bz2} 
+\textit{cd postgresql-9.3.4}
+
+Using the configuration’s script option --prefix is possible to change 
+the install directory to a custom location.
+Assuming the postgres user have his home directory in /home/postgres, we'll put 
+the install target into the bin directory organised per
+mayor version. In this way  is possible to have multiple versions on the same 
+box without hassle.
+
+\textit{mkdir -p /home/postgres/bin/9.3} 
+\textit{./configure --prefix=/home/postgres/bin/9.3}
+
+The script will check all the dependencies and will generate the makefiles. 
+Any error at configure time is usually explained good.
+
+When everthing looks fine you can start the build process with the \textit{make} command.
+The time required to compile depends from the box speed. On a laptop usually this doesn't require more than 30 minutes.
+
+After the build is complete is a good idea to run the regression tests before installing.
+
+To do it simply run \textit{make check}.
+
+All the output is written in the directory src/test/regress/results. 
+
+If everything is fine you can complete the installation with
+
+\textit{make install}
+
+After this, into the /home/postgres/bin/9.3 directory will appear with 4 subfolders 
+\textbf{bin} \textbf{include} \textbf{lib} and \textbf{share}.
+
+The \textbf{bin} folder is the place of the database binaries, like the client \textbf{psql} or the server \textbf{postgres}. 
+
+The \textbf{include} folder is the place for the server's header files.
+
+The \textbf{lib} folder is the location for all shared libraries and functions used by the database installation.
+
+In the \textbf{share} folder you'll find the example files and the extension. 
+
+
+\section{Packaged install}
+\label{sec:DEBIAN_INSTALL}
+
+The PostgreSQL Global Group mantains an apt repository to simplify the install on the GNU/Linux based on debian.
+
+The supported Linux versions are listed on the wiki page http://wiki.postgresql.org/wiki/Apt and at moment are
+
+\begin{itemize}
+ \item Debian 6.0 (squeeze)
+ \item Debian 7.0 (wheezy)
+ \item Debian unstable (sid) 
+ \item Ubuntu 10.04 (lucid)
+ \item Ubuntu 12.04 (precise)
+ \item Ubuntu 13.10 (saucy)
+ \item Ubuntu 14.04 (trusty) 
+\end{itemize}
+The packages are available for amd64 and i386.
+
+The available database versions are
+\begin{itemize}
+ \item PostgreSQL 8.4 
+ \item PostgreSQL 9.0 
+ \item PostgreSQL 9.1 
+ \item PostgreSQL 9.2 
+ \item PostgreSQL 9.3
+\end{itemize}
+
+Before starting you shall import the GPG key to validate the packages.
+
+In a root shell simply run
+\textit{wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -}
+
+Then add the file pgdg.list into the directory /etc/apt/sources.d/ with the following contents
+
+\textbf{deb http://apt.postgresql.org/pub/repos/apt/ \textit{codename}-pgdg main}
+
+Change the codename value accordingly with your distribuition. (e.g. wheezy) then you can run
+
+\textit{apt-get update}
+
+To install the full set of binaries simply run
+
+apt-get install postgreql-9.3 postgreql-contrib-9.3 postgreql-client-9.3 
+
+This will set up also a database cluster up and running.
+

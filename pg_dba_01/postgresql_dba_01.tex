@@ -1,0 +1,94 @@
+\documentclass[oneside]{book}
+\usepackage[utf8]{inputenc}
+\usepackage{makeidx}
+\usepackage{graphicx}
+\setcounter{tocdepth}{1}
+\usepackage{hyperref}
+\hypersetup{pdfborder={0 0 0},colorlinks=false}
+\usepackage{verbatim}
+\newenvironment{smallverbatim}{\endgraf\small\verbatim}{\endverbatim}
+\newenvironment{tinyverbatim}{\endgraf\scriptsize\verbatim}{\endverbatim} 
+\pagestyle{plain}
+\usepackage{float}
+\usepackage{pdfpages}
+\author{Federico Campoli}
+\title{PostgreSQL Database Administration \\ Volume 1 \\ Basic concepts}
+
+
+\makeindex
+\begin{document}
+\includepdf{covers/book_01_cover.pdf}
+\maketitle
+
+\newpage{}
+
+
+
+\tableofcontents{}
+
+\chapter*{Preface}
+When I first came with the idea to write a PostgreSQL DBA book, I decided
+to publish via a commercial publisher. 
+Shortly I changed my mind, as there's a massive lack of knowledge on the
+PostgreSQL database and few dba oriented books around.
+
+Then I decided this book series shall stay free in order to reach as many people
+as
+possible, and hopefully become a reference to keep under the pillow.
+
+Be warned before you start reading this book, I'm asking to be patient with me
+and my bad English.
+
+As I did not study English and I'm not native, my writing will be probably wrong
+with many typos (I'm affected by some dyslexia as well) and bad grammar. 
+
+In exchange I'll promise this book, and all the subsequent, will start free and
+will remain
+free. Free as freedom and as beer. 
+
+This first book covers the basics on PostgreSQL.
+
+A brief introduction, the installation and a deep enough to wet your taste
+analysis on the RDBMS, but not so deep to scare you. Not yet at least.
+
+
+
+
+\section*{Intended audience}
+Database administrators, System administrators, Developers
+
+\section*{Book structure}
+In this book assumes the reader knows how to perform the user operations like 
+connecting to the database or creating tables.
+
+The book covers the basic aspects of the database administration from the 
+product installation to the cluster management.
+
+A couple of chapters are dedicated to the logical and physical structure in 
+order to show the two coin's faces. The maintenance and the important task of 
+backup/restore completes the ``other side of the monitor's`` picture.
+The final chapter is dedicated to the developers who want to avoid the common 
+mistakes and wrong assumptions on PostgreSQL.
+
+\section*{Version and platform}
+This book cover the database version 9.3 on Debian GNU Linux 7.0.
+References to older version or different platform are explicitly specified.
+
+
+
+\input{chapters/PostgreSQL_glance}
+\input{chapters/Install}
+\input{chapters/Structure}
+\input{chapters/Management}
+\input{chapters/Logical_layout}
+\input{chapters/Physical_layout}
+\input{chapters/Maintenance}
+\input{chapters/Backup_restore}
+\input{chapters/Couple_things}
+
+\appendix
+\input{chapters/License}
+\listoffigures
+\listoftables
+\printindex{}
+\end{document}

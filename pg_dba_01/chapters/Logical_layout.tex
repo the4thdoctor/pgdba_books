@@ -1,0 +1,718 @@
+\chapter{The logical layout}
+\label{cha:LOGICLAY}\index{Logical layout}
+This chapter is dedicated to the PostgreSQL logical layout.
+After the connection process we'll look to the logical objects, the 
+relations like tables, indices and views. The chapter will end with the 
+tablespaces logical aspect and how PostgreSQL handle the transactions.
+
+\section{The connection}
+When a client tries to connect to a PostgreSQL cluster the process 
+follow few stages which can result in rejection or connection.
+
+The first stage is the host based authentication where the cluster 
+scans the pg\_hba.conf file searching a  match for the connection's 
+parameters, like the host, the username etc. This file is usually stored into 
+the data area amongst the postgresql.conf file and is read from the top to the 
+bottom. If there's match the corresponding method is used, otherwise if 
+there's no match then the connection is refused.
+
+The pg\_hba.conf is structured as shown in table \ref{tab:PGHBA}
+
+\begin{table}[H]
+  \begin{tabular}{ccccc}
+    Type & Database & User & Address & Method \\ 
+    \hline
+    local & name & name & ipaddress/network mask & trust\\
+    host & * & * & host name & reject\\
+    hostssl & &  &  & md5\\
+    hostnossl & &  &  & password \\
+    & & &  & gss \\
+    & & &  & sspi \\
+    & & &  & krb5 \\
+    & & &  & ident \\
+    & & &  & peer \\
+    & & &  & pam \\
+    & & &  & ldap \\
+    & & &  & radius \\
+    & & &  & cert \\
+  \end{tabular}
+  \caption{\label{tab:PGHBA}pg\_hba.conf}
+\end{table}
+
+The column type specifies if the connection is local and happens via unix 
+socket or host,hostssl,hostnossl, in this case the tcp/ip is used.The host 
+type matches either an SSL or plain connection, the hostssl only a SSL 
+connection and hostnossl only a plain connection.
+
+The Database and User columns are used to match specific databases or 
+users from the incoming connection. It's possible to use a wildcard to specify 
+everything. 
+
+The column address is used only if the type uses the tcp/ip and can be an ip 
+address with network mask or a hostname. Both ipv4 and ipv6 are supported.
+
+The last column is the authentication method. PostgreSQL supports many 
+methods, from the password challenge to the sophisticated radius or kerberos.
+
+For now we'll take a look to the most common.
+
+\begin{itemize}
+ \item \textbf{trust} allow the connection without any request. Is quite useful 
+if the password is lost but represent a threat on production.
+
+\item \textbf{peer} allow the connection if the OS user matches the 
+database user. Useful to authenticate to the database on the local boxes. 
+Initdb sets this as default method for the local connections.
+
+\item \textbf{password} allow the connection matching the user and 
+password with pg\_shadow system table. Beware asthis method sends the password 
+in clear over the network.
+
+\item \textbf{md5} same as for password this method offer a md5 encryption for 
+the passwords. As the md5 is deterministic a pseudo random subroutine is used 
+during the password challenge to avoid the same string to be sent over the 
+network.
+
+\end{itemize}
+
+When the connection request matches the pg\_hba.conf and the authentication 
+method is cleared, the connection becomes established. The postgres main 
+process forks a new backend process which attaches to the shared buffer. 
+
+As the fork process is expensive the connection is a potential bottleneck. 
+A great amount of opening connections can degenerate in zombies 
+resulting in the worst case in a denial of service.
+
+A solution could be to keep all the needed connections 
+constantly established. Even if it seems reasonable, this approach have a 
+couple of unpleasant side effects.
+
+Each connection's slot in the GUC max\_connections, consumes about 400 bytes of 
+shared memory; each established connection requires the allocation of the 
+work\_mem and the os management of the extra backend process. \newline
+
+For example a 512 MB shared\_buffer and 100MB work\_mem, with with 500 
+established connections consumes  about 49 GB. Even reducing the work\_mem to 
+10MB the required memory is still 5 GB; in addiction, as seen 
+in \ref{sub:WORKMEM}, this parameter affects the sorts and subsequently the 
+performance, his value requires then extra care.
+
+In this case a connection pooler like pgpool http://www.pgpool.net/ or the 
+lightweight pgbouncer http://pgfoundry.org/projects/pgbouncer is a 
+good solution. In particular the latter offers a very simple to use 
+configuration, with different pooling levels. 
+
+The GUC parameter listen\_addresses in a freshly initialised 
+data area is set to localhost. This way the cluster accepts only tcp 
+connections from the local machine. In order to have the cluster listening on 
+the network this parameter must be changed to the correct address to listen 
+or to * for 'all'. The parameter accepts multiple values separated by commas.
+
+Changing the parameters max\_connections and listen\_addresses require the 
+cluster shutdown and startup as described in \ref{sec:STARTUP} and 
+\ref{sec:SHUTDOWN_SEQ}
+
+
+
+\section{Databases}
+\label{sec:DATABASES}
+In order to establish the connection, PostgreSQL requires a 
+target database.
+
+When the connection happens via the client psql, the database can be omitted. 
+In this case the environment variable \$PGDATABASE \index{\$PGDATABASE 
+variable} is used. If the variable is not set then the target database defaults 
+to the login user.
+
+This can be confusing because even if the pg\_hba.conf authorises 
+the connection, this aborts with the message 
+
+\begin{verbatim}
+postgres@tardis:~$ psql -U test -h localhost
+Password for user test: 
+psql: FATAL:  database "test" does not exist
+\end{verbatim}
+
+In this case if the database to connect to is unknown, the connection should 
+contain the \textit{template1} as last parameter. This way the connection will 
+establish to the always present template1 database \index{template1 database}. 
+After the connection is 
+established a query to the pg\_database system table will return the database 
+list.
+
+\begin{verbatim}
+postgres@tardis:~$ psql -U test -h localhost template1
+Password for user test: 
+psql (9.3.4)
+SSL connection (cipher: DHE-RSA-AES256-SHA, bits: 256)
+Type "help" for help.
+
+template1=> SELECT datname FROM pg_database;
+    datname    
+---------------
+ template1
+ template0
+ postgres
+(3 rows)
+
+\end{verbatim}
+
+A brief note for the database administrators coming from MS SQL or MySql.
+The database postgres can be confused for the system database, like the master 
+db or the mysql database. 
+
+That's not correct, the postgres database\index{postgres database} have nothing 
+special and it's created by default only in the recent major PostgreSQL 
+versions because is required by specific tools like pg\_bench.
+
+The template0 and template1 \index{template1 database} \index{template0 
+database} are the template databases. A template database \index{template 
+database} is used to build new database copies via the physical file copy. 
+
+During the initdb the template1 is initialised with the correct references to 
+the WAL records. The system views and the procedural language PL/PgSQL are then
+loaded into the template1. Finally the template0 and postgres databases are 
+created from template1.
+
+The database template0 doesn't allow the connections and is used to rebuild 
+template1 if gets corrupted or to build a new database with 
+character encoding or ctype an different from the cluster wide values. 
+\index{CREATE DATABASE}
+
+\begin{verbatim}
+postgres=# CREATE DATABASE db_test WITH ENCODING 'UTF8' LC_CTYPE 'en_US.UTF-8';
+ERROR:  new LC_CTYPE (en_US.UTF-8) is incompatible with the LC_CTYPE of the 
+template database (en_GB.UTF-8)
+HINT:  Use the same LC_CTYPE as in the template database, or use template0 as 
+template.
+
+postgres=# CREATE DATABASE db_test WITH ENCODING 'UTF8' LC_CTYPE 'en_US.UTF-8' 
+TEMPLATE template0;
+CREATE DATABASE
+postgres=# 
+
+\end{verbatim}
+
+If not specified, the CREATE DATABASE  statement will use template1. 
+\index{ALTER DATABASE}\index{DROP DATABASE}
+A database can be renamed or dropped with the ALTER DATABASE and DROP DATABASE 
+statements. Those operations require the exclusive access to the database. If 
+any connection except the one performing the operation is present on the 
+database the operation will abort.
+
+
+\begin{verbatim}
+postgres=# ALTER DATABASE db_test RENAME TO db_to_drop;
+ALTER DATABASE
+
+postgres=# DROP DATABASE db_to_drop;
+DROP DATABASE
+
+\end{verbatim}
+
+
+
+
+\section{Tables}\index{Tables}
+\label{sec:TABLES}
+A database is the logical container of the relations.
+A relation is the relational object making the data accessible.
+
+The first kind of relation we'll take a look is the table.
+
+This is the fundamental storage unit for the data. PostgreSQL implements 
+various kind of tables having the full support, a partial implementation or no 
+support at all for the durability.
+
+The table creation is performed using the standard SQL command CREATE TABLE. 
+
+The PostgreSQL implementation does not guarantee the data is stored in a 
+particular order. This is a straight MVCC consequence Take a look to 
+more information in \ref{sec:MVCC}. 
+
+\subsection{Logged tables}\index{Logged tables}
+If executed without options, CREATE TABLE creates a logged table. This kind of 
+table implements fully the durability being WAL logged at any time. The data is 
+managed in the shared buffer, logged to the WAL and finally consolidated to the 
+data file. 
+
+\subsection{Unlogged tables}\index{Unlogged tables}
+\label{sub:UNLOGGEDTABLES}
+This kind of table were introduced in the 9.1. The data is still consolidated 
+to the data file but the blocks aren't WAL logged. This make the write 
+operations considerably faster at the cost of the data consistency. This kind 
+of table is not crash safe and the database truncate any existing data during 
+the crash recovery. Also, because there's no WAL record the unlogged tables 
+aren't replicated to the physical standby. 
+
+\subsection{Temporary tables}\index{Temporary tables}
+A temporary table's lifespan lasts the time of the connection. This kind of 
+tables are useful for any in memory operation. The temporary table stays in 
+memory as long as the amount of data is no bigger than 
+temp\_buffers seen in \ref{sub:TEMPBUF}. 
+
+\subsection{Table inheritance}\index{Table inheritance}
+As PostgreSQL is an Object Relational Database Management System, some of the 
+object oriented programming concepts are implemented. The relations are 
+referred generally as classes and the columns as attributes. 
+
+The inheritance binds a parent table to one or more child tables which have 
+the same parent's attribute structure. The inheritance can be defined at 
+creation time or later. If a manually defined table shall inherit another the 
+attribute structure shall be the same as the parent's.
+
+The PostgreSQL implementation is rather confusing as the unique constraints 
+aren't globally enforced on the inheritance tree and this prevents the foreign 
+key to refer inherited tables. This limitation makes the table 
+partitioning tricky.
+
+\subsection{Foreign tables}\index{Foreign tables}
+The foreign tables were first introduced with PostgreSQL 9.1, improving 
+considerably the way the remote data can be accessed. 
+A foreign table requires a called foreign data wrapper to define a foreign 
+server. This can be literally anything. Between the contrib modules PostgreSQL 
+has the file\_fdw to create foreign tables referring CSV or COPY formatted flat 
+files. In the the version 9.3 finally appeared the postgres\_fdw with the read 
+write for the foreign tables. The postgres\_fdw implementation is similar to 
+dblink with a more efficient performance management and the connection caching.
+
+
+\section{Indices}
+An index is a relation capable to map the values in an structured way pointing
+the table's position where the rows are stored. The presence of an index 
+doesn't mean this will be used for read. By default and index block read have 
+an estimated cost four times than the table block read. However the optimiser
+can be controlled using the two GUC parameters seq\_page\_cost for the table 
+ sequential read read and random\_page\_cost for the index. Lowering the latter 
+will make more probable the optimiser will choose the indices when building the 
+execution plan.
+
+Creating indices is a complex task. At first sight adding an index could seem a 
+harmless action. Unfortunately their presence adds overhead to the write 
+operations unpredictably. The rule of thumb is \textit{add an index only 
+if really needed}. Monitoring the index usage is crucial. Querying the 
+statistics view pg\_stat\_all\_indexes is possible to find out if the indices 
+are used or not.
+
+For example, the following query finds all the indices in che public 
+schema, with zero usage from the last database statistics reset.
+
+\begin{verbatim}
+SELECT
+        schemaname,
+        relname,
+        indexrelname,
+        idx_scan
+FROM
+         pg_stat_all_indexes
+WHERE
+                schemaname='public'
+        AND     idx_scan=0
+;
+
+
+\end{verbatim}
+
+
+
+PostgreSQL supports many index types. 
+
+The general purpose B-tree\index{index,b-tree}, implementing the Lehman and 
+Yao's high-concurrency B-tree management algorithm. The B-tree can handle 
+equality and range queries and returns ordered data. As the data is actually 
+stored in the page and because the index is not TOASTable, the max length for an 
+index entry is 1/3 of the page size. This is the limitation for the variable 
+length indexed data (e.g. text). \newline
+
+The hash indices\index{index,hash} can handle only equality and aren't WAL 
+logged. That means their changes are not replayed if the crash recovery occurs, 
+requiring a reindex in case of unclean shutdown.\newline
+
+The GiST indices\index{index,GiST} are the Generalised Search Tree. The GiST 
+is a collection of indexing strategies organized under an 
+infrastructure. They can implement arbitrary indexing schemes like B-trees, 
+R-trees  or other. The operator classes shipped with PostgreSQL are for the two 
+elements geometrical data and for the nearest-neighbor search. As the GiST 
+indices are not exact , when scanned the returned set doesn't requires a to 
+remove the false positives.\newline
+
+The GIN indices \index{index,GIN} are the Generalised Inverted Indices. This 
+kind of index is optimised for indexing the composite data types or vectors 
+like the full text search elements. The GIN are exact indices, when scanned the 
+returned set doesn't require recheck.
+
+There's no bitmap index implementation in PostgreSQL. 
+At runtime the executor can emulate partially the bitmap indices reading the 
+B-tree sequentially and matching the occurrences in the on the fly generated 
+bitmap. 
+
+The index type shall be specified in the create statement. If the type is 
+omitted then the index will default to the B-tree.
+
+\begin{verbatim}
+ CREATE INDEX idx_test ON t_test USING hash (t_contents);
+\end{verbatim}
+
+
+As the index maintenance is a delicate matter, the argument is described in 
+depth in \ref{cha:MAINTENANCE}.
+
+
+\section{Views}
+\index{view}
+A view is the representation of a query, stored in the system catalogue 
+for quick access. All the objects involved in the view are translated to the 
+internal identifiers at the creation time; the same happens for any wild card 
+which is expanded to the column list.
+
+An example will explain better the concept. Let's create a simple table. Using 
+the generate\_series() function let's put some data into it.
+
+\begin{verbatim}
+
+
+CREATE TABLE t_data 
+        ( 
+                i_id serial,
+                t_content       text
+        );
+
+ALTER TABLE t_data 
+ADD CONSTRAINT pk_t_data PRIMARY KEY (i_id);
+
+
+INSERT INTO t_data
+        (
+                t_content
+        )
+SELECT
+        md5(i_counter::text)
+FROM
+        (
+                SELECT
+                        i_counter
+                FROM
+                        generate_series(1,200) as i_counter
+        ) t_series;
+
+CREATE OR REPLACE VIEW v_data 
+AS 
+  SELECT 
+          *
+  FROM 
+        t_data;
+
+
+\end{verbatim}
+
+The SELECT * from t\_data or v\_data looks exactly the same, the view 
+simply runs the stored SQL used at creation time.
+If we look to the stored definition in pg\_views we'll find the wildcard is 
+expanded into the table's columns.
+
+
+\begin{verbatim}
+ db_test=# SELECT * FROM pg_views where viewname='v_data';
+-[ RECORD 1 ]--------------------
+schemaname | public
+viewname   | v_data
+viewowner  | postgres
+definition |  SELECT t_data.i_id,
+           |     t_data.t_content
+           |    FROM t_data;
+
+
+\end{verbatim}
+
+Now let's add a new column to the t\_data table and run again the select on the 
+table and the view.
+
+\begin{verbatim}
+ ALTER TABLE t_data ADD COLUMN d_date date NOT NULL default now()::date;
+ 
+ db_test=# SELECT * FROM t_data LIMIT 1;
+ i_id |            t_content             |   d_date   
+------+----------------------------------+------------
+    1 | c4ca4238a0b923820dcc509a6f75849b | 2014-05-21
+(1 row)
+
+
+db_test=# SELECT * FROM v_data LIMIT 1;
+ i_id |            t_content             
+------+----------------------------------
+    1 | c4ca4238a0b923820dcc509a6f75849b
+(1 row)
+
+
+ 
+\end{verbatim}
+
+The view doesn't show the new column. To update the view definition a new 
+CREATE OR REPLACE VIEW statement must be issued.
+
+\begin{verbatim}
+ CREATE OR REPLACE VIEW v_data 
+AS 
+  SELECT 
+        *
+  FROM 
+        t_data;
+        
+db_test=# SELECT * FROM v_data LIMIT 1;
+ i_id |            t_content             |   d_date   
+------+----------------------------------+------------
+    1 | c4ca4238a0b923820dcc509a6f75849b | 2014-05-21
+(1 row)
+
+\end{verbatim}
+
+Because the views are referring the objects identifiers they will never 
+invalidate when the referred objects are altered. 
+The CREATE OR REPLACE statement updates the view definition only if the column 
+list adds new attributes in the end. 
+Otherwise, any change to the existing columns requires the view's drop and 
+recreate. 
+
+When one or more view are pointing a relation this cannot be dropped. 
+The option CASCADE in the drop statement will drop the dependant objects before 
+the final drop. This is a dangerous approach though. Dropping objects 
+regardless can result in data or functionality loss.
+
+When a drop is blocked by dependant objects the database emits a message with 
+the informations about the dependencies. If the amount of objects is too much 
+big it's better to query the pg\_depend table to find out the correct 
+dependencies. This table lists all the dependencies for each object using a 
+peculiar logic.
+
+
+As seen before a view is a logical short cut to a pre saved query. This means 
+the database will follow all the steps to execute exactly the same way if the 
+entire query has been sent via client, except for the network overhead.
+
+Nothing forbids a view to point another view inside the definition or join 
+the one or more views in a different query. This can cause massive 
+regression on the overall performance because each view require an execution 
+plan and mixing the views will cause not efficient planning. 
+
+To mark a relation is a view it's a good idea to use a naming prefix like v\_. 
+This will distinguish them from the tables marked with the prefix t\_.
+In \ref{cha:COUPLETHINGS} we'll take a to the naming conventions to let the 
+database schema self explanatory.
+
+\index{view, updatable}
+PostgreSQL from the version 9.3 supports the updatable simple views. 
+A view is simple if
+
+\begin{itemize}
+
+
+ \item   Have exactly one entry in its FROM list, which must be a table or 
+another updatable view
+
+ \item Does not contain WITH, DISTINCT, GROUP BY, HAVING,LIMIT, or OFFSET 
+clauses at the top level
+
+ \item  Does not contain set operations (UNION, INTERSECT or EXCEPT) at the 
+top level
+
+ \item   All columns in the view's select list must be simple references to 
+columns of the underlying relation. They cannot be expressions, literals or 
+functions. System columns cannot be referenced, either
+
+ \item   columns of the underlying relation do not appear more than once in 
+the view's select list
+
+ \item   does not have the security\_barrier property
+
+\end{itemize}
+
+If the view doesn't fit those rules it's still possible to make it updatable 
+using the triggers with the INSTEAD OF clause.
+
+\index{view, materialised}
+The major version 9.3 introduces also the materialised view concept. This is a 
+physical snapshot of the saved SQL and can be refreshed with the statement 
+REFRESH MATERIALIZED VIEW.  
+
+
+\section{Tablespaces}\index{tablespaces,logical}
+\label{sub:TBS-LOGICAL}
+A tablespace\index{tablespace} is a logical shortcut for a physical location. 
+This feature was first introduced with the major release 8.0, recently with the 
+9.2 had a small adjustment to make the dba life easier.
+
+When a new relation is created without tablespace specification, the relation's
+tablespace is set to the GUC prameter default\_tablespace or, if this is 
+missing, is set to the database's default tablespace. 
+Anyway, without any specification the default tablespace is the pg\_default, 
+corresponding to the \$PGDATA/base directory.
+
+In order to create a new tablespace the chosen directory must be owned by 
+the os user which started the postgres process and must be specified as 
+absolute path. 
+
+For example, having a folder named /var/lib/postgresql/pg\_tbs/ts\_test a 
+tablespace we can create a new tablespace ts\_test.
+
+\begin{verbatim}
+CREATE TABLESPACE ts_test 
+OWNER postgres
+LOCATION '/var/lib/postgresql/pg_tbs/ts_test' ;
+
+\end{verbatim}
+
+Only superusers can create tablespaces. The OWNER clause is optional, if 
+omitted the tablespace is owned by the user issuing the command.
+
+The tablespaces are cluster wide, each database sees the same list in the 
+pg\_tablespace system table.
+
+To create a relation into the tablespace ts\_test just add the TABLESPACE 
+clause followed by the tablespace name at creation 
+time.
+
+\begin{verbatim}
+CREATE TABLE t_ts_test
+        (
+                i_id serial,
+                v_value text
+        )
+TABLESPACE ts_test ;
+
+\end{verbatim}
+
+It's possible to move a relation from a tablespace to another using the 
+ALTER command.
+
+For example, this is the command to move the previously created table to the 
+pg\_default tablespace.
+
+\begin{verbatim}
+ALTER TABLE t_ts_test SET TABLESPACE pg_default;
+\end{verbatim}
+
+The move is transaction safe but requires an exclusive lock on the affected 
+relation. If the relation have a significant size this means no access to 
+the data for the time required by the move.
+
+In addition, changing the tablespaces is not permitted when the backup is in 
+progress, the exclusive lock is not compatible with the locks issued by the 
+schema and data export.
+
+The tablespace feature adds flexibility to the space management. Even if is 
+still primitive a careful design can improve sensibly the performances, for 
+example, putting tables and indices on different devices to maximise the disks 
+bandwidth.
+
+To remove a tablespace there is the  DROP TABLESPACE command. The tablespace 
+must be empty before the drop. There's no CASCADE clause to have the 
+tablespace's contents dropped with the tablespace.
+
+\begin{verbatim}
+postgres=# DROP TABLESPACE ts_test;
+ERROR:  tablespace "ts_test" is not empty
+
+postgres=# ALTER TABLE t_ts_test SET TABLESPACE pg_default;
+ALTER TABLE
+postgres=# DROP TABLESPACE ts_test;
+DROP TABLESPACE
+
+\end{verbatim}
+
+In \ref{sub:TBS-PHYSICAL} we'll take a look to the how PostgreSQL 
+implements the tablespaces on the physical side.
+
+\section{Transactions}
+\label{sec:TRANSACTION}
+PostgreSQL implements the MVCC\index{MVCC} which stands for Multi Version 
+Concurrency Control\index{Multi Version Concurrency Control}. 
+This offers high efficiency in multi user access for read and write queries.
+When a new query starts a transaction identifier is assigned, the XID 
+\index{XID} a 32 bit quantity. To determine the transaction's snapshot 
+visibility, all the committed transactions with XID lesser than the current XID 
+are in the past and then visible. Otherwise, all the transactions with XID 
+greater than the current XID are in the future and not visible.\newline
+
+This comparison happens at tuple level using two system fields xmin and xmax 
+having the xid data type. 
+When a transaction creates a new tuple then the transaction's xid is put into 
+the tuple's xmin value. 
+When a transaction deletes a tuple then the xmax value is set to the 
+transaction's xid leaving the tuple in place for read consistency. 
+When a tuple is visible to any transaction is called a live tuple, a tuple 
+which is no longer visible is a dead tuple.\newline
+
+PostgreSQL have no dedicated field for the update's xid. That's because when an 
+UPDATE is issued PostgreSQL creates a new tuple's version with the updated 
+data and sets the xmax value in the old version making it disappear.\newline
+
+A dead tuple can be reclaimed by VACUUM if no longer required by running 
+transactions, anyway tables updated often can result in data bloat for the dead 
+tuples and for the eventual indices.
+Look to \ref{sec:TUPLES} for more information on the 
+tuples.\newline
+
+When designing a new data model, the PostgreSQL's peculiar behaviour on the 
+update should be the first thing to consider, in order to limit the table 
+and index bloat. \newline
+
+Among the xmin,xmax two other system fields the cmin and cmax which data type 
+is CID, command id. Those are similar to the xmin/xmax quantities and usage 
+and their usage is to track the internal transaction's commands, in order to 
+avoid the command execution on the same tuple more than one time. The pratical 
+issue is explained in the well known Halloween Problem. For more informations 
+take a look here 
+\href{http://en.wikipedia.org/wiki/Halloween_Problem}{
+http://en.wikipedia.org/wiki/Halloween\_Problem}.\newline
+
+The SQL standard defines four level of transaction's isolation levels where 
+some phenomena are permitted or forbidden.
+
+Those phenomena are the following.
+
+\begin{itemize}
+ \item \textbf{dirty read} A transaction reads data written by a concurrent 
+uncommitted transaction
+
+\item \textbf{nonrepeatable read} A transaction re reads the data previously 
+read and finds the data changed by another transaction which has
+committed since the initial read
+
+\item \textbf{phantom read} A transaction re executes a query returning a set 
+of rows satisfying a search condition and finds that the set of rows 
+satisfying the condition has changed because another recently-committed 
+transaction
+
+\end{itemize}
+
+Table \ref{tab:TRNISOLATION} shows the isolation levels with the 
+allowed phenomena. In PostgreSQL it's possible to set all the four 
+isolation levels but only the three more strict are supported. Setting the 
+isolation level to read uncommited fallback to the read committed in any case.
+
+\begin{table}[H]
+  \begin{tabular}{cccc}
+    Isolation Level & Dirty Read    &    Nonrepeatable Read   &   Phantom 
+Read\\ 
+    \hline
+    Read uncommitted  &  Possible    &    Possible     &   Possible\\
+    Read committed    &  Not possible &  Possible     &   Possible\\
+    Repeatable read   &  Not possible  & Not possible  &  Possible\\
+    Serializable      &  Not possible  & Not possible   & Not possible\\
+  \end{tabular}
+  \caption{\label{tab:TRNISOLATION}Standard SQL Transaction Isolation Levels}
+\end{table}
+
+By default the global isolation level is set to read committed, it's possible 
+to change the session's transaction isolation level using the command:
+\begin{verbatim}
+SET TRANSACTION ISOLATION LEVEL { SERIALIZABLE | REPEATABLE READ | READ 
+COMMITTED | READ UNCOMMITTED }; 
+\end{verbatim}
+
+To change the default transaction isolation level cluster wide there is the GUC 
+parameter transaction\_isolation.
+
+
+
+
