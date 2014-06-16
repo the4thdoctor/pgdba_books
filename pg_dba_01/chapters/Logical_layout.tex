@@ -146,7 +146,8 @@ Password for user test:
 psql (9.3.4)
 SSL connection (cipher: DHE-RSA-AES256-SHA, bits: 256)
 Type "help" for help.
-
+\end{verbatim}
+\begin{lstlisting}[style=pgsql]
 template1=> SELECT datname FROM pg_database;
     datname    
 ---------------
@@ -155,7 +156,7 @@ template1=> SELECT datname FROM pg_database;
  postgres
 (3 rows)
 
-\end{verbatim}
+\end{lstlisting}
 
 A brief note for the database administrators coming from MS SQL or MySql.
 The database postgres can be confused for the system database, like the master 
@@ -179,7 +180,7 @@ template1 if gets corrupted or to build a new database with
 character encoding or ctype an different from the cluster wide values. 
 \index{CREATE DATABASE}
 
-\begin{verbatim}
+\begin{lstlisting}[style=pgsql]
 postgres=# CREATE DATABASE db_test WITH ENCODING 'UTF8' LC_CTYPE 'en_US.UTF-8';
 ERROR:  new LC_CTYPE (en_US.UTF-8) is incompatible with the LC_CTYPE of the 
 template database (en_GB.UTF-8)
@@ -191,7 +192,7 @@ TEMPLATE template0;
 CREATE DATABASE
 postgres=# 
 
-\end{verbatim}
+\end{lstlisting}
 
 If not specified, the CREATE DATABASE  statement will use template1. 
 \index{ALTER DATABASE}\index{DROP DATABASE}
@@ -201,14 +202,14 @@ any connection except the one performing the operation is present on the
 database the operation will abort.
 
 
-\begin{verbatim}
+\begin{lstlisting}[style=pgsql]
 postgres=# ALTER DATABASE db_test RENAME TO db_to_drop;
 ALTER DATABASE
 
 postgres=# DROP DATABASE db_to_drop;
 DROP DATABASE
 
-\end{verbatim}
+\end{lstlisting}
 
 
 
@@ -297,7 +298,7 @@ are used or not.
 For example, the following query finds all the indices in che public 
 schema, with zero usage from the last database statistics reset.
 
-\begin{verbatim}
+\begin{lstlisting}[style=pgsql]
 SELECT
         schemaname,
         relname,
@@ -311,7 +312,7 @@ WHERE
 ;
 
 
-\end{verbatim}
+\end{lstlisting}
 
 
 
@@ -349,9 +350,9 @@ bitmap.
 The index type shall be specified in the create statement. If the type is 
 omitted then the index will default to the B-tree.
 
-\begin{verbatim}
+\begin{lstlisting}[style=pgsql]
  CREATE INDEX idx_test ON t_test USING hash (t_contents);
-\end{verbatim}
+\end{lstlisting}
 
 
 As the index maintenance is a delicate matter, the argument is described in 
@@ -368,7 +369,7 @@ which is expanded to the column list.
 An example will explain better the concept. Let's create a simple table. Using 
 the generate\_series() function let's put some data into it.
 
-\begin{verbatim}
+\begin{lstlisting}[style=pgsql]
 
 
 CREATE TABLE t_data 
@@ -403,7 +404,7 @@ AS
         t_data;
 
 
-\end{verbatim}
+\end{lstlisting}
 
 The SELECT * from t\_data or v\_data looks exactly the same, the view 
 simply runs the stored SQL used at creation time.
@@ -411,7 +412,7 @@ If we look to the stored definition in pg\_views we'll find the wildcard is
 expanded into the table's columns.
 
 
-\begin{verbatim}
+\begin{lstlisting}[style=pgsql]
  db_test=# SELECT * FROM pg_views where viewname='v_data';
 -[ RECORD 1 ]--------------------
 schemaname | public
@@ -422,12 +423,12 @@ definition |  SELECT t_data.i_id,
            |    FROM t_data;
 
 
-\end{verbatim}
+\end{lstlisting}
 
 Now let's add a new column to the t\_data table and run again the select on the 
 table and the view.
 
-\begin{verbatim}
+\begin{lstlisting}[style=pgsql]
  ALTER TABLE t_data ADD COLUMN d_date date NOT NULL default now()::date;
  
  db_test=# SELECT * FROM t_data LIMIT 1;
@@ -445,12 +446,12 @@ db_test=# SELECT * FROM v_data LIMIT 1;
 
 
  
-\end{verbatim}
+\end{lstlisting}
 
 The view doesn't show the new column. To update the view definition a new 
 CREATE OR REPLACE VIEW statement must be issued.
 
-\begin{verbatim}
+\begin{lstlisting}[style=pgsql]
  CREATE OR REPLACE VIEW v_data 
 AS 
   SELECT 
@@ -464,7 +465,7 @@ db_test=# SELECT * FROM v_data LIMIT 1;
     1 | c4ca4238a0b923820dcc509a6f75849b | 2014-05-21
 (1 row)
 
-\end{verbatim}
+\end{lstlisting}
 
 Because the views are referring the objects identifiers they will never 
 invalidate when the referred objects are altered. 
@@ -554,12 +555,12 @@ absolute path.
 For example, having a folder named /var/lib/postgresql/pg\_tbs/ts\_test a 
 tablespace we can create a new tablespace ts\_test.
 
-\begin{verbatim}
+\begin{lstlisting}[style=pgsql]
 CREATE TABLESPACE ts_test 
 OWNER postgres
 LOCATION '/var/lib/postgresql/pg_tbs/ts_test' ;
 
-\end{verbatim}
+\end{lstlisting}
 
 Only superusers can create tablespaces. The OWNER clause is optional, if 
 omitted the tablespace is owned by the user issuing the command.
@@ -571,7 +572,7 @@ To create a relation into the tablespace ts\_test just add the TABLESPACE
 clause followed by the tablespace name at creation 
 time.
 
-\begin{verbatim}
+\begin{lstlisting}[style=pgsql]
 CREATE TABLE t_ts_test
         (
                 i_id serial,
@@ -579,7 +580,7 @@ CREATE TABLE t_ts_test
         )
 TABLESPACE ts_test ;
 
-\end{verbatim}
+\end{lstlisting}
 
 It's possible to move a relation from a tablespace to another using the 
 ALTER command.
@@ -587,9 +588,9 @@ ALTER command.
 For example, this is the command to move the previously created table to the 
 pg\_default tablespace.
 
-\begin{verbatim}
+\begin{lstlisting}[style=pgsql]
 ALTER TABLE t_ts_test SET TABLESPACE pg_default;
-\end{verbatim}
+\end{lstlisting}
 
 The move is transaction safe but requires an exclusive lock on the affected 
 relation. If the relation have a significant size this means no access to 
@@ -608,7 +609,7 @@ To remove a tablespace there is the  DROP TABLESPACE command. The tablespace
 must be empty before the drop. There's no CASCADE clause to have the 
 tablespace's contents dropped with the tablespace.
 
-\begin{verbatim}
+\begin{lstlisting}[style=pgsql]
 postgres=# DROP TABLESPACE ts_test;
 ERROR:  tablespace "ts_test" is not empty
 
@@ -617,7 +618,7 @@ ALTER TABLE
 postgres=# DROP TABLESPACE ts_test;
 DROP TABLESPACE
 
-\end{verbatim}
+\end{lstlisting}
 
 In \ref{sub:TBS-PHYSICAL} we'll take a look to the how PostgreSQL 
 implements the tablespaces on the physical side.
@@ -705,10 +706,10 @@ Read\\
 
 By default the global isolation level is set to read committed, it's possible 
 to change the session's transaction isolation level using the command:
-\begin{verbatim}
+\begin{lstlisting}[style=pgsql]
 SET TRANSACTION ISOLATION LEVEL { SERIALIZABLE | REPEATABLE READ | READ 
 COMMITTED | READ UNCOMMITTED }; 
-\end{verbatim}
+\end{lstlisting}
 
 To change the default transaction isolation level cluster wide there is the GUC 
 parameter transaction\_isolation.

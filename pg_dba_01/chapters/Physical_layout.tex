@@ -308,7 +308,7 @@ path from the tablespace oid.\newline
 Querying the system catalogue to acquire any sort of informations is quite  simple. In this example 
 the query returns the tablespace's location seen in \ref{sub:TBS-LOGICAL} 
 
-\begin{verbatim}
+\begin{lstlisting}[style=pgsql]
  postgres=# 
  SELECT 
         pg_tablespace_location(oid),
@@ -322,25 +322,25 @@ FROM
  /var/lib/postgresql/pg_tbs/ts_test | ts_test
 (3 rows)
 
-\end{verbatim}
+\end{lstlisting}
 
 The function returns the empty string for the system tablespaces, pg\_default and pg\_global, 
 because those locations have an immutable location, relative to the data directory. We can get the 
 data area's absolute path using the function current\_settings. 
 
-\begin{verbatim}
+\begin{lstlisting}[style=pgsql]
  postgres=# SELECT current_setting('data_directory');
        current_setting        
 ------------------------------
  /var/lib/postgresql/9.3/main
 (1 row)
 
-\end{verbatim}
+\end{lstlisting}
 
 Using the CASE construct is then possible to build up an more complete query to lookout at the 
 tablespaces locations.\newpage
 
-\begin{verbatim}
+\begin{lstlisting}[style=pgsql]
  postgres=# 
 SELECT 
         CASE
@@ -369,7 +369,7 @@ FROM
  /var/lib/postgresql/pg_tbs/ts_test   | ts_test
 (3 rows)
 
-\end{verbatim}
+\end{lstlisting}
 
 Before the version 8.4 the tablespace location pointed directly to the referenced directory, 
 causing 
@@ -428,7 +428,7 @@ pg\_database system table.\newline
 Here's an example query using the CASE construct with the pg\_tablespace\_databases function, to 
 get 
 all the databases with objects on the ts\_test tablespace.\newpage
-\begin{verbatim}
+\begin{lstlisting}[style=pgsql]
  db_test=# 
  SELECT
         datname,
@@ -466,7 +466,7 @@ WHERE
  db_test | ts_test | /var/lib/postgresql/pg_tbs/ts_test
 (1 row)
 
-\end{verbatim}
+\end{lstlisting}
 
 Moving a tablespace to another physical location it's not complicated; the cluster of course has to 
 be shut down; see \ref{sec:SHUTDOWN_SEQ} for more informations about the shutdown sequence.\newline
@@ -512,7 +512,7 @@ the current XID and the value stored in the system catalogue. \newline
 
 For example this is a query to get all the databases with the datfrozenxid and the age.\newpage
 
-\begin{verbatim}
+\begin{lstlisting}[style=pgsql]
  postgres=# 
         SELECT 
                 datname,
@@ -527,7 +527,7 @@ For example this is a query to get all the databases with the datfrozenxid and t
  postgres      | 4211 |          679
  db_test       | 4211 |          679
 
-\end{verbatim}
+\end{lstlisting}
 
 The datfroxenxid value is meaningful only through the age function which shows the
 ``distance'' between the current XID and the datfroxenxid. PostgreSQL assigns the new 
