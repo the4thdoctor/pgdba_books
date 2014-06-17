@@ -70,7 +70,8 @@ INSERT 0 10000000
 
 
 \end{lstlisting}
-To have a statical environment we'll disable the table's autovacuum. More infos on autovacuum here 
+To have a statical environment we'll disable the table's autovacuum and the analy. More infos on 
+autovacuum here 
 \ref{sec:AUTOVACUUM}.
 We'll also increase the session's verbosity to look out what's happening during the VACUUM's 
  run.\newline
@@ -196,7 +197,7 @@ Time: 122021.251 ms
 
 \end{lstlisting}
 
-A table without indices does use the maintenance\_work\_mem. For example if we run 
+A table without indices does not use the maintenance\_work\_mem. For example if we run 
 the VACUUM after dropping the table's primary key the execution is faster even with the low 
 maintenance\_work\_mem setting.\newline
 
@@ -264,7 +265,116 @@ zero.
 
 \section{analyze}
 \label{sec:ANALYZE}
+The PostgreSQL's query optimiser is based on the costs estimates. When building the execution plans 
+the planner consults the internal statistics and assigns to each node plan an estimated cost. The 
+plan with the smallest total estimated cost is then executed. Having up to date and 
+accurate statistics will help the database to keep up the performances.\newline
 
+The ANALYZE\index{ANALYZE} command is used to gather the usage statistics. When launched reads the 
+data, builds up the statistics and stores them into the pg\_statistics\index{pg\_statistics, 
+table} system table. The command accepts the optional clause VERBOSE to increase verbosity and the 
+optional target table and the column list. If ANALYZE is launched with no parameters it 
+processes all the tables in the database. Launching ANALYZE with the table name only, will process 
+all the table's columns.\newline
+
+When working on large tables ANALYZE runs a sample random read on a table's portion.  The GUC 
+parameter default\_statistics\_target determines the amount of entries read by the sample. The 
+default limit is 100. Increasing the value will cause the planner to get better estimates. in 
+particular for columns having data distributed irregularly. This accuracy costs more time for the 
+statistics gathering and space because requires a bigger storage in the pg\_statistics 
+table.\newline
+
+
+To show how the default\_statistics\_target can affects the estimates, let's run an ANALYZE VERBOSE 
+with the default setting on the table created in \ref{sec:VACUUM}.
+
+\begin{lstlisting}[style=pgsql]
+postgres=# SET default_statistics_target =100;
+SET
+postgres=# ANALYZE VERBOSE t_vacuum;
+INFO:  analyzing "public.t_vacuum"
+INFO:  "t_vacuum": scanned 30000 of 103093 pages, containing 2909979 live rows and 0 dead rows; 
+30000 rows in sample, 9999985 estimated total rows
+ANALYZE
+\end{lstlisting}
+
+Even if the table have 10 million rows, the analyse estimates only 2,909,979 rows, the 30\% of the 
+total effective storage.
+
+Changing the default\_statistics\_target to its maximum value of 10000 ANALYZE will get 
+better estimates.
+
+
+\begin{lstlisting}[style=pgsql]
+SET
+postgres=# ANALYZE VERBOSE t_vacuum;
+INFO:  analyzing "public.t_vacuum"
+INFO:  "t_vacuum": scanned 103093 of 103093 pages, containing 10000000 live rows and 0 dead rows; 
+3000000 rows in sample, 10000000 estimated total rows
+ANALYZE
+\end{lstlisting}
+
+This time the table estimate is correctly determined in 10 millions live rows.\newline
+The pg\_statistics stores the gathered data for the database usage only. To help users and 
+administrators it's present the view pg\_stats\index{pg\_stats, view} providing a human readable 
+visualization of the gathered statistics.\newline
+
+As general rule, before starting any performance tuning, it's important to check if 
+database statistics are recent and accurate. The information is stored into the view 
+pg\_stat\_all\_tables \footnote{The subset views pg\_stat\_user\_tables and pg\_stat\_sys\_tables 
+are useful to search respectively the current user and the system tables only.}.
+
+For example this query gets the last execution of the manual and the auto vacuum with the 
+analyze and auto analyze, for a given table.
+
+\begin{lstlisting}[style=pgsql]
+
+postgres=# \x
+Expanded display is on.
+postgres=# SELECT
+        schemaname,
+        relname,
+        last_vacuum,
+        last_autovacuum,
+        last_analyze,
+        last_autoanalyze
+FROM
+         pg_stat_all_tables
+WHERE
+        relname='t_vacuum'
+;
+-[ RECORD 1 ]----+------------------------------
+schemaname       | public
+relname          | t_vacuum
+last_vacuum      | 
+last_autovacuum  | 
+last_analyze     | 2014-06-17 18:48:56.359709+00
+last_autoanalyze | 
+
+postgres=# 
+
+
+
+\end{lstlisting}
+
+
+The statistics target can be set per column to fine tune the ANALYZE with the ALTER TABLE SET 
+STATISTICS statement.
+
+\begin{lstlisting}[style=pgsql]
+
+
+--SET THE STATISTICS TO 1000 ON THE COLUMN i_id
+ALTER TABLE t_vacuum 
+        ALTER COLUMN  i_id 
+                        SET STATISTICS 1000
+;
+
+\end{lstlisting}
+
+The SET can be used, as seen before, to change the default statistics target for the current 
+session. Otherwise is possible to change the value cluster wide changing the parameter in the 
+postgresql.conf file.
 
 \section{reindex}
 \begin{comment}
