@@ -372,17 +372,189 @@ ALTER TABLE t_vacuum
 
 \end{lstlisting}
 
-The SET can be used, as seen before, to change the default statistics target for the current 
-session. Otherwise is possible to change the value cluster wide changing the parameter in the 
-postgresql.conf file.
+The SET command can be used for changing the default statistics target in the 
+current session. Otherwise it's possible to change the value cluster wide changing the parameter 
+in the postgresql.conf file.
 
 \section{reindex}
+A B-tree index entry carries the indexed value with the pointer to the corresponding heap page
+where the full tuple is stored. The pages are organised in the form of a balanced tree 
+referring each other using the special space seen in \ref{fig:INDEX01}. Until the heap tuple 
+does not change page, the index entry doesn't need update. The HOT strategy\index{HOT strategy} 
+tries to achieve this goal keeping the heap tuples in the same page. When the heap tuple's page 
+change then the index entry needs to be updates as well. Having the index pages fillfactor of 70 for 
+the not leaf pages and a fillfactor of 90 for the leaf pages\footnote{Changing the index's 
+fillfactor affects only 
+the leaf pages, the value for the not leaf cannot change} the index tuple's page 
+change is somewhat limited.\newline
+
+The VACUUM is not so effective with the indices, even clearing down the dead tuple's space this is 
+reusable only if compatible with the B-tree position. Only the completely empty pages can be 
+recycled and this requires at least two VACUUM runs, because when an index page is empty 
+then is marked as deleted, it's stamped with the next XID and becomes invisible. The empty page 
+then is not immediately recycled because there might be running scans which need to access the page 
+which is still visible in their snapshot. The next VACUUM run will ensure the page is no longer 
+required by the running transactions and the it marks as reusable.\newline
+
+For those reasons the indices are affected by the data bloat more than the tables. Alongside 
+with a bigger disk space allocation, the bloat results in a generally bad index's performances. 
+The reindex is then the only solution to restore an index good shape.\newline
+
+Unlike the VACUUM, REINDEX have a substantial impact on the database activity. To ensure 
+the data is consistently read the REINDEX sets a table lock which prevents the table's writes. The 
+reads are also blocked for the SELECT queries using the rebuilding index.\newline
+
+A B-tree index build requires a data sort to build the balanced tree. PostgreSQL comes with a handy 
+GUC parameter to track the sort, the trace\_sort\index{trace\_sort}. 
+The message verbosity level by the trace is DEBUG, then also the client\_min\_messages needs 
+adjustment for getting the informations from the trace. Let's then reindex the table's primary key 
+seen in \ref{sec:VACUUM}.
+
+\begin{lstlisting}[style=pgsql]
+postgres=# SET trace_sort =on;
+SET
+postgres=# SET client_min_messages ='debug';
+SET
+postgres=# \timing
+Timing is on.
+
+postgres=# REINDEX INDEX pk_t_vacuum ;
+DEBUG:  building index "pk_t_vacuum" on table "t_vacuum"
+LOG:  begin index sort: unique = t, workMem = 16384, randomAccess = f
+LOG:  begin index sort: unique = f, workMem = 1024, randomAccess = f
+LOG:  switching to external sort with 59 tapes: CPU 0.00s/0.08u sec elapsed 0.08 sec
+LOG:  finished writing run 1 to tape 0: CPU 0.13s/3.41u sec elapsed 3.55 sec
+LOG:  internal sort ended, 25 KB used: CPU 0.39s/8.35u sec elapsed 8.74 sec
+LOG:  performsort starting: CPU 0.39s/8.35u sec elapsed 8.74 sec
+LOG:  finished writing final run 2 to tape 1: CPU 0.39s/8.50u sec elapsed 8.89 sec
+LOG:  performsort done (except 2-way final merge): CPU 0.40s/8.51u sec elapsed 8.90 sec
+LOG:  external sort ended, 24438 disk blocks used: CPU 0.70s/9.67u sec elapsed 11.81 sec
+REINDEX
+Time: 11876.807 ms
+
+\end{lstlisting}
+
+The reindex performs a data sort which does not fit in the maintenance\_work\_mem. PostgreSQL then 
+starts a slower disk sort to build up the index. The first LOG entry with \textit{begin index 
+sort:} shows the available maintenance\_work\_mem for the index sort. If after the table scan the 
+available memory is exhausted then an external sort on disk will happen. Otherwise a faster sort in 
+memory will build the index. Increasing then the maintenance\_work\_mem  can improve the reindex. 
+Unfortunately the determining the value when the sort in memory happens is not simple and can just 
+be guessed from the index size. The previous reindex with 1 GB maintenance\_work\_mem runs 40\% 
+faster.
+
+\begin{lstlisting}[style=pgsql]
+postgres=# \timing
+Timing is on.
+postgres=# SET maintenance_work_mem='1GB';
+SET
+Time: 0.193 ms
+postgres=# REINDEX INDEX pk_t_vacuum ;
+DEBUG:  building index "pk_t_vacuum" on table "t_vacuum"
+LOG:  begin index sort: unique = t, workMem = 1048576, randomAccess = f
+LOG:  begin index sort: unique = f, workMem = 1024, randomAccess = f
+LOG:  internal sort ended, 25 KB used: CPU 0.45s/2.02u sec elapsed 2.47 sec
+LOG:  performsort starting: CPU 0.45s/2.02u sec elapsed 2.47 sec
+LOG:  performsort done: CPU 0.45s/4.36u sec elapsed 4.81 sec
+LOG:  internal sort ended, 705717 KB used: CPU 0.66s/4.74u sec elapsed 6.85 sec
+REINDEX
+Time: 6964.196 ms
+
+
+\end{lstlisting}
+
+The reindex create a completely new filenode for the index and when the build is complete, the 
+pg\_class entry is then updated with the new relfilenode's value and old filenode is deleted. The 
+entire sequence can be emulated creating a new index with a different name with the CREATE 
+INDEX\index{CREATE INDEX} statement. After the index is ready, dropping the old one, renaming 
+the new index to the old name, will result in a brand new index without blocking the 
+reads.\newline
+
+Since the version 8.2 PostgreSQL supports the CREATE INDEX CONCURRENTLY\index{CREATE INDEX 
+CONCURRENTLY} which doesn't block reads nor writes. Using this method, the index creation 
+starts adding a new invalid index in the system catalogue starting a first table scan to builds 
+the entries without caring for the changing data. When the first build is complete a second table 
+scan fixes the not consistent tuple's references and finally the index's status is set to valid 
+becoming available. This approach, combined with the swap strategy can limit greatly the 
+impact of the index maintenance. \newline
+
+The concurrent index build have indeed some caveats and limitations.
+\begin{itemize}
+ \item Any problem with the table scan will fail the command and leave behind an invalid index 
+which is ignored for the reads but adds overhead for the inserts and updates.
+\item When building an unique index concurrently this start enforcing the uniqueness when the 
+second table scan starts. Some transactions could then start reporting the uniqueness violation 
+before the index becomes available and if the build fails during the second scan then 
+the \textit{invalid} index continues to enforce the uniqueness.
+\item Regular index builds can run in parallel on the same table. Concurrent index builds cannot.
+\item Concurrent index builds cannot run within a transaction block.
+\end{itemize}
+
+With the primary keys and unique constraints is also possible to use the index swap strategy with 
+an extra little trick. PostgreSQL since the version 9.1 supports the \textit{ALTER TABLE table\_name 
+ADD table\_constraint using\_index} statement. Combining this statement in a single command with a 
+DROP CONSTRAINT it's possible to swap the constraint's index without losing the uniqueness 
+enforcement.
+
+\begin{lstlisting}[style=pgsql]
+postgres=# CREATE UNIQUE INDEX pk_t_vacuum_new 
+                ON  t_vacuum USING BTREE (i_id);
+CREATE INDEX
+postgres=# ALTER TABLE t_vacuum
+                DROP CONSTRAINT pk_t_vacuum,
+                ADD CONSTRAINT pk_t_vacuum_new PRIMARY KEY  
+                        USING INDEX pk_t_vacuum_new
+           ;
+ALTER TABLE
+postgres=# ALTER INDEX pk_t_vacuum_new 
+                RENAME TO pk_t_vacuum;
+ALTER INDEX
+
+\end{lstlisting}
+
+The example uses a regular index build and then blocks the writes. It's also possible to 
+build the new index concurrently.
+
+As this method works well for the unreferenced primary or unique keys, any foreign key 
+referencing the unique field will cause the drop constraint's failure.
+
+\begin{lstlisting}[style=pgsql]
+ postgres=# CREATE TABLE t_vac_foreign
+                                        (
+                                                i_foreign serial,
+                                                i_id integer NOT NULL,
+                                                t_value text
+                                        )
+            ;
+CREATE TABLE
+postgres=# ALTER TABLE t_vac_foreign 
+                ADD CONSTRAINT fk_t_vac_foreign_t_vacuum_i_id
+                        FOREIGN KEY (i_id) 
+                        REFERENCES t_vacuum (i_id) 
+                        ON DELETE CASCADE 
+                        ON UPDATE RESTRICT;
+ALTER TABLE
+
+postgres=# CREATE UNIQUE INDEX pk_t_vacuum_new ON  t_vacuum USING BTREE (i_id);
+CREATE INDEX
+postgres=# ALTER TABLE t_vacuum
+postgres-# DROP CONSTRAINT pk_t_vacuum,
+postgres-# ADD CONSTRAINT pk_t_vacuum_new PRIMARY KEY  USING INDEX pk_t_vacuum_new;
+ERROR:  cannot drop constraint pk_t_vacuum on table t_vacuum because other objects depend on it
+DETAIL:  constraint fk_t_vac_foreign_t_vacuum_i_id on table t_vac_foreign depends on index 
+pk_t_vacuum
+HINT:  Use DROP ... CASCADE to drop the dependent objects too.
+
+
+\end{lstlisting}
+
+In this case the safest way to proceed is the conventional REINDEX. 
+
 \begin{comment}
-  . A B-tree index is a tree of 
-table's implementation, An index is The tuples moving across the data files is the index entries 
-shall be updated. A B-tree index entry basically carries the indexed value with the pointer to the 
-page containing the tuple. When the tupe change page the index entry shall be updated. This require 
+
+
 \end{comment}
+
 
 \section{VACUUM FULL and CLUSTER}
 
