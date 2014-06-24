@@ -1,12 +1,12 @@
 \chapter{PostgreSQL at glance}
-PostgreSQL is a first class product with high end enterprise class level features.
+PostgreSQL is a first class product with high end enterprise class features.
 This first chapter is a general review on the product with a brief talk on the database's history.
 
 \section{Long time ago in a galaxy far far away...}
 
-Following the works of the Berkeley's Professor  Michael Stonebraker, in the
-1996 Marc G. Fournier\index{Marc G. Fournier} asked for any
-volunteer interested in revamping the Postgres 95 project.
+Following the works of the Berkeley's Professor  Michael Stonebraker, in 1996
+Marc G. Fournier\index{Marc G. Fournier} asked for any volunteers interested
+in revamping the Postgres 95 project.
 
 \framebox{\parbox[t][1\totalheight]{1\columnwidth}{%
 {\scriptsize Date: Mon, 08 Jul 1996 22:12:19-0400 (EDT) From: \char`\"{}Marc
@@ -32,21 +32,20 @@ the sup server from my machines using this): }{\scriptsize \par}
 }}%
 
 The answer came from Bruce Momjian\index{Bruce Momjian},Thomas
-Lockhart\index{Thomas Lockhart} e Vadim Mikheev\index{Vadim Mikheev}, the very
+Lockhart\index{Thomas Lockhart}, and Vadim Mikheev\index{Vadim Mikheev}, the very
 first PostgreSQL Global Development Team.
 
 \section{Features}
-Every time a new major release is released, new powerful features join the
-rich set of the product's functionalities.
-There's a small excerpt of what the latest version offer in terms of flexibility
+Every time a new major release is published, new powerful features join the
+rich feature set.
+Here's a small excerpt of what the latest version offers in terms of flexibility
 and reliability.
 
 \subsection{Write ahead logging}
-Like any RDBMS worth of this name PostgreSQL have the write ahead logging
-feature.
+Like any standards compliant RDBMS, PostgreSQL implements a write ahead log.
 In short, when a data block is updated the change is saved in a reliable
 location, the so called write ahead log\index{wal}\index{write ahead log}. The
-effective write on the datafile is performed later. Should the database crash
+effective write on the data file is performed later. Should the database crash
 the WAL is scanned and the saved blocks are replayed during the
 crash recovery. PostgreSQL stores the redo records in fixed size segments,
 usually 16 MB. When the wal segment is full PostgreSQL switches to a newly
@@ -55,22 +54,21 @@ switch}
 
 \subsection{Point in time recovery}
 \index{pitr}\index{point in time recovery}\index{log shipping}When the
-log switch happens is possible to archive the previous segment in a safe
+log switch happens it is possible to archive the previous segment in a safe
 location. Taking an inconsistent copy of the data directory is possible to
-restore a fully functional cluster because the
-archived wal segments have all the informations to replay the physical data
-blocks on the inconsistent data files. The restore can be, optionally stopped
-at a given point in time. For example is possible to recover a PostgreSQL
-cluster to one second before the a catastrophic happening (e.g. a table
-drop). 
+restore a fully functional cluster because the archived wal segments have all
+the information to replay the physical data blocks on the inconsistent data
+files. The restore can be, optionally stopped at a given point in time. For
+example is possible to recover a PostgreSQL cluster to one second before the
+a catastrophic happening (e.g. a table drop).
 
 \subsection{Standby server and high availability}
 \index{standby server}\index{high availability}The inconsistent snapshot
 can be configured to stay up in continuous archive recovery. PostgreSQL 8.4
 supports the warm standby\index{warm standby} configuration where the standby
-server does not accept connections. From the version 9.0 is possible to
-enable the hot standby\index{hot standby} configuration to access the standby
-server in read only mode.
+server does not accept connections. From version 9.0 it is possible to enable
+hot standby\index{hot standby} configuration to access the standby server in
+read only mode.
 
 \subsection{Streaming replication}
 The wal archiving doesn't work in real time. The wal shipping happens only
@@ -80,50 +78,52 @@ replication} a standby server can get the wal blocks over a database connection
 in almost real time.
 
 
-\subsection{Transactional}
-PostgreSQL fully supports the transactions and is ACID compliant.
-From the version 8.0 the save points were introduced.
+\subsection{Transactions}
+PostgreSQL fully supports transactions and is ACID compliant.
+Version 8.0 introduced save points.
 
 \subsection{Procedural languages}
-Amongst the rich of feature procedural language pl/pgsql, many procedural
+PostgreSQL has it's own feature rich procedural language pl/pgsql, but many procedural
 languages such as perl or python are available for writing database functions.
-The DO keyword was introduced in the 9.1 to have anonymous function's code
+The DO keyword was introduced in version 9.1 to allow anonymous function code
 blocks.
 
 \subsection{Partitioning}
-The partitioning\index{partitioning}\index{constraint exclusion}, implemented in
-PostgreSQL is still very basic. The partitions are tables connected
-with one empty parent table using the table's inheritance. 
-Defining check constraints on the partitioned criteria the database can
-exclude, querying the parent table, the partitions not affected by the where
-condition.
-As the physical storage is distinct for each partition and there's no global
-primary key enforcement nor foreign keys can be defined on the partitioned
+The partitioning\index{partitioning}\index{constraint exclusion} implementation in
+PostgreSQL is still very basic. Partitions are tables connected with one
+empty parent table using table inheritance.
+
+By defining check constraints on the partitioned data, the database can
+exclude partitions from a query on the parent table based on the WHERE
+clause criteria.
+
+As the physical storage is distinct for each partition, no global primary key
+enforcement nor foreign key constraints can be defined on the partitioned
 structure.
 
-\subsection{Cost based optimizer}
-The cost based optimizer, or CBO,\index{cost based optimizer}\index{CBO} is the
-one of PostgreSQL's point of strenght.
-The query execution is dynamically determined and self adapting to the
-underlying data structure or the estimated amount of data affected. 
-PostgreSQL supports also the genetic query optimizer GEQO.
+\subsection{Cost based optimiser}
+The cost based optimiser, or CBO,\index{cost based optimizer}\index{CBO} is
+one of PostgreSQL's strong points.
+The query execution plan is dynamically determined and self adapting to the
+underlying data structure or the estimated amount of data affected.
+PostgreSQL also supports the genetic query optimizer GEQO.
 
 \subsection{Multi platform support}
-PostgreSQL\index{platform} nowadays supports almost any unix flavour and from
-the the version 8.0 is native to Windows.
+PostgreSQL\index{platform} nowadays supports almost any unix flavour, and from
+version 8.0 is native to Windows.
 
 \subsection{Tablespaces}
-The tablespace support permits the data files fine grain distribution on the OS
-filesystems. 
+Tablespace support permits fine grained distribution of the data files across
+filesystems.
 
 \subsection{MVCC}
 The way PostgreSQL keeps things consistent is the MVCC which stands for Multi
 Version Concurrency Control. The mechanism is neat and efficient, offering
-great advantages and one single disadvantage. We'll see in detail further but
+great advantages and one single disadvantage. We'll see in detail later but
 keep in mind this important sentence. \\
-There's no such thing like an update in PostgreSQL.
+There's no such thing as an update in PostgreSQL.
 
-\subsection{Triggers}
+\subsection{Triggers} TODO
 Triggers to execute automated tasks on when DML is performed on tables and also
 views are supported at any level. The events triggers are also supported.
 
