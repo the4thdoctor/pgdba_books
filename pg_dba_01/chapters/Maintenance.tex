@@ -12,7 +12,7 @@ to point the new page and because of the index's ordered structure, the bloating
 probable than the table. 
 
 
-\section{vacuum}\index{VACUUM}
+\section{VACUUM}\index{VACUUM}
 \label{sec:VACUUM}
 VACUUM is a PostgreSQL specific command which reclaims back the dead tuple's space. When called 
 without specifying a target table, the command processes all the tables in the database. Running 
@@ -263,7 +263,7 @@ regardless to the age. That's equivalent to run the VACUUM setting the vacuum\_f
 zero.
 
 
-\section{analyze}
+\section{ANALYZE}
 \label{sec:ANALYZE}
 The PostgreSQL's query optimiser is based on the costs estimates. When building the execution plans 
 the planner consults the internal statistics and assigns to each node plan an estimated cost. The 
@@ -376,7 +376,7 @@ The SET command can be used for changing the default statistics target in the
 current session. Otherwise it's possible to change the value cluster wide changing the parameter 
 in the postgresql.conf file.
 
-\section{reindex}
+\section{REINDEX}\label{sec:REINDEX}
 A B-tree index entry carries the indexed value with the pointer to the corresponding heap page
 where the full tuple is stored. The pages are organised in the form of a balanced tree 
 referring each other using the special space seen in \ref{fig:INDEX01}. Until the heap tuple 
@@ -463,8 +463,8 @@ Time: 6964.196 ms
 
 \end{lstlisting}
 
-The reindex create a completely new filenode for the index and when the build is complete, the 
-pg\_class entry is then updated with the new relfilenode's value and old filenode is deleted. The 
+The reindex create a completely new file node for the index and when the build is complete, the 
+pg\_class entry is then updated with the new relfilenode value and old file node is deleted. The 
 entire sequence can be emulated creating a new index with a different name with the CREATE 
 INDEX\index{CREATE INDEX} statement. After the index is ready, dropping the old one, renaming 
 the new index to the old name, will result in a brand new index without blocking the 
@@ -556,7 +556,85 @@ In this case the safest way to proceed is the conventional REINDEX.
 \end{comment}
 
 
-\section{VACUUM FULL and CLUSTER}
+\section{VACUUM FULL and CLUSTER}\index{VACUUM FULL}\index{CLUSTER}
+The CLUSTER command rebuilds a completely new table with the tuples in the same order of the 
+clustered index. The clustered index can be set using the command \textit{ALTER TABLE table\_name 
+CLUSTER ON index\_name} and is used as sort key in the next CLUSTER. 
+In order to get a clearer picture, let's cluster the table created in \ref{sec:VACUUM} its
+primary key. 
+
+\begin{lstlisting}[style=pgsql]
+postgres=# SET trace_sort='on';
+SET
+postgres=# set client_min_messages ='debug';
+SET
+postgres=# ALTER TABLE t_vacuum CLUSTER ON pk_t_vacuum;
+ALTER TABLE
+postgres=# CLUSTER t_vacuum;
+DEBUG:  building index "pg_toast_28608_index" on table "pg_toast_28608"
+LOG:  begin index sort: unique = t, workMem = 16384, randomAccess = f
+LOG:  begin index sort: unique = f, workMem = 1024, randomAccess = f
+LOG:  internal sort ended, 25 KB used: CPU 0.00s/0.00u sec elapsed 0.00 sec
+LOG:  performsort starting: CPU 0.00s/0.00u sec elapsed 0.00 sec
+LOG:  performsort done: CPU 0.00s/0.00u sec elapsed 0.00 sec
+LOG:  internal sort ended, 25 KB used: CPU 0.00s/0.00u sec elapsed 0.06 sec
+DEBUG:  clustering "public.t_vacuum" using index scan on "pk_t_vacuum"
+DEBUG:  "t_vacuum": found 0 removable, 10000000 nonremovable row versions in 103093 pages
+DETAIL:  0 dead row versions cannot be removed yet.
+CPU 1.16s/3.43u sec elapsed 7.41 sec.
+DEBUG:  building index "idx_ts_value" on table "t_vacuum"
+LOG:  begin index sort: unique = f, workMem = 16384, randomAccess = f
+LOG:  switching to external sort with 59 tapes: CPU 0.01s/0.07u sec elapsed 0.09 sec
+LOG:  performsort starting: CPU 0.45s/9.13u sec elapsed 9.57 sec
+LOG:  finished writing final run 1 to tape 0: CPU 0.45s/9.27u sec elapsed 9.71 sec
+LOG:  performsort done: CPU 0.45s/9.27u sec elapsed 9.71 sec
+LOG:  external sort ended, 24439 disk blocks used: CPU 0.76s/10.02u sec elapsed 12.57 sec
+DEBUG:  building index "pk_t_vacuum" on table "t_vacuum"
+LOG:  begin index sort: unique = f, workMem = 16384, randomAccess = f
+LOG:  switching to external sort with 59 tapes: CPU 0.02s/0.05u sec elapsed 0.08 sec
+LOG:  performsort starting: CPU 0.44s/8.35u sec elapsed 8.79 sec
+LOG:  finished writing final run 1 to tape 0: CPU 0.45s/8.49u sec elapsed 8.93 sec
+LOG:  performsort done: CPU 0.45s/8.49u sec elapsed 8.93 sec
+LOG:  external sort ended, 24439 disk blocks used: CPU 0.80s/9.20u sec elapsed 11.64 sec
+DEBUG:  drop auto-cascades to type pg_temp_28553
+DEBUG:  drop auto-cascades to type pg_temp_28553[]
+DEBUG:  drop auto-cascades to toast table pg_toast.pg_toast_28608
+DEBUG:  drop auto-cascades to index pg_toast.pg_toast_28608_index
+DEBUG:  drop auto-cascades to type pg_toast.pg_toast_28608
+CLUSTER
+
+\end{lstlisting}
+
+This CLUSTER's run performs a full index scan on the clustered index avoiding the table sort. The 
+tuples are then stored into a new file node. When the build is complete then the relation's file 
+node is swapped in the system catalogue and indices are reindexed. When the command completes the 
+old file node is then removed. The entire process requires an exclusive lock on the table preventing 
+the reads and the writes. Also the storage is a critical point because the disk space 
+requirements are for the old relation plus the new one with the indices and the eventual sort on 
+disk.\newline
+
+Looking at source code in \textbf{src/backend/commands/cluster.c}, is clearly stated in the 
+file's header that \textit{CLUSTER a table on an index.  This is now also used for VACUUM FULL}. 
+The only difference between VACUUM FULL and CLUSTER, is the clustered index's OID validity. If 
+it's valid then the data output is sorted on the clustered index. How the data is sorted is 
+determined by the planner, which choice is the cheapest between an index scan and the sequential 
+scan with a data sort. Otherwise, if the index's OID is invalid then the tuples are read using a 
+plain sequential scan.\newline
+
+VACUUM FULL and CLUSTER have beneficial effects on the storage as the space is returned to the 
+operating system. Also, regenerating completely the relation's files with the reindex, it makes the 
+page access more efficient and CLUSTER rebuilds the table on the clustered index order. This 
+minimise the random disk seeks when accessing the data via clustered index.\newline
+
+The disadvantages for using those commands are the complete stop of the affected table's activity. 
+Also, CLUSTER and VACUUM FULL do not fix the XID wraparound risk which the conventional VACUUM 
+does.\newline
+
+As rule of thumb, in order to minimise the database's downtime, CLUSTER and the VACUUM FULL should 
+be used only for extraordinary maintenance and only if the disk space is critical. For the day to 
+day maintenance it's best to rely on VACUUM and occasionally the reindex as seen in \ref{sec:VACUUM} 
+and \ref{sec:REINDEX}.
+
 
 
 \section{The autovacuum daemon}
