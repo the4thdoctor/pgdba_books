@@ -262,6 +262,70 @@ VACUUM accepts the FREEZE \index{VACUUM FREEZE} clause which forces a complete t
 regardless to the age. That's equivalent to run the VACUUM setting the vacuum\_freeze\_min\_age to 
 zero.
 
+There are various GUC parameters governing VACUUM
+
+\subsection{vacuum\_freeze\_table\_age}
+As seen before, VACUUM this parameter triggers a whole table scan if the table's 
+pg\_class.relfrozenxid field is older than the parameter's value. The default is 150 million 
+transactions. The accepted values are from zero to one billion. Anyway VACUUM will silently set the 
+effective value to the 95\% of autovacuum\_freeze\_max\_age, in order to give more chance to the 
+manual VACUUM to run before an anti-wraparound autovacuum.
+
+\subsection{vacuum\_freeze\_min\_age}
+Sets the age in transactions when VACUUM replaces the tuple's transaction IDs with the 
+FrozenXID. The default is 50 million transactions. Same as for vacuum\_freeze\_table\_age tThe 
+accepted values are from zero to one billion. With this parameter VACUUM will silently set the 
+effective value to half the value of autovacuum\_freeze\_max\_age in order to increase the time 
+between the forced autovacuums.
+
+\subsection{vacuum\_multixact\_freeze\_min\_age}
+As from 9.3 VACUUM take care also of the multiple transaction ID, used to store the row locks in 
+the tuple's header.  Because the multixact ID\index{multixact ID} is implemented same as the XID 
+the value suffers of the same wraparound failure\index{multixact ID, wraparound failure}. This 
+parameter sets the age's limit for VACUUM to performs a whole table scan. The  table's 
+pg\_class.relminmxid is used to check the transaction's age. . The default is 150 million 
+multixacts. Also VACUUM limits the effective value to 95\% of 
+autovacuum\_multixact\_freeze\_max\_age, so that a periodical manual VACUUM has a chance to run 
+before an anti-wraparound is launched for the table.
+
+\subsection{vacuum\_multixact\_freeze\_table\_age}
+Sets the age in multixacts when VACUUM replaces the multixact IDs with a newer transaction ID or 
+multixact ID while scanning a table. The default is 5 million multixacts. The accepted values 
+are from zero to one billion but VACUUM will silently limit the effective value to half the value 
+of autovacuum\_multixact\_freeze\_max\_age, in order to increase the time between forced 
+autovacuums.
+
+\subsection{vacuum\_defer\_cleanup\_age}
+This parameter have effect only on the master in hot standby configurations. When set to a positive  
+value on the master, can reduce the risk of query conflicts on the standby. Does not have 
+effect on the standby though.
+
+
+\subsection{vacuum\_cost\_delay}\label{sub:VACUUMCOST}
+This parameter, if set to a not zero value enables the cost based vacuum delay\index{VACUUM, cost 
+based delay} and sets the time, in milliseconds, that the VACUUM process sleeps when the cost limit 
+has been exceeded. The default value is zero, which disables the cost-based vacuum delay feature. 
+
+\subsection{vacuum\_cost\_limit}
+This parameter sets the value when the internal counter puts the VACUUM process to sleep. The 
+default value is 200. 
+
+
+\subsection{vacuum\_cost\_page\_hit}
+The counter's cost is determined using arbitrary values for each vacuum operation. This parameter 
+sets the estimated cost for vacuuming one buffer found in the shared buffer cache. It represents 
+the cost to lock the buffer pool, lookup the shared hash table and scan the content of the page. The 
+default value is one.
+
+\subsection{vacuum\_cost\_page\_miss}
+This parameter sets the estimated cost for vacuuming a buffer not present in the shared buffer. This 
+represents the effort to lock the buffer pool, lookup the shared hash table, read the desired block 
+in from the disk and scan its content. The default value is 10.
+
+\subsection{vacuum\_cost\_page\_dirty}
+This parameter sets the estimated cost charged when vacuum changes a previously clean block. It 
+represents the extra I/O required to flush the dirty block out to disk again. The default value is 
+20.
 
 \section{ANALYZE}
 \label{sec:ANALYZE}
@@ -634,8 +698,75 @@ As rule of thumb, in order to minimise the database's downtime, CLUSTER and the 
 be used only for extraordinary maintenance and only if the disk space is critical. For the day to 
 day maintenance it's best to rely on VACUUM and occasionally the reindex as seen in \ref{sec:VACUUM} 
 and \ref{sec:REINDEX}.
+ 
 
 
-
-\section{The autovacuum daemon}
+\section{The autovacuum daemon}\index{AUTOVACUUM}
 \label{sec:AUTOVACUUM}
+The autovacuum daemon appeared with the revolutionary PostgreSQL version 8.0. With the version 8.3 
+was also enabled by default because reliable and efficient. Alongside with vacuum, the autovacuum 
+GUC parameters are the following.
+
+\subsection{autovacuum} 
+This parameter is used to enable or disable the autovacuum daemon. Changing the setting requires 
+the cluster's restart. Turning autovacuum off never disables the daemon completely. The autovacuum 
+process will start in any case for tables with XID older than autovacuum\_freeze\_max\_age
+
+\subsection{autovacuum\_max\_workers} 
+The parameter sets the maximum number of autovacuum subprocesses. Changing the setting requires the 
+cluster's restart and each subprocess consumes one PostgreSQL connection.
+
+\subsection{autovacuum\_naptime} 
+The parameter sets the delay between two autovacuum runs on a specified database.The delay is 
+measured in seconds and the default value is 1 minute.
+
+
+\subsection{autovacuum\_vacuum\_scale\_factor}
+This parameter and the next one controls when the autovacuum is triggered. This one specifies the 
+fraction of table to add to autovacuum\_vacuum\_threshold in order to determine whether start the 
+vacuum. The default is 0.2,  20\% of the table. This setting can be overridden for individual 
+tables by changing storage parameters.
+
+\subsection{autovacuum\_vacuum\_threshold}
+This parameter sets the minimum number of a table's updated or deleted tuples needed to trigger 
+a VACUUM. The default is 50 tuples. This setting can be overridden for individual 
+tables by changing storage parameters. For example, if we have a 10 million rows table with both 
+parameters set to default, the autovacuum will start after 2,000,050 update or delete.
+
+\subsection{autovacuum\_analyze\_scale\_factor}
+This parameter and the next one controls when the auto analyse is triggered. This one specifies the 
+fraction of table to add to autovacuum\_analyze\_threshold in order to determine whether start the 
+vacuum. The default is 0.1,  10\% of the table. This setting can be overridden for individual 
+tables by changing storage parameters.
+
+\subsection{autovacuum\_analyze\_threshold}
+This parameter sets the minimum number of a table's updated or deleted tuples needed to trigger an 
+ANALYZE. The default is 50 tuples. This setting can be overridden for individual 
+tables by changing storage parameters. For example, if we have a 10 million rows table with both 
+parameters set to default, the autovacuum will start after 1,000,050 update or delete.
+
+\subsection{autovacuum\_freeze\_max\_age}
+The parameter sets the maximum age of the table's pg\_class.relfrozenxid, in transactions, after 
+the VACUUM is forced to avoid the transaction ID wraparound. The process will start also if the 
+autovacuum is disabled. The parameter can be set only at server's start but is possible to reduce 
+the value per table by changing the storage parameter.
+
+\subsection{autovacuum\_multixact\_freeze\_max\_age}
+The parameter sets the maximum age of the table's pg\_class.relminmxid, in transactions, after 
+the VACUUM is forced to avoid the multixact ID wraparound. The process will start also if the 
+autovacuum is 
+disabled. The parameter can be set only at server's start but is possible to reduce the value per 
+table by changing the storage parameter.
+
+\subsection{autovacuum\_vacuum\_cost\_delay}
+The parameter sets the cost delay to use in automatic VACUUM operations. If set to -1, the regular 
+vacuum\_cost\_delay value will be used. The default value is 20 milliseconds. 
+
+\subsection{autovacuum\_vacuum\_cost\_limit}
+The parameter sets  cost limit value to be used in automatic VACUUM operations. 
+If set to -1 then the regular vacuum\_cost\_limit value will be used. The default value is -1.
+The value is distributed among the running autovacuum workers. The sum of the limits of each worker 
+never exceeds this variable. More informations on cost based vacuum here \ref{sub:VACUUMCOST}.
+
+
+
