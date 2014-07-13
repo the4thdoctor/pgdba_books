@@ -1,0 +1,251 @@
+\chapter{Backup}
+The hardware is subject to faults. In particular if the storage is lost the entire data 
+infrastructure becomes inaccessible, sometime for good. Also human errors, like not filtered 
+delete or table drop can happen. Having a solid backup strategy is then the best protection, 
+ensuring the data is still recoverable. In this chapter we'll take a look only to the logical 
+backup with pg\_dump. 
+
+\section{pg\_dump at glance}
+\label{sec:PGDUMP}
+As seen in \ref{sub:PGDUMP}, pg\_dump is the PostgreSQL's utility for saving consistent backups. 
+Its usage is quite simple and if launched without options it tries to connect to the local cluster 
+with the current user sending the dump to the standard output.\newline
+
+The pg\_dump help gives useful informations about the usage.
+
+\begin{verbatim}
+postgres@tardis:~/dump$ pg_dump --help
+pg_dump dumps a database as a text file or to other formats.
+
+Usage:
+  pg_dump [OPTION]... [DBNAME]
+
+General options:
+  -f, --file=FILENAME          output file or directory name
+  -F, --format=c|d|t|p         output file format (custom, directory, tar,
+                               plain text (default))
+  -j, --jobs=NUM               use this many parallel jobs to dump
+  -v, --verbose                verbose mode
+  -V, --version                output version information, then exit
+  -Z, --compress=0-9           compression level for compressed formats
+  --lock-wait-timeout=TIMEOUT  fail after waiting TIMEOUT for a table lock
+  -?, --help                   show this help, then exit
+
+Options controlling the output content:
+  -a, --data-only              dump only the data, not the schema
+  -b, --blobs                  include large objects in dump
+  -c, --clean                  clean (drop) database objects before recreating
+  -C, --create                 include commands to create database in dump
+  -E, --encoding=ENCODING      dump the data in encoding ENCODING
+  -n, --schema=SCHEMA          dump the named schema(s) only
+  -N, --exclude-schema=SCHEMA  do NOT dump the named schema(s)
+  -o, --oids                   include OIDs in dump
+  -O, --no-owner               skip restoration of object ownership in
+                               plain-text format
+  -s, --schema-only            dump only the schema, no data
+  -S, --superuser=NAME         superuser user name to use in plain-text format
+  -t, --table=TABLE            dump the named table(s) only
+  -T, --exclude-table=TABLE    do NOT dump the named table(s)
+  -x, --no-privileges          do not dump privileges (grant/revoke)
+  --binary-upgrade             for use by upgrade utilities only
+  --column-inserts             dump data as INSERT commands with column names
+  --disable-dollar-quoting     disable dollar quoting, use SQL standard quoting
+  --disable-triggers           disable triggers during data-only restore
+  --exclude-table-data=TABLE   do NOT dump data for the named table(s)
+  --inserts                    dump data as INSERT commands, rather than COPY
+  --no-security-labels         do not dump security label assignments
+  --no-synchronized-snapshots  do not use synchronized snapshots in parallel jobs
+  --no-tablespaces             do not dump tablespace assignments
+  --no-unlogged-table-data     do not dump unlogged table data
+  --quote-all-identifiers      quote all identifiers, even if not key words
+  --section=SECTION            dump named section (pre-data, data, or post-data)
+  --serializable-deferrable    wait until the dump can run without anomalies
+  --use-set-session-authorization
+                               use SET SESSION AUTHORIZATION commands instead of
+                               ALTER OWNER commands to set ownership
+
+Connection options:
+  -d, --dbname=DBNAME      database to dump
+  -h, --host=HOSTNAME      database server host or socket directory
+  -p, --port=PORT          database server port number
+  -U, --username=NAME      connect as specified database user
+  -w, --no-password        never prompt for password
+  -W, --password           force password prompt (should happen automatically)
+  --role=ROLENAME          do SET ROLE before dump
+
+\end{verbatim}
+
+\subsection{Connection options}
+The connection options specify the way the program connects to the cluster. All the options are 
+straightforward except for the password. Is possible to avoid the password prompt or to disable it 
+but the password cannot be specified on the command line. In an automated dump script this can be 
+worked around exporting the variable PGPASSWORD\index{PGPASSWORD} or using the password 
+file.\newline
+
+The PGPASSWORD variable is considered not secure and shouldn't be used if untrusted users are 
+accessing the server. The password file is a text file named .pgpass and stored in the home 
+directory of the os user which connects to the cluster.\newline
+Each file's line specify a connection using the following format.
+
+\begin{verbatim}
+hostname:port:database:username:password
+\end{verbatim}
+
+If, for example, we want to connect to the database \textit{db\_test} with the username 
+\textit{usr\_test} on the host \textit{tardis} with port \textit{5432} and the password is 
+\textit{testpwd}\footnote{Please, don't use this simple password on production systems but generate 
+a decent password with pwgen}, the password file will contain this row
+
+\begin{verbatim}
+tardis:5432:db_test:usr_test:testpwd
+\end{verbatim}
+
+For security reasons the file will not work if group or others accessible. In order to make it work 
+you should issue the command chmod go-rw .pgpass . The password file is used also by other
+PostgreSQL programs like the client psql.\newline
+
+\subsection{General options}
+The general options are a set of switches used to control the backup's output and format. 
+
+The -f followed by the FILENAME outputs the backup on file.\newline
+
+The -F specifies the backup format and requires a second option to tell pg\_dump which format to 
+use. The option can be one of those, \textit{c d t p} which corresponds to 
+\textit{custom directory tar plain}.\newline
+
+If the parameter is omitted then pg\_dump uses the p format. This outputs a SQL script which 
+recreates the objects when loaded into an empty database. The format is not compressed and is 
+suitable for direct load using the client psql. 
+
+The the custom together with the directory format  is most versatile format. It offers compression 
+and flexibility at restore time. The file offers the parallel restore functionality and the 
+selective restore of single objects.\newline
+
+The directory format stores the schema dump, the dump's table of contents alongside with the 
+compressed data dump in the directory specified with the -f switch. Each table is saved in a 
+different file and is compressed by default.From the version 9.3 this format offers the parallel 
+dump functionality.\newline
+
+The tar format stores the dump in the conservative tape archive format. This format is compatible 
+with directory format, does not supports compression and have the 8 GB limit on the size of 
+individual tables.\newline
+
+The -j option specifies the number of jobs to run in parallel for dumping the data. This feature 
+appeared in the version 9.3 and uses the transaction's snapshot export to give a consistent data 
+snapshot to the export jobs. The switch is usable only with the directory format and only 
+against PostgreSQL 9.2 and later.\newline 
+
+The option -Z specifies the compression level for the compressed formats. The default is 5 
+resulting in a dumped archive from 5 to 8 times smaller than the original database. 
+
+The option --lock-wait-timeout is the number of milliseconds for the table's lock acquisition. 
+When expired the dump will fail. Is useful to avoid the program to wait forever for a table lock 
+but can result in failed backups if set too much low.
+
+\subsection{Output options}
+The output options control the way the program outputs the backup. Some of those options are 
+meaningful only under specified conditions, other are quite obvious.\newline
+
+The -a option sets the data only export. Separating schema and data have some effects at restore 
+time, in particular with the performance. We'll see in the detail in \ref{cha:RESTORE} how to 
+build an efficient two phase restore.\newline
+
+The -b option exports the large objects. This is the default setting except if the -n switch is 
+used. In this case the -b is required to export the large objects.\newline
+
+The options -c and -C are meaningful only for the plain output format. They respectively add the 
+DROP and CREATE command before the object's DDL. For the archive formats the same option exists for 
+pg\_restore.\newline
+
+The -E specifies the character encoding for the archive. If not set the origin database encoding 
+will be used.\newline 
+
+The -n switch is used to dump the named schema only. It's possible to specify multiple -n switches 
+to select many schemas or using the wildcards. However despite the efforts of pg\_dump to get all 
+the dependencies resolved, something could be missing. There's no guarantee the resulting archive 
+can be successfully restored.\newline
+
+The -N switch does the opposite of the -n switch. Skips the named schema. Accepts wildcards and 
+it's possible to specify multiple schemas with multiple -N switches. When both -n and -N are given, 
+the behavior is to dump just the schemas that match at least one -n switch but no -N switches. If -N 
+appears without -n, then schemas matching -N are excluded from what is otherwise a normal 
+dump.\newline
+
+The -o option dumps the object id as part of the table for every table. This options should be 
+used only if the OIDs are part of the design. Otherwise this option shouldn't be used.\newline
+
+The -O have effects only on plain text exports and skips the object ownership set.\newline
+
+The -s option dumps only the database schema.\newline
+
+
+The -S option is meaningful only for plain text exports. This is the super user which disables the 
+triggers if the export is performed with the option --disable-triggers. Anyway, as suggested on the 
+manual, it's better to run the restoring script as superuser.\newline
+
+The -t switch is used to dump the named table only. It's possible to specify multiple tables using 
+the wildcards or specifying the -t more.\newline
+
+The -T does the opposite, skips the named table in the dump.\newline
+
+The switch -x skips dumping the privileges settings usually dumped as grant/revoke commands.\newline
+
+The option --binary-upgrade is used only for the in place upgrade program pg\_upgrade. Is not 
+for general usage. 
+
+
+The option --column-inserts result in the data exported as INSERT commands with all the column 
+names specified. Because by default the data is saved as COPY statement, using this switch will 
+results in a bigger dump file and a very slow restoration. It's sole advantage is any error in the 
+restore will skip just the affected row and not the entire table's load.\newline
+
+The --disable-dollar-quoting disables the newer dollar quoting for the function's body and uses the 
+standard SQL quoting.\newline
+
+The --disable-triggers emits the triggers disable 
+and re enable for the data only export. Disabling the triggers ensure the foreign keys won't fail 
+for the missing referenced data. This switch is meaningful only for the plain text export.\newline
+
+The --exclude-table-data=TABLE skips the data for the named table but dumps the table's definition. 
+It follow the same rules of the -t and -T for specifying multiple tables.\newline
+
+The --insert dumps the data as INSERT command. Same as the --column-inserts the restore is very 
+slow and should be used only for reloading data into non-PostgreSQL databases.\newline
+
+The --no-security-labels doesn't include the security labels into the dump file.\newline
+
+The --no-synchronized-snapshots  allows the parallel export against pre 9.2 databases. Because the 
+snapshot export feature is missing this means the database shall not change its status meanwhile 
+the export is running. Otherwise there will be a not consistent data export. If in doubt do not 
+use this option.\newline
+
+The --no-tablespaces skips the tablespace assignments.\newline
+
+The --no-unlogged-table-data does not export data for the unlogged relations.\newline
+
+The --quote-all-identifiers  cause all the identifiers to be enclosed in double quotes. By default 
+only the identifiers with keyword's name are quoted.\newline
+
+The --section option specifies one of the three export's sections. The pre-data, with the 
+table, the view and the function definitions. The data section where the actual table data is 
+dumped as COPY or INSERTS, accordingly with the command line options. The post-data section 
+where the constraint, the index and the eventual GRANT REVOKE commands are finally executed. This 
+switch is meaningful only for text exports. \newline
+
+The --serializable-deferrable uses a serializable transaction for the dump, to ensure the database 
+state is consistent. The dump execution waits for a point in the transaction stream without 
+anomalies to avoid the risk of the dump failing or causing other transactions to abort for the 
+serialization\_failure. The option is not beneficial for a dump intended only for disaster 
+recovery. It's useful for the dump used for reloading the data into a read only database which 
+needs to have a consistent state compatible with the origin's database.\newline
+
+The switch --use-set-session-authorization causes the usage of SET SESSION AUTHORIZATION 
+commands instead of ALTER OWNER commands to set the objects ownership. The resulting dump is more 
+standards compatible but the SET SESSION AUTHORIZATION command requires the super user privileges 
+whereas ALTER OWNER doesn't.
+
+
+
+
+\section{Internals}
+\label{sec:PGDUMPINT}

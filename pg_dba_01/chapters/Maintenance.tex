@@ -262,7 +262,7 @@ VACUUM accepts the FREEZE \index{VACUUM FREEZE} clause which forces a complete t
 regardless to the age. That's equivalent to run the VACUUM setting the vacuum\_freeze\_min\_age to 
 zero.
 
-There are various GUC parameters governing VACUUM
+There are few GUC parameters controlling VACUUM
 
 \subsection{vacuum\_freeze\_table\_age}
 As seen before, VACUUM this parameter triggers a whole table scan if the table's 
@@ -701,11 +701,19 @@ and \ref{sec:REINDEX}.
  
 
 
-\section{The autovacuum daemon}\index{AUTOVACUUM}
+\section{The autovacuum}\index{AUTOVACUUM}
 \label{sec:AUTOVACUUM}
 The autovacuum daemon appeared with the revolutionary PostgreSQL version 8.0. With the version 8.3 
-was also enabled by default because reliable and efficient. Alongside with vacuum, the autovacuum 
-GUC parameters are the following.
+was also enabled by default because reliable and efficient. Having the autovacuum turned on is a 
+good idea because all the maintenance is done automatically by the system. The number of workers to 
+start is not simple to determine. Each process consumes a connection slot and changing the 
+number of workers requires the cluster's restart. Turning off autovacuum does't disable it, the 
+worker starts automatically to vacuum tables near to the transacion ID and multixact ID wraparound 
+failure. In order to have autovacuum working the statistic collector must be enabled with 
+track\_counts= 'on'.\newline
+
+
+The autovacuum behaviour is controlled using few GUC parameters.
 
 \subsection{autovacuum} 
 This parameter is used to enable or disable the autovacuum daemon. Changing the setting requires 

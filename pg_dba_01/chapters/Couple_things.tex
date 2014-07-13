@@ -1,2 +1,132 @@
 \chapter{A couple of things to know before start coding...}
 \label{cha:COUPLETHINGS}
+\section{SQL is your friend}
+\section{Design comes first}
+\section{Clean coding}
+\subsection{The identifier's name}
+Any DBMS have its way of managing the identifiers. Oracle for example sets all the names in 
+uppercase. PostgreSQL does the opposite and changes the identifier's name in  lowercase. This 
+doesn't work very well with the camel case. The PostgreSQL's workaround is to enclose 
+all the identifiers in double quotes. This means you have to put it everywhere, making the code 
+difficult to read and to mantain. It's simpler to avoid the camel case and stick to the 
+underscores.This will also have a beneficial effect on your DBA, avoiding him to get massive 
+headache. If you don't have a DBA see \ref{sec:GETDBA}.
+
+\subsection{Self explaining schema}
+When a database's structure become complex it's very difficult to say what is what and how 
+it relates with the other objects. A design diagram or a data dictionary can give some help, but 
+they can be outdated or maybe are not generally accessible. Adopting a simple naming convention for 
+the relation's name will give an immediate outlook of the object's kind.\newline
+
+My personal coding convention is a simple prefix to put on the identifiers.
+\begin{table}[H]
+\begin{tabular}{ll}
+ \textbf{Object} & \textbf{Prefix}  \\
+ \hline
+ Table & t\_ \\
+ View & v\_ \\
+Index & idx\_ \\
+Unique index & uidx\_ \\
+Primary key & pk\_ \\
+Foreign key & fk\_ \\
+Check & chk\_ \\
+Unique key & uk\_ \\
+Type & ty\_ \\
+Sql function & fn\_sql\_ \\
+PlPgsql function & fn\_plpg\_ \\
+PlPython function & fn\_plpy\_ \\
+PlPerl function & fn\_plpr\_ \\
+Trigger & trg\_ \\
+rule & rul\_ \\
+
+\end{tabular}
+\end{table}
+
+Using this method the column names, it shows column's data type at glance.
+
+\begin{table}[H]
+\begin{tabular}{ll}
+ \textbf{Type} & \textbf{Prefix}  \\
+ \hline
+ Character & c\_ \\
+ Character varying & v\_ \\
+Integer & i\_ \\
+Text & t\_ \\
+Bytea & by\_ \\
+Numeric & n\_ \\
+Timestamp & ts\_ \\
+Date & d\_ \\
+Double precision & dp\_ \\
+Hstore & hs\_ \\
+Custom data type & ty\_ \\
+
+\end{tabular}
+\end{table}
+
+
+
+
+\subsection{Query formatting}
+Another thing gives me headache is when I receive something like this...
+
+\begin{verbatim}
+select * from debitnoteshead a join debitnoteslines b on debnotid 
+where a.datnot=b. datnot and b.deblin>1;
+\end{verbatim}
+
+There are various tools to prettify those queries, but this doesn't solve the problem.
+Writing this way shows a lack of care on what the statement is doing and without knowledge and 
+readability, solving the problem is quite difficult.\newline
+
+The query have various issues.
+
+\begin{itemize}
+ \item \textbf{lowercase keywords} this makes hard to spot them from the identifiers which are 
+lowercase as well
+\item \textbf{the wildcard *} have some bad effects; it hides the required columns 
+making the query's purpose unclear; it returns all the column values with bigger bandwidth usage; 
+forbids the index only scans
+\item \textbf{the generic aliases} like \textit{a} and \textit{b} is the same as using generic 
+variable names in a program. it makes difficult to reconstruct the list of tables involved in the 
+query.
+\item \textbf{the single line statement} makes difficult to understand the query's levels of 
+complexity .
+\end{itemize}
+
+To write a decent query it's not complicated, it's sufficient follow few simple rules
+
+\begin{itemize}
+ \item All SQL keywords should be in upper case
+ \item All the identifiers should be indented on the query's level
+ \item All the current query's keywords should be indented at same level
+ \item Don't use the SELECT * but specify only the columns you really need
+ \item When joining please use always the keyword ON to make clear the joining points
+ \item Adopt meaningful aliases
+\end{itemize}
+
+Here's the clearer SQL
+\begin{verbatim}
+SELECT
+        productcode,
+        noteid,
+        datnot
+FROM
+        debitnoteshead head
+        INNER JOIN
+                debitnoteslines lines
+                ON
+                                head.debnotid=lines.debnotid
+                        AND     head.datnot=lines.datnot
+WHERE
+               lines.deblin>1
+;
+\end{verbatim}
+
+Obviously for existing code some of those rules aren't applicable, but for the new code and 
+projects teaching the developers to write decent SQL it's a step forward to let them understand the 
+database is more than a stupid storage area.
+This is a reasonable objective and I'm sure it worth to spend time to achieve it.
+
+
+\section{Get DBA advice}
+\label{sec:GETDBA}
