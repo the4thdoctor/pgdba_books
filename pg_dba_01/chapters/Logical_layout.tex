@@ -360,7 +360,8 @@ depth in \ref{cha:MAINTENANCE}.
 
 
 \section{Views}
-\index{view}
+\index{views}
+\label{sec:VIEWS}
 A view is the representation of a query, stored in the system catalogue 
 for quick access. All the objects involved in the view are translated to the 
 internal identifiers at the creation time; the same happens for any wild card 
@@ -701,7 +702,7 @@ Read\\
     Repeatable read   &  Not possible  & Not possible  &  Possible\\
     Serializable      &  Not possible  & Not possible   & Not possible\\
   \end{tabular}
-  \caption{\label{tab:TRNISOLATION}Standard SQL Transaction Isolation Levels}
+  \caption{\label{tab:TRNISOLATION}SQL Transaction isolation levels}
 \end{table}
 
 By default the global isolation level is set to read committed, it's possible 
@@ -715,5 +716,70 @@ To change the default transaction isolation level cluster wide there is the GUC
 parameter transaction\_isolation.
 
 
+\subsection{Snapshot exports}
+\label{sub:SNAPEXPORT}
+Since PostgreSQL 9.2 are supported the transaction's snapshot exports. A session with an open 
+transaction, can export its consistent snapshot to any other session. The snapshot remains valid 
+meanwhile the transaction is open. Using this functionality offers a way to run multiple backends 
+on a consistent data set frozen in time. This feature resulted in the brilliant parallel export in 
+the 9.3's pg\_dump as described in \ref{sec:PGDUMPINT}.\newline
 
+In the following example, let's consider the table created in \ref{sec:VIEWS}. We'll first start an 
+explicit transaction and then we'll export the current snapshot.
+
+\begin{lstlisting}[style=pgsql]
+postgres=# BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+BEGIN
+postgres=# SELECT pg_export_snapshot();
+ pg_export_snapshot 
+--------------------
+ 00001369-1
+(1 row)
+
+postgres=# SELECT count(*) FROM t_data;
+ count 
+-------
+   200
+(1 row)
+
+\end{lstlisting}
+
+We are first starting a transaction with the REPEATABLE READ isolation level. The second 
+statement exports the current snapshot using the function pg\_export\_snapshot(). Finally we are 
+checking with a simple row count the table t\_data have data inside.\newline
+
+We can now login with in a different session and delete all the rows from the t\_data table.
+
+\begin{lstlisting}[style=pgsql]
+postgres=# DELETE FROM t_data;
+DELETE 200
+postgres=# SELECT count(*) FROM t_data;
+ count 
+-------
+     0
+(1 row)
+
+\end{lstlisting}
+
+With the table now empty let's import the snapshot exported by the first backend.
+
+\begin{lstlisting}[style=pgsql]
+postgres=# BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+BEGIN
+postgres=# SET TRANSACTION SNAPSHOT '00001369-1';
+SET
+postgres=# SELECT count(*) FROM t_data;
+ count 
+-------
+   200
+(1 row)
+
+\end{lstlisting}
+
+The function pg\_export\_snapshot saves the current snapshot returning the text string which 
+identifies the snapshot. Passing the string to clients that want to import the snapshot gives to 
+independent sessions a single consistent vision. The import is possible only until the end of the 
+transaction that exported it. The export is useful only in the READ COMMITTED transactions, 
+because the REPEATABLE READ and higher isolation levels use the same snapshot within their 
+lifetime. 
 

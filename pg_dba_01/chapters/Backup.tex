@@ -143,6 +143,7 @@ When expired the dump will fail. Is useful to avoid the program to wait forever 
 but can result in failed backups if set too much low.
 
 \subsection{Output options}
+\label{sub:PGDUMPOUTPUT}
 The output options control the way the program outputs the backup. Some of those options are 
 meaningful only under specified conditions, other are quite obvious.\newline
 
@@ -245,7 +246,181 @@ standards compatible but the SET SESSION AUTHORIZATION command requires the supe
 whereas ALTER OWNER doesn't.
 
 
+\section{Performance tips}
+Despite the fact pg\_dump doesn't affects the running queries, its strict transactional approach 
+have some effects on the affected schema. Any alter schema is blocked until the backup's end. The 
+vacuum efficiency is affected as well, because all the dead rows generated during the backup's run, 
+cannot be reclaimed being potentially required by the backup's running transaction.\newline
+
+There are some tips to improve the backup's speed.
+
+\subsection{Avoid remote backups}
+The pg\_dump can connect to remote databases same like any other PostgreSQL client.
+It seems reasonable then to use the program installed on a centralised storage and to dump locally 
+from the remote cluster.\newline 
+Unfortunately even using the compressed format, the entire database flows uncompressed and in 
+clear, from the server to the remote pg\_dump. The compression happens locally when the data is 
+received.\newline
+This approach expose also a network security issue. If the environment is not trusted then the 
+remote connection must happen on a secure channel. This add an extra overhead to the transfer and 
+any failure on this layer will fail the entire backup.\newline
+A far better approach is to save locally the database, using the local connection if possible, and 
+then copy the entire dump file using a secure transfer protocol like scp or sshfs.
+
+\subsection{Skip replicated tables}
+If the database is configured as logical slave in slony or londiste for example, backing up the 
+replicated table's data is not important as the contents are re synchronised from the master when 
+the node is attached to the replication system. The switch --exclude-table-data=TABLE is then 
+useful for dumping the table's definition only without the contents.
+
+\subsection{Check for slow cpu cores}
+PostgreSQL is a multitasking but not a multithreaded database system. Each backend is attached 
+to just one cpu. The pg\_dump opens one backend connection to the cluster in order to 
+export the database objects. The pg\_dump process receives the data flow from the backend and it 
+saves performing also the optional compression. In this scenario the cpu power is critical in order 
+to avoid a bottleneck. This could be helped using the parallel export offered by pg\_dump from the 
+version 9.3. The functionality is implemented via  the snapshot exports. As this was introduced 
+with PostgreSQL 9.2 the paralle export can happen only from this version and only if the output 
+format is directory . 
+
+\subsection{Check for the available locks}
+PostgreSQL at various level uses the locks to ensure the data consistency at various levels. For 
+example, when a table is read an access share lock on the relation is put in order to avoid any 
+structure change. Any backend issuing an ALTER TABLE which affect the table structure, will wait 
+for the lock to be released before acquiring itself an exclusive lock and then perform the change.
+The relation's locks are stored into the pg\_locks table. This table is quite unique because have 
+a limited number of rows. The maximum number of table's lock slot is determine with this simple 
+formula.\newline
+\begin{math}
+ max_locks_per_transaction * (max_connections + max_prepared_transactions)
+\end{math}\newline
+
+The default configuration permits have only 6400 table's lock slots. This value is generally OK. 
+However, if the database have a great number of relations, a full backup, pg\_dump could hit the 
+slot limit and fail with an out of memory error.\newline
+All the three GUC parameters require a restart to apply the new changes so is very important to 
+plan the change before the limit is reached. 
+
+\subsection{Try to use flexible formats}
+This is more a good practice suggestion rather a performance tip. Exporting the database in plain 
+text have some advantages. Is possible to load the dump just using psql and any file's corruption 
+can be managed in a simple way; if the damage is limited of course. The custom and directory 
+formats need the pg\_restore utility for the restoration. We'll take a look to this approach in 
+\ref{cha:RESTORE}. Anyway, the custom and directory formats have alongside with the compression, 
+the parallel restore feature and the selective restoration. The compression can be fine tuned to 
+suit the export's nature. In this era of ``big data'' is something to consider seriously.
 
 
-\section{Internals}
+\section{pg\_dump under the bonnet}
 \label{sec:PGDUMPINT}
+The pg\_dump source code gives a very good picture of what exactly the backup 
+software does. The process runs into with fixed transaction's isolation level accordingly with the 
+server's version. 
+The distinction is required because, becoming PostgreSQL more sophisticated at each major release, 
+the isolation levels became more and more strict with their meanings.\newline
+More informations about the transactions are in \ref{sec:TRANSACTION}.\newline
+From PostgreSQL 9.1 the transaction serializable became a real serialisation. The 
+transaction's behaviour offered by the serializable in the version up to 9.0 were assigned to the 
+REPETABLE READ transaction's isolation, its real kind. The SERIALIZABLE transaction's isolation 
+level is still used with DEFERRABLE option when pg\_dump is executed with 
+the option --serializable-deferrable as seen in \ref{sub:PGDUMPOUTPUT}. The switch have effect only 
+on the remote server with version 9.1 and later. The transaction is also set to READ ONLY, when 
+supported by the server, in order to limit the XID generation. \newline
+
+\begin{table}[H]
+  \begin{tabular}{ll}
+    Server version & Command    \\ 
+    \hline
+    \textgreater=  9.1 &  REPEATABLE READ, READ ONLY        \\
+    \textgreater= 9.1 with --serializable-deferrable  &  SERIALIZABLE, READ ONLY, DEFERRABLE  \\
+    \textgreater= 7.4 &  SERIALIZABLE READ ONLY   \\
+    \textless 7.4 &  SERIALIZABLE \\
+  \end{tabular}
+  \caption{\label{tab:TRNPGDUMP}pg\_dump's transaction isolation levels }
+\end{table}
+
+From the version 9.3 pg\_dump supports the parallel dump using the feature seen in  
+\ref{sub:SNAPEXPORT}. As the snapshot export is supported from the version 9.2 this permit a 
+parallel dump from the older major version if using the newer backup program. However, 
+pg\_dump accepts the option --no-synchronized-snapshots in order to dump in parallel jobs 
+from the older versions. The data is not supposed to be consistent if there are  read write 
+transactions during this kind of export. To have a consistent export in this case all the 
+transactions which modify the data must be stopped meanwhile the export is in progress.\newline 
+
+When exporting in parallel the only permitted format is the directory. The pg\_restore program 
+since the version 9.3 supports also the directory format for the paralelle data restoration.
+The combination of the parallel jobs backup and the parallel jobs restore, can improve massively 
+either the backup and the recovery speed in case of disaster.
+
+\section{pg\_dumpall}
+The pg\_dumpall program is mostly a wrapper for pg\_dump. It's usage is mainly for dumping all the 
+databases in the cluster. Having lesser options than pg\_dump is also less flexible. However one 
+option is absolutely useful and should be included in any backup plan to ensure a rapid recovery 
+in case of disaster.\newline
+
+The --globals-only option saves on the standard output all the cluster wide options like the 
+tablespaces, the roles and the privileges. The passwords are dumped as well encrypted in md5 
+format. The dump format for this utility is only text. The best way to save the globals is to 
+specify the -f option followed by the file name. This file can be loaded into an empty cluster to 
+recreate the global objects. The tablespaces, if any present, must have the filesystem already in 
+place before running the sql as PostgreSQL doesn't create the filesystem structure.\newline
+
+This example shows the program call and the contents of the output file.
+\begin{verbatim}
+postgres@tardis:~/dmp$ pg_dumpall --globals-only -f main_globals.sql
+postgres@tardis:~/dmp$ cat main_globals.sql 
+--
+-- PostgreSQL database cluster dump
+--
+
+SET default_transaction_read_only = off;
+
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+
+--
+-- Roles
+--
+
+CREATE ROLE postgres;
+ALTER ROLE postgres WITH SUPERUSER INHERIT CREATEROLE CREATEDB LOGIN REPLICATION;
+
+
+
+
+
+
+--
+-- PostgreSQL database cluster dump complete
+--
+
+postgres@tardis:~/dmp$ 
+
+\end{verbatim}
+
+
+\section{Backup validation}
+There's little advantage in having a backup if this is not restorable. The corruption danger is at 
+various levels and unfortunately the problem appears only when the restore is needed.\newline 
+
+The corruption have many causes. If the dump is saved locally a damaged filesystem can hide the 
+problem meanwhile the corrupted block is not read. Also the disk subsystem with undetected problems 
+will result in a silent corruption. In order to limit this kind of problems the filesystem of 
+choice should be a solid one with strong journaling support.\newline
+
+The disk subsystem should guarantee the data reliability rather the speed. Slow disks when backing 
+up the data, in particular if in the compressed format don't limit the speed, being the cpu power 
+the real bottleneck.\newline
+If the dump file is transferred over the network is a good idea to generate a md5 checksum to 
+check the file integrity after the transfer.\newline
+
+All those measures don't give the security the backup is restorable. The only test capable to 
+ensure the backup is good is a test restore on separate server. This can be a single test or a more 
+structured check. Which strategy to adopt is determined by the amount of data, the time required 
+for the restore and the backup schedule.\newline
+
+The general purpose databases, which size is measurable in hundreds of gigabytes, the restore can 
+complete in few hours and the continuous test is feasible. For the VLDB, which size is measured in 
+terabytes, the restore can take more than one day, in particular if there are big indices requiring 
+expensive sort on disk for the build. In this scenario a weekly restore gives a good perception if 
+there are potential problems with the saved data. 
