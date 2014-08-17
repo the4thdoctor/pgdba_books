@@ -21,7 +21,8 @@ regulary VACUUM have some beneficial effects.
 \begin{itemize}
  \item It reclaims back the dead tuple's disk space.
  \item It updates the visibility map making the index scans run faster.
- \item It freezes the tuples with old XID protecting from the XID wraparound\index{XID wraparound} 
+ \item It freezes the tuples with old XID protecting from the XID wraparound\index{XID wraparound 
+failure} 
 data loss
 \end{itemize}
 

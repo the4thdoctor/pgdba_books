@@ -1,4 +1,5 @@
 \chapter{Backup}
+\label{cha:BACKUP}
 The hardware is subject to faults. In particular if the storage is lost the entire data 
 infrastructure becomes inaccessible, sometime for good. Also human errors, like not filtered 
 delete or table drop can happen. Having a solid backup strategy is then the best protection, 
@@ -7,14 +8,15 @@ backup with pg\_dump.
 
 \section{pg\_dump at glance}
 \label{sec:PGDUMP}
-As seen in \ref{sub:PGDUMP}, pg\_dump is the PostgreSQL's utility for saving consistent backups. 
+As seen in \ref{sub:PGDUMP}, pg\_dump\index{pg\_dump} is the PostgreSQL's utility for saving 
+consistent backups. 
 Its usage is quite simple and if launched without options it tries to connect to the local cluster 
 with the current user sending the dump to the standard output.\newline
 
 The pg\_dump help gives useful informations about the usage.
 
 \begin{verbatim}
-postgres@tardis:~/dump$ pg_dump --help
+postgres@tardis:~/dump pg_dump --help
 pg_dump dumps a database as a text file or to other formats.
 
 Usage:
@@ -76,6 +78,7 @@ Connection options:
 \end{verbatim}
 
 \subsection{Connection options}
+\index{pg\_dump, connection options}
 The connection options specify the way the program connects to the cluster. All the options are 
 straightforward except for the password. Is possible to avoid the password prompt or to disable it 
 but the password cannot be specified on the command line. In an automated dump script this can be 
@@ -86,7 +89,7 @@ The PGPASSWORD variable is considered not secure and shouldn't be used if untrus
 accessing the server. The password file is a text file named .pgpass and stored in the home 
 directory of the os user which connects to the cluster.\newline
 Each file's line specify a connection using the following format.
-
+\index{password file}
 \begin{verbatim}
 hostname:port:database:username:password
 \end{verbatim}
@@ -100,16 +103,18 @@ a decent password with pwgen}, the password file will contain this row
 tardis:5432:db_test:usr_test:testpwd
 \end{verbatim}
 
-For security reasons the file will not work if group or others accessible. In order to make it work 
-you should issue the command chmod go-rw .pgpass . The password file is used also by other
-PostgreSQL programs like the client psql.\newline
+For security reasons the file will not work if readable from the group or others. In 
+order to make it work you should issue the command chmod go-rw .pgpass . The password file is used 
+also by other PostgreSQL programs like the client psql.\newline
 
 \subsection{General options}
+\index{pg\_dump, general options}
 The general options are a set of switches used to control the backup's output and format. 
 
 The -f followed by the FILENAME outputs the backup on file.\newline
 
-The -F specifies the backup format and requires a second option to tell pg\_dump which format to 
+The \index{pg\_dump, output formats} -F specifies the backup format and requires a second 
+option to tell pg\_dump which format to 
 use. The option can be one of those, \textit{c d t p} which corresponds to 
 \textit{custom directory tar plain}.\newline
 
@@ -117,14 +122,14 @@ If the parameter is omitted then pg\_dump uses the p format. This outputs a SQL 
 recreates the objects when loaded into an empty database. The format is not compressed and is 
 suitable for direct load using the client psql. 
 
-The the custom together with the directory format  is most versatile format. It offers compression 
+The the custom together with the directory format is most versatile format. It offers compression 
 and flexibility at restore time. The file offers the parallel restore functionality and the 
 selective restore of single objects.\newline
 
 The directory format stores the schema dump, the dump's table of contents alongside with the 
 compressed data dump in the directory specified with the -f switch. Each table is saved in a 
-different file and is compressed by default.From the version 9.3 this format offers the parallel 
-dump functionality.\newline
+different file and is compressed by default. From the version 9.3 this format offers the parallel 
+dump functionality. \index{pg\_dump, parallel export}\newline
 
 The tar format stores the dump in the conservative tape archive format. This format is compatible 
 with directory format, does not supports compression and have the 8 GB limit on the size of 
@@ -143,6 +148,7 @@ When expired the dump will fail. Is useful to avoid the program to wait forever 
 but can result in failed backups if set too much low.
 
 \subsection{Output options}
+\index{pg\_dump, output options}
 \label{sub:PGDUMPOUTPUT}
 The output options control the way the program outputs the backup. Some of those options are 
 meaningful only under specified conditions, other are quite obvious.\newline
@@ -194,10 +200,9 @@ The switch -x skips dumping the privileges settings usually dumped as grant/revo
 The option --binary-upgrade is used only for the in place upgrade program pg\_upgrade. Is not 
 for general usage. 
 
-
 The option --column-inserts result in the data exported as INSERT commands with all the column 
 names specified. Because by default the data is saved as COPY statement, using this switch will 
-results in a bigger dump file and a very slow restoration. It's sole advantage is any error in the 
+results in a bigger dump file and a very slow restore. It's sole advantage is any error in the 
 restore will skip just the affected row and not the entire table's load.\newline
 
 The --disable-dollar-quoting disables the newer dollar quoting for the function's body and uses the 
@@ -247,6 +252,7 @@ whereas ALTER OWNER doesn't.
 
 
 \section{Performance tips}
+\index{pg\_dump, performance tips}
 Despite the fact pg\_dump doesn't affects the running queries, its strict transactional approach 
 have some effects on the affected schema. Any alter schema is blocked until the backup's end. The 
 vacuum efficiency is affected as well, because all the dead rows generated during the backup's run, 
@@ -313,6 +319,7 @@ suit the export's nature. In this era of ``big data'' is something to consider s
 
 \section{pg\_dump under the bonnet}
 \label{sec:PGDUMPINT}
+\index{pg\_dump, internals}
 The pg\_dump source code gives a very good picture of what exactly the backup 
 software does. The process runs into with fixed transaction's isolation level accordingly with the 
 server's version. 
@@ -353,20 +360,22 @@ The combination of the parallel jobs backup and the parallel jobs restore, can i
 either the backup and the recovery speed in case of disaster.
 
 \section{pg\_dumpall}
-The pg\_dumpall program is mostly a wrapper for pg\_dump. It's usage is mainly for dumping all the 
-databases in the cluster. Having lesser options than pg\_dump is also less flexible. However one 
-option is absolutely useful and should be included in any backup plan to ensure a rapid recovery 
-in case of disaster.\newline
+\index{pg\_dumpall}
+The pg\_dumpall program is more very basic version of pg\_dump. It's usage is mainly for 
+dumping all the databases in the cluster. Having lesser options than pg\_dump is also less 
+flexible. However one option is absolutely useful and should be included in any backup plan to 
+ensure a rapid disaster recovery.\newline
 
-The --globals-only option saves on the standard output all the cluster wide options like the 
-tablespaces, the roles and the privileges. The passwords are dumped as well encrypted in md5 
-format. The dump format for this utility is only text. The best way to save the globals is to 
-specify the -f option followed by the file name. This file can be loaded into an empty cluster to 
-recreate the global objects. The tablespaces, if any present, must have the filesystem already in 
-place before running the sql as PostgreSQL doesn't create the filesystem structure.\newline
+The\index{pg\_dumpall, global objects} --globals-only option saves on the standard output all the 
+cluster wide options like the tablespaces, the roles and the privileges. The passwords are dumped as 
+well, encrypted in md5 format if stored this way. The utility output is just plain text. 
+The best way to save the globals is to specify the -f option followed by the file name. This file 
+can be loaded into an empty cluster to recreate the global objects. The tablespaces, if any present, 
+must have the filesystem already in place before running the sql as PostgreSQL doesn't create the 
+filesystem structure.\newline
 
 This example shows the program call and the contents of the output file.
-\begin{verbatim}
+\begin{lstlisting}[style=pgsql]
 postgres@tardis:~/dmp$ pg_dumpall --globals-only -f main_globals.sql
 postgres@tardis:~/dmp$ cat main_globals.sql 
 --
@@ -385,21 +394,17 @@ SET standard_conforming_strings = on;
 CREATE ROLE postgres;
 ALTER ROLE postgres WITH SUPERUSER INHERIT CREATEROLE CREATEDB LOGIN REPLICATION;
 
-
-
-
-
-
 --
 -- PostgreSQL database cluster dump complete
 --
 
-postgres@tardis:~/dmp$ 
+postgres@tardis:~/dmp
 
-\end{verbatim}
+\end{lstlisting}
 
 
 \section{Backup validation}
+\index{backup validation}
 There's little advantage in having a backup if this is not restorable. The corruption danger is at 
 various levels and unfortunately the problem appears only when the restore is needed.\newline 
 

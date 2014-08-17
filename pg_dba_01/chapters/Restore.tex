@@ -1,12 +1,543 @@
 \chapter{Restore}
 \label{cha:RESTORE}
-There's little advantage in saving the data if is not possible to recover the database status. 
-In this chapter we'll take a look to the best way to restore the data using the various formats 
-offered by pg\_dump. 
+There's little advantage in saving the data if the recover is not possible. 
+In this chapter we'll take a look to the fastest and safest way to restore recover the saved 
+dump.\newline
 
-\section{Restoring with psql}
+The backup format determines which program will be used for the restore. 
+We'll take a look first on the restore from plain format. Later we'll see how the custom and 
+directory formats are the best choice, giving flexibility and performance at restore time. Finally 
+we'll see how to improve database performances at restore time sacrificing temporarily the 
+reliability.
 
-\section{Restoring with pg\_restore}
+\section{The plain format}
+\label{sec:PLAINFORMAT}
+As seen in \ref{cha:BACKUP} the pg\_dump by default saves the entire database in plain format. This 
+is an SQL script offering nothing but a straightforward reload strategy. Feeding the saved file 
+into psql rebuilds completely the objects.\newline
+
+This format have few advantages. For example it's possible to edit the statement using a common 
+text editor. This of course if the dump is reasonably small. Even loading a file with vim when 
+its size is measured in gigabytes becomes a stressful experience.\newline
+
+The data is saved by default in the copy format. This guarantee the best performances at load time. 
+It's still possible to save the data using the inserts but this will result in a very slow restore, 
+having each statement to be parsed and planned.\newline
+
+Saving the schema and data in two separate files requires also an extra care at dump time. 
+Restoring from a data only plain backup will very likely result in tables with foreign keys 
+having their data missing because the key violation. \newline
+
+In order to avoid the problem, at backup time and  when running a data only backup, the switch 
+--disable-triggers should be used. This will emit the DISABLE TRIGGER statements before the data 
+load and the ENABLE TRIGGER after the data is consistently restored. The following example will 
+show a dump reload session with the separate schema and data save.
+
+Let's create the simple data structure. We'll create a new database with a table for the addresses 
+and another one for the cities. Between the cities an the addresses a foreign key will enforce the 
+relation on the id city column.
+
+\begin{lstlisting}[style=pgsql]
+postgres=# CREATE DATABASE db_addr;
+CREATE DATABASE
+postgres=# \c db_addr 
+You are now connected to database "db_addr" as user "postgres".
+db_addr=# CREATE TABLE t_address
+        (
+                i_id_addr serial,
+                i_id_city integer NOT NULL,
+                t_addr text,
+                CONSTRAINT pk_id_address PRIMARY KEY (i_id_addr)
+        )
+;
+CREATE TABLE
+db_addr=# CREATE TABLE t_city
+        (
+                i_id_city       serial,
+                v_city          character varying (255),
+                v_postcode      character varying (20),
+                CONSTRAINT pk_i_id_city PRIMARY KEY (i_id_city)
+        )
+;
+CREATE TABLE
+db_addr=# ALTER TABLE t_address ADD 
+	    CONSTRAINT fk_t_city_i_id_city FOREIGN KEY (i_id_city)  
+	    REFERENCES t_city(i_id_city) 
+	      ON DELETE CASCADE 
+	      ON UPDATE RESTRICT;
+ALTER TABLE
+
+\end{lstlisting}
+
+Now let's put some data into it.
+
+\begin{lstlisting}[style=pgsql]
+INSERT INTO t_city
+	    ( 
+	      v_city,	
+	      v_postcode
+	     )
+      VALUES
+	    (
+	      'Leicester - Stoneygate',
+	      'LE2 2BH'
+	    )
+      RETURNING i_id_city
+;
+
+ i_id_city 
+-----------
+         3
+(1 row)
+
+db_addr=# INSERT INTO t_address
+	    ( 
+	      i_id_city,	
+	      t_addr
+	     )
+      VALUES
+	    (
+	      3,
+	      '4, malvern road '
+	    )
+      RETURNING i_id_addr
+;
+
+ i_id_addr 
+-----------
+         1
+(1 row)
+
+
+\end{lstlisting}
+
+We'll now execute two dumps one for the schema and one for the data without the disable triggers 
+switch.
+
+\begin{verbatim}
+postgres@tardis:~/dmp$ pg_dump --schema-only db_addr > db_addr.schema.sql
+postgres@tardis:~/dmp$ pg_dump --data-only db_addr > db_addr.data.sql
+
+\end{verbatim}
+
+Looking to the schema dump it's quite obvious what it does. All the DDL are saved in the correct 
+order to restore the same database structure .\newline
+The data is then saved by pg\_dump in the correct order for having the referential integrity 
+guaranteed. In our very simple example the table t\_city is dumped before the table t\_address. 
+This way the data will not violate the foreign key. In a scenario where a complex structure 
+is dumped, this cannot be guaranteed. Let's run the same dump with the option --disable-trigger.
+
+\begin{verbatim}
+postgres@tardis:~/dmp$ pg_dump --disable-triggers --data-only db_addr > db_addr.data.sql
+
+\end{verbatim}
+
+The copy statements in this case are enclosed by two extra statements for disabling and re enabling 
+the triggers.
+
+\begin{lstlisting}[style=pgsql]
+
+ALTER TABLE t_address DISABLE TRIGGER ALL;
+
+COPY t_address (i_id_addr, i_id_city, t_addr) FROM stdin;
+1	3	4, malvern road 
+\.
+
+
+ALTER TABLE t_address ENABLE TRIGGER ALL;
+
+\end{lstlisting}
+
+This way the FOREIGN KEY's triggers with any user defined trigger, will be disabled during the 
+restore, ensuring the data will be safely stored. After the restoration the enable will restore any 
+constraint enforcement.\newline
+
+The data saved in plain format is then restored using the command line client psql.
+
+Let's then create a new database and restore it the saved dumps, first schema and then the data.
+
+\begin{lstlisting}[style=pgsql]
+postgres=# CREATE DATABASE db_addr_restore;
+CREATE DATABASE
+postgres=# \c db_addr_restore 
+You are now connected to database "db_addr_restore" as user "postgres".
+db_addr_restore=# \i db_addr.schema.sql 
+SET
+...
+SET
+CREATE EXTENSION
+COMMENT
+SET
+SET
+CREATE TABLE
+ALTER TABLE
+CREATE SEQUENCE
+ALTER TABLE
+ALTER SEQUENCE
+CREATE TABLE
+ALTER TABLE
+CREATE SEQUENCE
+ALTER TABLE
+ALTER SEQUENCE
+ALTER TABLE
+...
+ALTER TABLE
+REVOKE
+REVOKE
+GRANT
+GRANT
+db_addr_restore=# \i db_addr.data.sql 
+SET
+...
+SET
+ALTER TABLE
+...
+ALTER TABLE
+ setval 
+--------
+      1
+(1 row)
+
+ setval 
+--------
+      3
+(1 row)
+
+db_addr_restore=# \d
+                   List of relations
+ Schema |          Name           |   Type   |  Owner   
+--------+-------------------------+----------+----------
+ public | t_address               | table    | postgres
+ public | t_address_i_id_addr_seq | sequence | postgres
+ public | t_city                  | table    | postgres
+ public | t_city_i_id_city_seq    | sequence | postgres
+(4 rows)
+
+\end{lstlisting}
+
+
+
+\section{The binary formats}
+The three binary formats supported by pg\_dump are the custom, the directory and the tar format. 
+The first two can be accessed randomly by the restore program and have the parallel restore 
+support, being the best choice for having a flexible and reliable restore. Before the the 9.3 the 
+only format supporting the parallel restore was the custom. With this version the directory 
+format accepts the -j switch. This feature, combined with the parallel dump seen in 
+\ref{sec:PGDUMPINT} is a massive improvement for saving big amount of data. The tar format does 
+have the limit of 12 GB in the archive's file size and doesn't offer the parallel restore nor the 
+selective restore. \newline
+
+The custom format is a binary archive with a table of contents pointing the various archive 
+sections. The directory format is a directory which name is the value provided with the -f switch. 
+The directory contents are a toc.dat file, where the table of contents and the schema are stored. 
+For each table there is a gzip file which name is a number corresponding to the toc entry for the 
+saved relation. Those files store the data restore for the relation.\newline
+
+
+The restore from the binary formats requires the pg\_restore usage. Because almost 
+all the pg\_dump's switches are supported by pg\_restore we'll not repeat the look out. Take a look 
+to  \ref{sec:PGDUMP} for the switch meanings. Anyway this is the pg\_restore's help output.
+\newline 
+
+\begin{verbatim}
+pg_restore restores a PostgreSQL database from an archive created by pg_dump.
+
+Usage:
+  pg_restore [OPTION]... [FILE]
+
+General options:
+  -d, --dbname=NAME        connect to database name
+  -f, --file=FILENAME      output file name
+  -F, --format=c|d|t       backup file format (should be automatic)
+  -l, --list               print summarized TOC of the archive
+  -v, --verbose            verbose mode
+  -V, --version            output version information, then exit
+  -?, --help               show this help, then exit
+
+Options controlling the restore:
+  -a, --data-only              restore only the data, no schema
+  -c, --clean                  clean (drop) database objects before recreating
+  -C, --create                 create the target database
+  -e, --exit-on-error          exit on error, default is to continue
+  -I, --index=NAME             restore named index
+  -j, --jobs=NUM               use this many parallel jobs to restore
+  -L, --use-list=FILENAME      use table of contents from this file for
+                               selecting/ordering output
+  -n, --schema=NAME            restore only objects in this schema
+  -O, --no-owner               skip restoration of object ownership
+  -P, --function=NAME(args)    restore named function
+  -s, --schema-only            restore only the schema, no data
+  -S, --superuser=NAME         superuser user name to use for disabling triggers
+  -t, --table=NAME             restore named table(s)
+  -T, --trigger=NAME           restore named trigger
+  -x, --no-privileges          skip restoration of access privileges (grant/revoke)
+  -1, --single-transaction     restore as a single transaction
+  --disable-triggers           disable triggers during data-only restore
+  --no-data-for-failed-tables  do not restore data of tables that could not be
+                               created
+  --no-security-labels         do not restore security labels
+  --no-tablespaces             do not restore tablespace assignments
+  --section=SECTION            restore named section (pre-data, data, or post-data)
+  --use-set-session-authorization
+                               use SET SESSION AUTHORIZATION commands instead of
+                               ALTER OWNER commands to set ownership
+
+Connection options:
+  -h, --host=HOSTNAME      database server host or socket directory
+  -p, --port=PORT          database server port number
+  -U, --username=NAME      connect as specified database user
+  -w, --no-password        never prompt for password
+  -W, --password           force password prompt (should happen automatically)
+  --role=ROLENAME          do SET ROLE before restore
+
+If no input file name is supplied, then standard input is used.
+
+Report bugs to <pgsql-bugs@postgresql.org>.
+ 
+\end{verbatim}
+
+
+If the database connection is omitted pg\_restore sends the output to the standard output. The 
+switch -f sends the output to a filename though. This is very useful if we want to check the 
+original dump file is readable, executing a restore onto the /dev/null device.\newline
+The the custom and directory formats show their power when restoring on a database 
+connection in a multi core system. Using the -j switch it's possible to specify the number of 
+parallel jobs for the data and the post data section. This can improve massively the 
+recovery time, running the most time consuming actions in multiple processes.\newline
+
+The word \textit{parallel} can be confusing in some way. PostgreSQL does not supports 
+multithreading. That means each backend process will use just only one cpu. In this context, each 
+job take care of a different area of the restore's table of contents, The TOC is split in 
+many queues with a fixed object list to process. For example one queue will contain the data 
+restoration for a table, and the relation's indices and constraints.\newline
+
+The switch --section offers a fine grain control on which section of the archived data will be 
+restored. In a custom and directory format there are three distinct sections. 
+\begin{itemize}
+ \item \textbf{pre-data} This section restores only the schema definitions not affecting the speed 
+and reliability of the data restore. e.g. table's DDL, functions creation, extensions, etc.
+\item  \textbf{data} The data restore itself, by default saved as COPY statements to speed up the 
+process
+\item  \textbf{post-data} This section runs the restore for all the objects enforcing the data 
+integrity, like the primary and foreign keys, triggers and the indices which presence during the 
+restore slow down the data reload massively.
+\end{itemize}
+
+The switch -C creates the target database before starting the restoration. To do this the 
+connection must happen first on another database. \newline
+
+We'll now will see how to restore the database seen in \ref{sec:PLAINFORMAT} in the same two 
+steps approach, using the custom format.\newline
+
+Let's start with a complete database dump using the custom format. 
+
+\begin{verbatim}
+postgres@tardis:~/dump$ pg_dump -Fc -f db_addr.dmp  db_addr
+pg_dump: reading schemas
+pg_dump: reading user-defined tables
+pg_dump: reading extensions
+pg_dump: reading user-defined functions
+pg_dump: reading user-defined types
+pg_dump: reading procedural languages
+pg_dump: reading user-defined aggregate functions
+pg_dump: reading user-defined operators
+pg_dump: reading user-defined operator classes
+pg_dump: reading user-defined operator families
+pg_dump: reading user-defined text search parsers
+pg_dump: reading user-defined text search templates
+pg_dump: reading user-defined text search dictionaries
+pg_dump: reading user-defined text search configurations
+pg_dump: reading user-defined foreign-data wrappers
+pg_dump: reading user-defined foreign servers
+pg_dump: reading default privileges
+pg_dump: reading user-defined collations
+pg_dump: reading user-defined conversions
+pg_dump: reading type casts
+pg_dump: reading table inheritance information
+pg_dump: reading event triggers
+pg_dump: finding extension members
+pg_dump: finding inheritance relationships
+pg_dump: reading column info for interesting tables
+pg_dump: finding the columns and types of table "t_address"
+pg_dump: finding default expressions of table "t_address"
+pg_dump: finding the columns and types of table "t_city"
+pg_dump: finding default expressions of table "t_city"
+pg_dump: flagging inherited columns in subtables
+pg_dump: reading indexes
+pg_dump: reading indexes for table "t_address"
+pg_dump: reading indexes for table "t_city"
+pg_dump: reading constraints
+pg_dump: reading foreign key constraints for table "t_address"
+pg_dump: reading foreign key constraints for table "t_city"
+pg_dump: reading triggers
+pg_dump: reading triggers for table "t_address"
+pg_dump: reading triggers for table "t_city"
+pg_dump: reading rewrite rules
+pg_dump: reading large objects
+pg_dump: reading dependency data
+pg_dump: saving encoding = UTF8
+pg_dump: saving standard_conforming_strings = on
+pg_dump: saving database definition
+pg_dump: dumping contents of table t_address
+pg_dump: dumping contents of table t_city
+
+\end{verbatim}
+
+We'll use a second database for the restore.
+
+\begin{lstlisting}[style=pgsql]
+postgres=# CREATE DATABASE db_addr_restore_bin;
+CREATE DATABASE
+
+\end{lstlisting}
+
+We'll then restore just the schema using the following command.
+
+\begin{verbatim}
+postgres@tardis:~/dump$ pg_restore -v -s -d db_addr_restore_bin db_addr.dmp 
+pg_restore: connecting to database for restore
+pg_restore: creating SCHEMA public
+pg_restore: creating COMMENT SCHEMA public
+pg_restore: creating EXTENSION plpgsql
+pg_restore: creating COMMENT EXTENSION plpgsql
+pg_restore: creating TABLE t_address
+pg_restore: creating SEQUENCE t_address_i_id_addr_seq
+pg_restore: creating SEQUENCE OWNED BY t_address_i_id_addr_seq
+pg_restore: creating TABLE t_city
+pg_restore: creating SEQUENCE t_city_i_id_city_seq
+pg_restore: creating SEQUENCE OWNED BY t_city_i_id_city_seq
+pg_restore: creating DEFAULT i_id_addr
+pg_restore: creating DEFAULT i_id_city
+pg_restore: creating CONSTRAINT pk_i_id_city
+pg_restore: creating CONSTRAINT pk_id_address
+pg_restore: creating FK CONSTRAINT fk_t_city_i_id_city
+pg_restore: setting owner and privileges for DATABASE db_addr
+pg_restore: setting owner and privileges for SCHEMA public
+pg_restore: setting owner and privileges for COMMENT SCHEMA public
+pg_restore: setting owner and privileges for ACL public
+pg_restore: setting owner and privileges for EXTENSION plpgsql
+pg_restore: setting owner and privileges for COMMENT EXTENSION plpgsql
+pg_restore: setting owner and privileges for TABLE t_address
+pg_restore: setting owner and privileges for SEQUENCE t_address_i_id_addr_seq
+pg_restore: setting owner and privileges for SEQUENCE OWNED BY t_address_i_id_addr_seq
+pg_restore: setting owner and privileges for TABLE t_city
+pg_restore: setting owner and privileges for SEQUENCE t_city_i_id_city_seq
+pg_restore: setting owner and privileges for SEQUENCE OWNED BY t_city_i_id_city_seq
+pg_restore: setting owner and privileges for DEFAULT i_id_addr
+pg_restore: setting owner and privileges for DEFAULT i_id_city
+pg_restore: setting owner and privileges for CONSTRAINT pk_i_id_city
+pg_restore: setting owner and privileges for CONSTRAINT pk_id_address
+pg_restore: setting owner and privileges for FK CONSTRAINT fk_t_city_i_id_city
+
+\end{verbatim}
+
+The dump file is specified as last parameter. The -d switch tells pg\_restore which database to 
+connect for the restore. By default the postgres user usually connects using the ident 
+operating system daemon or the trust authentication method, when connected as local. That's the 
+reason why in this example there's no need of specifying the username or enter the 
+password.\newline 
+
+The second restore's step is the data load. In the example seen in \ref{sec:PLAINFORMAT} we used 
+the pg\_dump with --disable-triggers switch in order to avoid failures caused by constraint 
+violation. With the custom format the switch is used at restore time.
+
+\begin{verbatim}
+postgres@tardis:~/dump$ pg_restore --disable-triggers -v -a -d db_addr_restore_bin db_addr.dmp 
+pg_restore: connecting to database for restore
+pg_restore: disabling triggers for t_address
+pg_restore: processing data for table "t_address"
+pg_restore: enabling triggers for t_address
+pg_restore: executing SEQUENCE SET t_address_i_id_addr_seq
+pg_restore: disabling triggers for t_city
+pg_restore: processing data for table "t_city"
+pg_restore: enabling triggers for t_city
+pg_restore: executing SEQUENCE SET t_city_i_id_city_seq
+pg_restore: setting owner and privileges for TABLE DATA t_address
+pg_restore: setting owner and privileges for SEQUENCE SET t_address_i_id_addr_seq
+pg_restore: setting owner and privileges for TABLE DATA t_city
+pg_restore: setting owner and privileges for SEQUENCE SET t_city_i_id_city_seq
+ 
+\end{verbatim}
+
+However, this approach does not prevent the slowness caused by the indices when reloading the data.
+If a restore with multiple steps is required (e.g. creating the database schema and check all the 
+relations are in place before starting) the section switch is a better choice. Let's see how it 
+works with the example seen before.\newline
+
+We'll first restore the pre-data section\footnote{Don't forget to clear the existing objects in 
+the database.}.
+
+\begin{verbatim}
+postgres@tardis:~/dump$ pg_restore --section=pre-data -v  -d db_addr_restore_bin db_addr.dmp 
+pg_restore: connecting to database for restore
+pg_restore: creating SCHEMA public
+pg_restore: creating COMMENT SCHEMA public
+pg_restore: creating EXTENSION plpgsql
+pg_restore: creating COMMENT EXTENSION plpgsql
+pg_restore: creating TABLE t_address
+pg_restore: creating SEQUENCE t_address_i_id_addr_seq
+pg_restore: creating SEQUENCE OWNED BY t_address_i_id_addr_seq
+pg_restore: creating TABLE t_city
+pg_restore: creating SEQUENCE t_city_i_id_city_seq
+pg_restore: creating SEQUENCE OWNED BY t_city_i_id_city_seq
+pg_restore: creating DEFAULT i_id_addr
+pg_restore: creating DEFAULT i_id_city
+pg_restore: setting owner and privileges for DATABASE db_addr
+pg_restore: setting owner and privileges for SCHEMA public
+pg_restore: setting owner and privileges for COMMENT SCHEMA public
+pg_restore: setting owner and privileges for ACL public
+pg_restore: setting owner and privileges for EXTENSION plpgsql
+pg_restore: setting owner and privileges for COMMENT EXTENSION plpgsql
+pg_restore: setting owner and privileges for TABLE t_address
+pg_restore: setting owner and privileges for SEQUENCE t_address_i_id_addr_seq
+pg_restore: setting owner and privileges for SEQUENCE OWNED BY t_address_i_id_addr_seq
+pg_restore: setting owner and privileges for TABLE t_city
+pg_restore: setting owner and privileges for SEQUENCE t_city_i_id_city_seq
+pg_restore: setting owner and privileges for SEQUENCE OWNED BY t_city_i_id_city_seq
+pg_restore: setting owner and privileges for DEFAULT i_id_addr
+pg_restore: setting owner and privileges for DEFAULT i_id_city
+ 
+\end{verbatim}
+
+
+Again the pg\_restore loads the objects with the ownership and privileges. What's missing is the 
+constraints creation. The second step is the data section's load.
+
+\begin{verbatim}
+postgres@tardis:~/dump$ pg_restore --section=data -v  -d db_addr_restore_bin db_addr.dmp 
+pg_restore: connecting to database for restore
+pg_restore: implied data-only restore
+pg_restore: processing data for table "t_address"
+pg_restore: executing SEQUENCE SET t_address_i_id_addr_seq
+pg_restore: processing data for table "t_city"
+pg_restore: executing SEQUENCE SET t_city_i_id_city_seq
+pg_restore: setting owner and privileges for TABLE DATA t_address
+pg_restore: setting owner and privileges for SEQUENCE SET t_address_i_id_addr_seq
+pg_restore: setting owner and privileges for TABLE DATA t_city
+pg_restore: setting owner and privileges for SEQUENCE SET t_city_i_id_city_seq
+
+\end{verbatim}
+
+This section simply loads the table's data and sets the sequence values. Apart for the ownership no 
+further action is performed. Finally we'll run the post-data section.
+
+\begin{verbatim}
+postgres@tardis:~/dump$ pg_restore --section=post-data -v  -d db_addr_restore_bin db_addr.dmp 
+pg_restore: connecting to database for restore
+pg_restore: creating CONSTRAINT pk_i_id_city
+pg_restore: creating CONSTRAINT pk_id_address
+pg_restore: creating FK CONSTRAINT fk_t_city_i_id_city
+pg_restore: setting owner and privileges for CONSTRAINT pk_i_id_city
+pg_restore: setting owner and privileges for CONSTRAINT pk_id_address
+pg_restore: setting owner and privileges for FK CONSTRAINT fk_t_city_i_id_city
+
+\end{verbatim}
+
+With this run the constrains (and eventually all the indices) are created in the best 
+approach possible when dealing with the bulk data processing. \newline
+
+Loading the data contents without indices maximise the speed. The constraint and index build with 
+the data already in place results in a faster build and a fresh index without any bloat.
 
 \section{Restore performances}
 

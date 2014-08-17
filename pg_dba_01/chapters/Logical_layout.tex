@@ -626,6 +626,7 @@ implements the tablespaces on the physical side.
 
 \section{Transactions}
 \label{sec:TRANSACTION}
+\index{transactions}
 PostgreSQL implements the MVCC\index{MVCC} which stands for Multi Version 
 Concurrency Control\index{Multi Version Concurrency Control}. 
 This offers high efficiency in multi user access for read and write queries.
@@ -669,7 +670,7 @@ http://en.wikipedia.org/wiki/Halloween\_Problem}.\newline
 
 The SQL standard defines four level of transaction's isolation levels where 
 some phenomena are permitted or forbidden.
-
+\index{transactions, isolation levels}
 Those phenomena are the following.
 
 \begin{itemize}
@@ -717,7 +718,7 @@ parameter transaction\_isolation.
 
 
 \subsection{Snapshot exports}
-\label{sub:SNAPEXPORT}
+\label{sub:SNAPEXPORT}\index{transactions, snapshot export}
 Since PostgreSQL 9.2 are supported the transaction's snapshot exports. A session with an open 
 transaction, can export its consistent snapshot to any other session. The snapshot remains valid 
 meanwhile the transaction is open. Using this functionality offers a way to run multiple backends 
