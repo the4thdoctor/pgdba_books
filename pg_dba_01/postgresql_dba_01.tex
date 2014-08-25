@@ -12,7 +12,7 @@
 \usepackage{float}
 \usepackage{pdfpages}
 \usepackage{listings}
-\usepackage[paperwidth=9.44in,paperheight=10.68in]{geometry}
+\usepackage[paperwidth=21.59cm,paperheight=27.94cm]{geometry}
 
 
 \author{Federico Campoli}
@@ -47,28 +47,24 @@
 \tableofcontents{}
 
 \chapter*{Preface}
-When I first came up with the idea to write a PostgreSQL DBA book, I intended
-to publish it commercially through a publisher.
+When I first came up with the idea to write a PostgreSQL DBA book, my intention was go 
+through a commercial publisher.\newline
 
-Soon after I changed my mind, as there's a huge lack of knowledge on
-PostgreSQL and very few DBA oriented books around.
+Shortly I changed my mind as I became aware the uniqueness of a PostgreSQL DBA oriented book.
+I took the decision to keep this book, and all the subsequent I'll write, free. This 
+hopefully will spread the PostgreSQL knowledge becoming a reference to help the 
+PostgreSQL professionals.\newline
 
-I decided that this book series shall stay free in order to reach as many people
-as possible, and hopefully become a reference to keep under your pillow.
+Before you start reading this book I'm begging your pardon in advance for my bad English.\newline
 
-Be warned before you start reading this book, I'm asking to be patient with me
-and my bad English.
+As I did not study English and unfortunately my mothertongue is not English. The following text 
+will very likely be full of typos (I'm affected by some dyslexia as well) and bad grammar.\newline
 
-As I did not study English and I'm not native, my writing will be probably wrong
-with many typos (I'm affected by some dyslexia as well) and bad grammar.
-
-In exchange I'll promise this book, and all the subsequent in the series, will
-start free and will remain free. Free as in freedom and as in beer.
-
-This first book covers the basics of PostgreSQL.
-
-A brief introduction, installation, and an analysis of the RDBMS deep enough to
-wet your appetite, but not so deep to scare you. Not yet at least.
+Anyway, my promise  is this book and all the subsequent in the series, will be free as freedom 
+and as beer.\newline
+However, if you want to help me to cleanup the text you're very welcome to fork the github 
+repository where I'm storing the latex sources \href{https://github.com/the4thdoctor/pgdba\_books}{
+https://github.com/the4thdoctor/pgdba\_books}.\newline
 
 
 
@@ -95,22 +91,23 @@ References to older versions or different platforms are explicitly specified.
 
 \section*{Thanks}
 A big thank you to Craig Barnes for the priceless work on the book review.\newline
+The beautiful cover has been made by \href{http://www.bonland.eu/}{
+Chiaretta e Bon }.\newline
 
-The beautiful cover is made by Chiaretta e Bon 
 
 \input{chapters/PostgreSQL_glance}
 \input{chapters/Install}
 \input{chapters/Structure}
 \input{chapters/Management}
 \input{chapters/Logical_layout}
-\input{chapters/Data_integrity}
+\input{ chapters/Data_integrity}
 \input{chapters/Physical_layout}
 \input{chapters/Maintenance}
 \input{chapters/Backup}
 \input{chapters/Restore}
-\chapter{A couple of things to know before start coding...}
-\label{cha:COUPLETHINGS}
-%\input{chapters/Couple_things}
+%\chapter{A couple of things to know before start coding...}
+%\label{cha:COUPLETHINGS}
+\input{chapters/Couple_things}
 
 \appendix
 \input{chapters/License}

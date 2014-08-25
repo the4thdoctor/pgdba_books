@@ -105,7 +105,7 @@ To write a decent query it's not complicated, it's sufficient follow few simple 
 \end{itemize}
 
 Here's the clearer SQL
-\begin{verbatim}
+\begin{lstlisting}[style=pgsql]
 SELECT
         productcode,
         noteid,
@@ -120,7 +120,7 @@ FROM
 WHERE
                lines.deblin>1
 ;
-\end{verbatim}
+\end{lstlisting}
 
 Obviously for existing code some of those rules aren't applicable, but for the new code and 
 projects teaching the developers to write decent SQL it's a step forward to let them understand the 
