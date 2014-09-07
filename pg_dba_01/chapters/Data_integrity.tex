@@ -107,21 +107,244 @@ field. \newline
 The primary key can then be dropped and recreated using the new unique index. This is permitted 
 only if there's no foreign key referencing the field. In this case a multi drop and create 
 statement is required. The final cleanup should include the trigger's drop and the old primary key 
-removal. Any view using the old primary key should be rebuilt before the drop.
+removal. Any view using the old primary key should be rebuilt before the drop.\newline
+
+Another approach for the primary keys is the so called natural keys. A natural key, in opposition 
+to the surrogate keys, have meaning in the real world. For example a table with the cities will 
+have the field v\_city as primary key. 
+
+\begin{lstlisting}[style=pgsql]
+--PRIMARY NATURAL KEY 
+CREATE TABLE t_cities
+        (
+                v_city          character varying (255),
+                CONSTRAINT pk_t_cities PRIMARY KEY (v_city)
+        )
+;
+\end{lstlisting}
+
+The advantages of this approach is a more compact table, with an index defined implicitly on the 
+meaningful field. Another advantage is the reduced disk I/O when looking up the data, taking 
+advantage of the the index only scans, supported from PostgreSQL 9.2.
+
 
 \section{Unique keys}
-The unique keys are similar to the primary keys. They enforce the uniqueness using an implicit 
-index but they allow the presence of NULL values. Their usage is for enforcing uniqueness on 
-columns not used as primary key. Similar to the primary key the unique constraints are based on a 
-unique index. In fact there's little difference between the unique index and the unique key except 
-the presence of the latter in the system table pg\_constraint. 
-
+The unique keys are very similar to the primary keys. They enforce the uniqueness using an implicit 
+index allowing the presence of NULL values. Their usage is mainly for enforcing uniqueness on 
+columns not used as primary key. In fact there's little difference between the unique index and the 
+unique key except the presence of the latter in the system table pg\_constraint. Another usage 
+is with the foreign keys because they require the referenced attributes to be unique. 
+\newpage
 
 \section{Foreign keys}
+\label{sec:FKEYS}
+A foreign key is a constraint enforced using the values another table's field. The classical 
+example is the tables storing the addresses  and cities. We can store the addresses with the city 
+field, inline.
+
+\begin{lstlisting}[style=pgsql]
+CREATE TABLE t_addresses
+        (
+                i_id_address    serial,
+                v_address       character varying(255),
+                v_city          character varying(255),
+                CONSTRAINT pk_t_addresses PRIMARY KEY (i_id_address)
+        )
+;
+\end{lstlisting}
+
+Being the city a duplicated value over many addresses, this will cause the table bloat by storing 
+long strings, duplicated many and many times, alongside with the the address. Defining a table with 
+the cities and referencing the city id in the addresses table will result in a smaller row size. 
+
+\begin{lstlisting}[style=pgsql]
+CREATE TABLE t_addresses
+        (
+                i_id_address    serial,
+                v_address       character varying(255),
+                i_id_city       integer NOT NULL,
+                CONSTRAINT pk_t_addresses PRIMARY KEY (i_id_address)
+        )
+;
+
+CREATE TABLE t_cities
+        (
+                i_id_city    serial,
+                v_city       character varying(255),
+                CONSTRAINT pk_t_cities PRIMARY KEY (i_id_city)
+        )
+;
+
+\end{lstlisting}
+
+When dealing with referencing data, the main concern is the data consistency between the tables. 
+In our example, putting an invalid identifier for the city in the t\_addresses table will result 
+missing data when joining. The same result will happen if for any reason the city identifier in 
+the t\_cities table is updated.\newline
+
+The foreign keys are designed to enforce the referential integrity. In our example will we'll 
+enforce a strong relationship between the tables.
+
+\begin{lstlisting}[style=pgsql]
+ALTER TABLE t_addresses 
+  ADD CONSTRAINT fk_t_addr_to_t_city
+  FOREIGN KEY (i_id_city)
+  REFERENCES t_cities(i_id_city)
+  ;
+
+\end{lstlisting}
+
+The key is enforced in two ways. When a row with an invalid i\_id\_city hits the table t\_addresses 
+the key is violated and the transaction aborts. Deleting a city from the t\_cities table which id 
+is referenced in the t\_addresses, will violate the key. The same will updating a i\_id\_city 
+referenced in the t\_addresses.\newline
+
+The enforcement is performed via triggers. The pg\_dump or pg\_restore option --disable-trigger 
+will permit the the data restore with the schema already in place. For more informations take a 
+look to \ref{cha:BACKUP} and  \ref{cha:RESTORE}.\newline
+
+The FOREIGN KEYS have been enriched with an handful of options which make them very flexible. 
+The referenced table can drive actions on the referencing using the two options ON DELETE and ON 
+UPDATE. By default the behaviour is to take NO ACTION if there are referencing rows until the 
+end of the transaction. This is useful if the key check should be deferred to the end of the 
+transaction. The other two actions are the RESTRICT which does not allow the deferring and 
+the CASCADE which cascade the action to the referred rows. 
+
+If we want our foreign key restrict the delete with no deferring and cascade any update, here's the 
+DDL.
+
+\begin{lstlisting}[style=pgsql]
+ALTER TABLE t_addresses 
+  ADD CONSTRAINT fk_t_addr_to_t_city
+  FOREIGN KEY (i_id_city)
+  REFERENCES t_cities(i_id_city)
+  ON UPDATE CASCADE ON DELETE RESTRICT
+  ;
+
+\end{lstlisting}
+
+Another very useful clause available with the foreign and check constraints is the NOT VALID. When 
+the constraint is created with NOT VALID, the initial check is skipped making the constraint 
+creation instantaneous. This is acceptable if the actual data is consistent. The constraint is then 
+enforced for all the new data. The invalid constraint can be validated later with the command 
+VALIDATE CONSTRAINT.
+
+\begin{lstlisting}[style=pgsql]
+postgres=#ALTER TABLE t_addresses
+                ADD CONSTRAINT fk_t_addr_to_t_city
+                FOREIGN KEY (i_id_city)
+                REFERENCES t_cities(i_id_city)
+                ON UPDATE CASCADE ON DELETE RESTRICT
+                NOT VALID
+                ;
+ALTER TABLE
+postgres=# ALTER TABLE t_addresses VALIDATE CONSTRAINT fk_t_addr_to_t_city ;
+ALTER TABLE
+
+\end{lstlisting}
+
+
+
 \section{Check constraints}
-\section{Exclusion constraints}
+\label{sec:CHECKCNS}
+
+A check constraint is a user defined check to enforce specific condtions on the rows. 
+The definition can be a condition or a used defined function. In this case the function must return 
+a boolean value.  As for the foreign keys, the check accepts the NOT VALID clause to speed up the 
+creation.\newline
+
+The check is satisfied if the condition returns true or NULL. This behaviour can 
+produce unpredictable results if not fully understood. An example will help to clarify. 
+Let's create a CHECK constraint on the v\_address table for enforcing a the presence of a value.
+Even with the check in place the insert without the address completes successfully.
+
+\begin{lstlisting}[style=pgsql]
+postgres=# ALTER TABLE t_addresses
+                ADD CONSTRAINT chk_t_addr_city_exists
+                CHECK (length(v_address)>0)
+                ; 
+postgres=# INSERT INTO t_cities (v_city) VALUES ('Brighton') RETURNING i_id_city;
+ i_id_city 
+-----------
+         2
+
+postgres=# INSERT INTO t_addresses (i_id_city) VALUES (2);
+INSERT 0 1
+\end{lstlisting}
+
+
+This is possible because the v\_address does not have a default value and accepts the NULL 
+values. The check constraint is violated if, for example we'll try to update the v\_address with 
+the empty string.
+
+\begin{lstlisting}[style=pgsql]
+postgres=# UPDATE t_addresses SET v_address ='' ;
+ERROR:  new row for relation "t_addresses" violates check constraint "chk_t_addr_city_exists"
+DETAIL:  Failing row contains (3, , 2)
+\end{lstlisting}
+
+Our check constraint will work as expected if we set for the v\_address field a fallback default 
+value.
+
+\begin{lstlisting}[style=pgsql]
+postgres=# ALTER TABLE t_addresses ALTER COLUMN v_address SET DEFAULT '';
+ALTER TABLE
+postgres=# INSERT INTO t_addresses (i_id_city) VALUES (2);
+ERROR:  new row for relation "t_addresses" violates check constraint "chk_t_addr_city_exists"
+DETAIL:  Failing row contains (4, , 2).
+
+\end{lstlisting}
+Please note the existing rows are not affected by the default value change.
+
+The message for the update and the insert is exactly the same because PostgreSQL attempts to create 
+a new row in both cases. When the constraint fails the transaction is rolled back leaving the dead 
+row in place. We'll take a better look to the MVCC in \ref{sec:MVCC}.
+
 
 \section{Not null}
-\section{Type enforcement}
-\section{Custom data types}
+For people approaching the database universe the NULL value can be quite confusing. A NULL value is 
+an empty object without any type or meaning. Actually when a field is NULL it doesn't consumes 
+physical space. By default when defining a field this is NULLable. Those fields are quite useful to 
+omit some columns, for example, at insert time.\newline
+The NULLable fields can be enforced with an unique constraint as the NULL are not considered as 
+duplicates. When dealing with the NULL it's important to remind the NULL acts like the mathematical 
+zero. When evaluating an expression with a NULL, the entire expression becomes NULL.\newline
 
+The NOT NULL is a column constraint which forbids the presence of NULL in the affected field. 
+Combining a NOT NULL with a unique constraint is exactly like having enforced a PRIMARY KEY. When 
+altering a field the table is scanned for validation and the constraint's creation is aborted if 
+any NULL value is present on the affected field.\newline
+
+For example, if we want to add the NOT NULL constraint to the field v\_address in the t\_addresses 
+table the command is just.
+
+\begin{lstlisting}[style=pgsql]
+postgres=# ALTER TABLE t_addresses ALTER COLUMN v_address SET NOT NULL;
+ERROR:  column "v_address" contains null values
+
+\end{lstlisting}
+
+In this case the alter fails because the column v\_address contains NULL values from the example 
+seen in \ref{sec:CHECKCNS}. The fix can be performed in a single query using the coalesce function.
+This function returns the first not null value from the left. This way is possible to change the 
+v\_address on the fly to a fixed placeholder \footnote{we've set the check constraint to avoid empty 
+addresses}.
+
+\begin{lstlisting}[style=pgsql]
+postgres=# UPDATE t_addresses
+            SET v_address='EMPTY'
+            WHERE v_address IS NULL;
+UPDATE 1
+postgres=# ALTER TABLE t_addresses ALTER COLUMN v_address SET NOT NULL;
+ALTER TABLE
+
+\end{lstlisting}
+
+Adding new columns with NULL is quick. PostgreSQL simply adds the new attribute in the system 
+catalogue and manages the new tuple structure considering the new field as empty space. Adding 
+a field with NOT NULL requires the presence of the DEFAULT value as well. This is an operation to 
+consider carefully when dealing with big amount of data. This way the table will be locked in 
+exclusive mode and a complete relation's rewrite will happen. A far better way is to add a NOT NULL 
+field is to add at first as NULLable field. A second alter will add the default value to have the 
+new rows correctly set. An update will then fix the NULL values without locking the 
+table. Finally the NOT NULL could be enforced without hassle.

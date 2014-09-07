@@ -541,4 +541,9 @@ the data already in place results in a faster build and a fresh index without an
 
 \section{Restore performances}
 
-
+There are many parameters affecting the time require for restoring a database. During a restore the
+ data section is usually fast. The copy statements, enabled by default by, load the data
+sequentially quickly. The multiple jobs available for the custom and directory format can
+reduce significantly the time required for completing the data section reload. The post-data
+section, where all the random access operations happen it can require more time than the data
+section itself because the unavoidable sort operations are CPU and memory bound. 
