@@ -1,32 +1,71 @@
 \chapter{A couple of things to know before start coding...}
 \label{cha:COUPLETHINGS}
+This chapter is completely different from the rest of the book. It's dedicated to the developers. 
+PostgreSQL is a fantastic infrastructure for building powerful and scalable applications. In order 
+to use al its potential there are some things to consider. In particular if coming from other DBMS 
+there are subtle caveats that can make the difference between a magnificent success or a miserable 
+failure. 
+
 \section{SQL is your friend}
+Recently the rise of the NOSQL approach,has shown more than ever how SQL is a fundamental 
+requirement for managing the data efficiently. All the shortcuts, like the ORMs or the SQL 
+engines implemented over the NOSQL systems, sooner or later will show their limits. Despite the 
+bad reputation around it, the SQL language is very simple to understand. 
+Purposely built with few simple English words is a powerful tool set for accessing, managing or 
+defining the data model. Unfortunately this simplicity have a cost. The language must be parsed and 
+converted into the database structure and sometimes there is a misunderstanding between 
+what the developer wants and what the database understands.\newline 
+
+Mastering the SQL is a slow and difficult process and requires some sort of empathy with the DBMS. 
+Asking for advice to the database administrator is a good idea to get introduced in the the 
+database mind. Having a few words with the DBA is a good idea in any case though.
+
 \section{Design comes first}
+One of the worst mistakes when building an application is to forget about the foundation, the 
+database. With the rise of the ORM\footnote{Yes, I hate the ORMs} this is happening 
+more frequently than it could be expected. Sometimes the database itself is considered as 
+\textit{storage}, one of the biggest mistake possible.\newline
+
+Forgetting about the database design is like building a skyscraper from the top. If 
+unfortunately the project is successful there are good chances to see it crumbling down instead of 
+making money.\newline
+In particular one of the PostgreSQL's features, the MVCC, is completely ignored at design time. 
+In \ref{sec:MVCC} it's explained how is implemented and what are the risks when designing a data 
+model. It doesn't matter if the database is simple or the project is small. Nobody knows how 
+successful could be a new idea. Having a robust design will make the project to scale properly.
+
 \section{Clean coding}
+One of the the first things a developer learns is how to write formatted code. The purpose of 
+having clean code is double. It simplifies the code's reading to the other developers and 
+improves the code management when, for example, is changed months after the writing. In this good 
+practice the SQL seems to be an exception. Is quite common to find long queries written all 
+lowercase, on one single line with keywords used as identifier. Trying just to understand what such 
+query does is a nightmare. What follow is a list of good practice for writing decent SQL and avoid 
+a massive headache to your DBA. If you don't have a DBA see \ref{sec:GETDBA}.
+
 \subsection{The identifier's name}
-Any DBMS have its way of managing the identifiers. Oracle for example sets all the names in 
-uppercase. PostgreSQL does the opposite and changes the identifier's name in  lowercase. This 
-doesn't work very well with the camel case. The PostgreSQL's workaround is to enclose 
-all the identifiers in double quotes. This means you have to put it everywhere, making the code 
-difficult to read and to mantain. It's simpler to avoid the camel case and stick to the 
-underscores.This will also have a beneficial effect on your DBA, avoiding him to get massive 
-headache. If you don't have a DBA see \ref{sec:GETDBA}.
+Any DBMS have its way of managing the identifiers. PostgreSQL transforms the identifier's name in  
+lowercase. This doesn't work very well with the camel case, however it's still possible to mix
+upper and lower case letters enclosing the identifier name between double quotes. This makes the
+code difficult to read and to maintain. Using the underscores in the old fashion way it makes
+things simpler.
 
 \subsection{Self explaining schema}
-When a database's structure become complex it's very difficult to say what is what and how 
-it relates with the other objects. A design diagram or a data dictionary can give some help, but 
-they can be outdated or maybe are not generally accessible. Adopting a simple naming convention for 
-the relation's name will give an immediate outlook of the object's kind.\newline
+When a database structure becomes complex is very difficult to say what is what and how 
+it relates with the other objects. A design diagram or a data dictionary can help. But they can be 
+outdated or maybe are not generally accessible. Adopting a simple prefix to add to the relation's
+name will give an immediate outlook of the object's kind.\newline
 
-My personal coding convention is a simple prefix to put on the identifiers.
 \begin{table}[H]
 \begin{tabular}{ll}
  \textbf{Object} & \textbf{Prefix}  \\
  \hline
  Table & t\_ \\
  View & v\_ \\
-Index & idx\_ \\
-Unique index & uidx\_ \\
+Btree Index & idx\_bt\_ \\
+GiST Index & idx\_gst\_ \\
+GIN Index & idx\_gin\_ \\
+Unique index & u\_idx\_ \\
 Primary key & pk\_ \\
 Foreign key & fk\_ \\
 Check & chk\_ \\
@@ -42,7 +81,7 @@ rule & rul\_ \\
 \end{tabular}
 \end{table}
 
-Using this method the column names, it shows column's data type at glance.
+A similar approach can be used for the column names, making the data type immediately recognisable.
 
 \begin{table}[H]
 \begin{tabular}{ll}
@@ -65,46 +104,43 @@ Custom data type & ty\_ \\
 
 
 
-
 \subsection{Query formatting}
-Another thing gives me headache is when I receive something like this...
+Having a properly formatted query helps to understand which objects are involved in the data
+retrieval and the relations between them. Even with a very simple query a careless writing can make
+it very difficult to understand.
 
-\begin{verbatim}
+
+\begin{lstlisting}[style=pgsql]
 select * from debitnoteshead a join debitnoteslines b on debnotid 
 where a.datnot=b. datnot and b.deblin>1;
-\end{verbatim}
+\end{lstlisting}
 
-There are various tools to prettify those queries, but this doesn't solve the problem.
-Writing this way shows a lack of care on what the statement is doing and without knowledge and 
-readability, solving the problem is quite difficult.\newline
-
-The query have various issues.
+A query like this have many issues .\newline
 
 \begin{itemize}
- \item \textbf{lowercase keywords} this makes hard to spot them from the identifiers which are 
-lowercase as well
-\item \textbf{the wildcard *} have some bad effects; it hides the required columns 
-making the query's purpose unclear; it returns all the column values with bigger bandwidth usage; 
-forbids the index only scans
-\item \textbf{the generic aliases} like \textit{a} and \textit{b} is the same as using generic 
-variable names in a program. it makes difficult to reconstruct the list of tables involved in the 
-query.
-\item \textbf{the single line statement} makes difficult to understand the query's levels of 
-complexity .
+ \item using lowercase keywords it makes difficult to spot them
+\item the wildcard * hides which columns are effectively needed; it retrieves all the columns
+consuming more bandwidth than required; it prevents the index only scans
+\item the meaningless aliases like \textit{a} and \textit{b} it make difficult to understand which
+relations are involved.
+\item writing a statement with no indenting it makes difficult to understand the query's
+logic.
 \end{itemize}
 
-To write a decent query it's not complicated, it's sufficient follow few simple rules
+Despite existence of tools capable to prettify such queries, their usage doesn't solve the
+root problem. It's better to write immediately decent SQL following those simple rules.
 
 \begin{itemize}
  \item All SQL keywords should be in upper case
- \item All the identifiers should be indented on the query's level
- \item All the current query's keywords should be indented at same level
- \item Don't use the SELECT * but specify only the columns you really need
- \item When joining please use always the keyword ON to make clear the joining points
+ \item All the identifiers and kewrords should be grouped by line break and indented at the same
+level
+ \item In the SELECT list specify all and only the columns required by the query
+ \item Avoid the auto join in order to make clear the relation's logic
  \item Adopt meaningful aliases
 \end{itemize}
 
-Here's the clearer SQL
+And that's the fixed SQL.
+
 \begin{lstlisting}[style=pgsql]
 SELECT
         productcode,
@@ -122,11 +158,28 @@ WHERE
 ;
 \end{lstlisting}
 
-Obviously for existing code some of those rules aren't applicable, but for the new code and 
-projects teaching the developers to write decent SQL it's a step forward to let them understand the 
-database is more than a stupid storage area.
-This is a reasonable objective and I'm sure it worth to spend time to achieve it.
-
 
 \section{Get DBA advice}
 \label{sec:GETDBA}
+The database administration is weird. It's very difficult to explain what a DBA does. It's a job
+where the statement ``failure is not an option" is the rule number zero. A DBA usually works in
+antisocial hours, with a very limited time window. A DBA holds a lot on the shoulders and that's
+the reason why those people can seem hostile or living in their own world.\newline
+
+Despite the strange reputation, a database expert is an incredible resource for building up
+efficient and scalable designs. Nowadays is very simple to set up a PostgreSQL instance. Even with
+the default configuration parameter the system is so efficient that basically doesn't show any
+problem when running at low or medium load. If this, at first sight, seems a fantastic feature
+actually is a really bad thing. Any mistake at design level is hidden and when the problem sooner or
+later appears is too late.\newline
+
+This final advice is probably the most important of the entire chapter. If you have a DBA don't be
+shy. Ask for any suggestion, even if the solution seems obvious or if the task is small. The
+database layer is a completely different universe. A small mistake can result in a
+very big problem.\newline
+
+Of course if there's no DBA, that's bad. Never sail without a compass. Never start a database
+project without an expert. A professional to take care of the most important part, the
+foundations.\newline
+
+If this is the case, ask your employer to hire a PostgreSQL DBA as soon as possible.

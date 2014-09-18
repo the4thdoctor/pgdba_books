@@ -218,6 +218,7 @@ db_addr_restore=# \d
 
 
 \section{The binary formats}
+\label{sec:PGDUMPBINFMT}
 The three binary formats supported by pg\_dump are the custom, the directory and the tar format. 
 The first two can be accessed randomly by the restore program and have the parallel restore 
 support, being the best choice for having a flexible and reliable restore. Before the the 9.3 the 
@@ -541,9 +542,84 @@ the data already in place results in a faster build and a fresh index without an
 
 \section{Restore performances}
 
-There are many parameters affecting the time require for restoring a database. During a restore the
- data section is usually fast. The copy statements, enabled by default by, load the data
-sequentially quickly. The multiple jobs available for the custom and directory format can
-reduce significantly the time required for completing the data section reload. The post-data
-section, where all the random access operations happen it can require more time than the data
-section itself because the unavoidable sort operations are CPU and memory bound. 
+When restoring a database, in particular in a disaster recovery scenario, the main goal is 
+to have the data back on line as fast as possible. Usually the data section's restore 
+is fast. If the dump has been taken using the copy statements, which are enabled by default, 
+the reload requires a fraction of the entire restore's time. Taking the advantage of the parallel 
+jobs, available for the custom and directory format, it's still possible to improve the data 
+section's reload.\newline
+
+The other face of the coin is the post-data section. Because the objects in this section are mostly 
+random access operations, the completion can require more time than the data section itself; even 
+if the size of the resulting objects is smaller than the table's data. This happens because the 
+unavoidable sort operations are CPU and memory bound. The parallel restore gives some advantage, 
+but as seen in \ref{sec:PGDUMPBINFMT} each loop's process is single threaded. \newline
+
+Setting up an emergency postgresql.conf file can speed up the restore, reducing the time up to 40\% 
+than the production's configuration. What it follows assumes the production's database is lost and 
+the data is restored from a custom format's backup. 
+
+\subsection{shared\_buffers}
+When reloading the data from the dump, the database performs a so called bulk load operation. The 
+PostgreSQL's memory manager have a subroutine which protects the shared segment from the block 
+eviction caused by IO intensive operations. It's then very likely the ring buffer strategy will be 
+triggered by the restore, sticking the IO in a small 4 MB buffer protecting the rest of the memory. 
+A big shared buffer it can cache the data pages when in production but becomes useless when 
+restoring. A smaller shared buffer, enough to hold the IO from  the restore processes will result 
+in more memory available for the backends when processing the post-data section. There's no fixed 
+rule for the sizing. A gross approximation could be 10 MB for each parallel job with a minimum cap 
+of 512 MB.   
+
+\subsection{wal\_level}
+The wal\_level parameter sets the level of redo informations stored in the WAL segments. By default 
+is set to minimal, enabling the xlog skip. Having the database in with a standby, or simply using 
+the point in time recovery as alternate backup strategy requires the parameter to be set to archive 
+or hot\_standby. If this is the case and you have a PITR or standby to failover, stop reading 
+this book and act immediately. Restoring from a physical backup is several time faster than a 
+logical restore. If you have lost the standby or PITR snapshot then before starting the reload the 
+wal\_level must be set to minimal.
+
+\subsection{fsync}
+Turning off fsync can improve massively the restore's speed. Having this parameter turned off
+is not safe, unless the cache is have the backup battery to prevent data loss in case of power
+failure. However, even without the battery at restore time having the fsync off is not critical.
+After all the database is lost, what else can happen?
+
+\subsection{checkpoint\_segments, checkpoint\_timeout}
+The checkpoint is a vital event in the database activity. When occurs all the pages not yet written
+to the data files are synced to disk. This in the restore context is a disturbance. Increasing the
+checkpoint segments and the timeout to the maximum allowed values will avoid any extra IO. In any
+case the dirtied blocks will be written on disk when the buffer manager will need to free some
+space.
+
+
+\subsection{autovacuum}
+There's no point in having vacuumed the tables after a complete reload. Unfortunately autovacuum
+does not know if a table is being restored. When the limit for the updated tuples is recognised the
+daemon starts a new process wasting precious CPU cycles. Turning off temporarily the setting will
+let the backends to stay focused on the main goal. The data restore.
+
+
+\subsection{max\_connections}
+Limiting the max connections to number of restore jobs is a good idea. It's ok also giving a slight
+headroom for one or two connections, just in case there's need to log in and check the database
+status. This way the available memory can be shared efficiently between the backends.
+
+\subsection{maintenance\_work\_memory}
+This parameter affects the index builds which are stored in the restore's post-data section. Low 
+values will results in the backends sorting on disk and slowing down the entire process. Higher
+values will keep the index build in memory with great speed gain. The value should be carefully
+sized keeping in mind the memory available on the system. This value should be reduced by a 20\% if
+the total ram is up to 10 GB and by 10\% if bigger. This reduction is needed to consider the memory
+consumed by the operating system and the other processes. From the remaining ram must be subtracted
+the shared\_buffer's memory. The remaining value must be divided by the expected backends to
+perform the restore. For example if we have a system with 26GB a shared\_buffer of 2 GB and 10
+parallel jobs to execute the restore, the maintenance\_work\_mem is  2.14 GB.
+\newpage
+\begin{verbatim}
+26 - 10% =  23.4
+23.4 - 2 = 21.4
+21.4 / 10 = 2.14
+\end{verbatim}
+
+Ignoring this recommendation can trigger the swap usage resulting in a slower restore process.

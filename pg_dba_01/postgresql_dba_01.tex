@@ -15,6 +15,7 @@
 \usepackage[paperwidth=21.59cm,paperheight=27.94cm]{geometry}
 
 
+
 \author{Federico Campoli}
 \title{PostgreSQL Database Administration \\ Volume 1 \\ Basic concepts}
 
@@ -47,26 +48,22 @@
 \tableofcontents{}
 
 \chapter*{Preface}
-When I first came up with the idea to write a PostgreSQL DBA book, my intention was go 
-through a commercial publisher.\newline
+When I first came up with the idea to write a PostgreSQL DBA book, my intention was to 
+publish it commercially.\newline
 
-Shortly I changed my mind as I became aware the uniqueness of a PostgreSQL DBA oriented book.
-I took the decision to keep this book, and all the subsequent I'll write, free. This 
-hopefully will spread the PostgreSQL knowledge becoming a reference to help the 
-PostgreSQL professionals.\newline
+Shortly I changed my mind as I became aware the uniqueness of a book for the database 
+administrators. Then I decided to keep this book free. The same will happen for the 
+next books in this series. I hope this will spread the knowledge on PostgreSQL becoming an 
+useful reference.\newline
 
-Before you start reading this book I'm begging your pardon in advance for my bad English.\newline
+Just a quick advice before you start reading. I beg your pardon in advance for my 
+bad English. Unfortunately I'm not native English and it's very likely the book to be full of 
+typos and bad grammar.\newline
 
-As I did not study English and unfortunately my mothertongue is not English. The following text 
-will very likely be full of typos (I'm affected by some dyslexia as well) and bad grammar.\newline
-
-Anyway, my promise  is this book and all the subsequent in the series, will be free as freedom 
-and as beer.\newline
-However, if you want to help me to cleanup the text you're very welcome to fork the github 
-repository where I'm storing the latex sources \href{https://github.com/the4thdoctor/pgdba\_books}{
+However, if you want to help me in cleaning and reviewing the text please to fork 
+the github repository where I'm sharing the latex sources 
+\href{https://github.com/the4thdoctor/pgdba\_books}{
 https://github.com/the4thdoctor/pgdba\_books}.\newline
-
-
 
 
 \section*{Intended audience}
@@ -74,16 +71,17 @@ Database administrators, System administrators, Developers
 
 \section*{Book structure}
 This book assumes the reader knows how to perform basic user operations such as
-connecting to the database and creating tables.
+connecting to the database and creating tables.\newline
 
 The book covers the basic aspects of database administration from installation
-to cluster management.
+to cluster management.\newline
 
 A couple of chapters are dedicated to the logical and physical structure in
-order to show both sides of coin.  Maintenance and disaster recovery
-backup/restore completes the ``other side of the monitor's`` picture.
-The final chapter is for developers who want to avoid common pitfalls when
-using PostgreSQL.
+order to show both sides of coin.  The triplet of maintenance backup and restore completes the 
+the picture, not exhaustive but good enough to start getting ``hands on'' the product.
+The final chapter is dedicated to the developers. The various sections are 
+giving advice that can seem quite obvious. But it's better to repeat things than having dangerous 
+mistakes when building an application. 
 
 \section*{Version and platform}
 This book is based on PostgreSQL version 9.3 running on Debian GNU Linux 7.
@@ -100,7 +98,7 @@ Chiaretta e Bon }.\newline
 \input{chapters/Structure}
 \input{chapters/Management}
 \input{chapters/Logical_layout}
-\input{ chapters/Data_integrity}
+\input{chapters/Data_integrity}
 \input{chapters/Physical_layout}
 \input{chapters/Maintenance}
 \input{chapters/Backup}
