@@ -1,94 +1,100 @@
 \chapter{Database installation}
 \label{cha:DB_INSTALL}
-This chapter will cover the install procedure, on Debian Gnu linux compiling from source and using the packaged install from the pgdg archive.
-\index{pgdg}
+In this chapter will see how to install PostgreSQL on Debian Gnu Linux. We'll take a look to 
+two procedures, compiling from source and using the packages shipped by the pgdg 
+\index{pgdg apt repository} apt repository.\newline 
+There are advantages and disadvantages on both procedures. The compile from source offers a fine
+grain control on all the aspects of the binaries configuration. Also doesn't have risks of
+unwanted restarts when upgrading and it's possible to install and upgrade the binaries with normal
+privileges.\newline
+
+The packaged install is easier to manage when deploying the new binaries on the server, in
+particular if there is a large number of installations to manage. The binary packages are
+released shortly after a new update is released. Because the frequency for the minor
+releases is not fixed, it could happen to have in place bugs affecting the production for months.
+For example the bug causing the standby server crashing when the master found invalid pages during
+a conventional vacuum, it was fixed almost immediately. Unfortunately the release with the fix
+appeared after five months.\newline
+
 
 \section{Install from source}
-Installing from source, using the default configuration settings requires the root access as the default install location is in /usr/local/. 
-To simplify things I've created a procedure with minimal need for root access.
-This of course is still required but only for the os user creation and to install the dependencies. 
-
-Before starting with the postgresql part, ask your sysadmin, or do it by yourself, to do the following
+Using the configure script with the default settings requires the root access when installing.
+That's because the permissions in the target location /usr/local don't allow the write for normal
+users. This method adopts a different install location and requires the root access only for the os
+user creation and the dependencies install. 
+Before starting the PostgreSQL part ask your sysadmin to run the following commands.
 
 \begin{itemize}
 
- \item Create a postgres group and a postgres user
- \item Add the postgres user to the postgres group
- \item Install the packages
- \item build-essential
- \item libreadline6-dev
- \item zlib1g-dev
- 
+ \item useradd -d /home/postgres -s /bin/bash -m -U postgres
+ \item passwd postgres 
+ \item apt-get update
+ \item apt-get install build-essential  libreadline6-dev  zlib1g-dev
 \end{itemize}
 
+Please note the second step will require inserting a new user password. Unless is a personal
+test it's better to avoid obvious passwords like \textit{postgres}.\newline
 
-When everything is in place login as postgres user and download the source's tarball.
+In order to build the binaries we must download and extract the PostgreSQL's source tarball.
 
-\begin{smallverbatim}
-mkdir download
-cd download
-wget http://ftp.postgresql.org/pub/source/v9.3.4/postgresql-9.3.4.tar.bz2
-\end{smallverbatim}
+\begin{verbatim}
+mkdir ~/download
+cd ~/download
+wget http://ftp.postgresql.org/pub/source/v9.3.5/postgresql-9.3.5.tar.bz2
+tar xfj postgresql-9.3.5.tar.bz2
+cd postgresql-9.3.5
+\end{verbatim}
 
-Then extract the tarball with
 
-\begin{smallverbatim}
-tar xfj postgresql-9.3.4.tar.bz2
-cd postgresql-9.3.4
-\end{smallverbatim}
+Using the configure script's option --prefix we'll point the install directory to a writable
+location. We can also use a director named after the the major version's numbering. This will allow
+us to have installed different PostgreSQL versions without problems.
 
-Using the configuration’s script option --prefix is possible to change 
-the install directory to a custom location.
-Assuming the postgres user have his home directory in /home/postgres, we'll put 
-the install target into the bin directory organised per
-mayor version. In this way  is possible to have multiple versions on the same 
-box without hassle.
-
-\begin{smallverbatim}
+\begin{verbatim}
 mkdir -p /home/postgres/bin/9.3
 ./configure --prefix=/home/postgres/bin/9.3
-\end{smallverbatim}
-The script will check all the dependencies and will generate the makefiles. 
-Any error at configure time is usually displayed clearly.
+\end{verbatim}
 
-When everything looks fine you can start the build process with the \textit{make} command.
+The configuration script will check all the dependencies and, if there's no error, will generate 
+the makefiles. Then we can start the build simply running the command \textit{make}. The time
+required for compiling is variable and depends from the system's power. If you have a multicore
+processor the make -j option can improve significantly the build time. When the build is is complete
+it's a good idea to to run the regression tests. Those tests are designed to find any regression or
+malfunction before the binaries are installed.
 
-The time required to compile depends from the box speed. On a laptop usually this doesn't require 
-more than 30 minutes. After the build is complete it's a good idea to run the regression tests 
-before completing the installation.
+\begin{verbatim}
+make
+<very verbose output>
 
-\begin{smallverbatim}
 make check 
-\end{smallverbatim}
- 
 
-All the output is written in the directory src/test/regress/results. 
+\end{verbatim}
 
-If everything looks fine the installation can be completed with
+The test's results are written in the source's subdirectory src/test/regress/results. If
+there's no error we can finalise the installation with the command make install.
 
-\begin{smallverbatim}
+\begin{verbatim}
 make install
-\end{smallverbatim}
+\end{verbatim}
 
-
-When the install is complete, into the /home/postgres/bin/9.3 directory will appear with 4 new
-subfolders \textit{bin} \textit{include} \textit{lib} and \textit{share}.
+This will create into the folder /home/postgres/bin/9.3 four subfolders \textit{bin} 
+\textit{include} \textit{lib} and \textit{share}.
 
 \begin{itemize}
- \item \textbf{bin} is where the database binaries are stored
+ \item \textbf{bin} is the location for PostgreSQL's binaries
  \item \textbf{include} contains the server's header files
- \item \textbf{lib} is the shared objects location
- \item \textbf{share} is where the example files and the extension config are stored
+ \item \textbf{lib} is the location where to put the shared libraries
+ \item \textbf{share} is where the example files and the extension configurations are stored
 \end{itemize}
-
 
 
 \section{Packaged install}
 \label{sec:DEBIAN_INSTALL}
 
-The PostgreSQL Global Group mantains an apt repository to simplify the install on the GNU/Linux based on debian.
+The PostgreSQL Global Development Group manages a repository in order to facilitate the
+installations on the Linux distributions based on the debian's packaging system. 
 
-The supported Linux versions are listed on the wiki page http://wiki.postgresql.org/wiki/Apt and at moment are
+Currently the supported distributions are
 
 \begin{itemize}
  \item Debian 6.0 (squeeze)
@@ -99,36 +105,51 @@ The supported Linux versions are listed on the wiki page http://wiki.postgresql.
  \item Ubuntu 13.10 (saucy)
  \item Ubuntu 14.04 (trusty) 
 \end{itemize}
-The packages are available for amd64 and i386.
 
-The available database versions are
+The PostgreSQL's versions available are 
 \begin{itemize}
- \item PostgreSQL 8.4 
  \item PostgreSQL 9.0 
  \item PostgreSQL 9.1 
  \item PostgreSQL 9.2 
  \item PostgreSQL 9.3
+ \item PostgreSQL 9.4
 \end{itemize}
 
-Before starting you shall import the GPG key to validate the packages.
+The he packages are available either for amd64 and i386 architecture.
+
+Anyway, the up to date list is available on the the wiki page 
+\href{http://wiki.postgresql.org/wiki/Apt}{http://wiki.postgresql.org/wiki/Apt}.\newline
+
+All the installation steps require root privileges, via sudo or acquiring the root login via su.
+Before starting configuring the repository it's a good idea to import the GPG key for the
+package validation.
 
 In a root shell simply run
-\begin{smallverbatim}
+\begin{verbatim}
 wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
-\end{smallverbatim}
-Then add the file pgdg.list into the directory /etc/apt/sources.d/ with the following contents
+\end{verbatim}
+When the key is imported create a file named pgdg.list into the directory /etc/apt/sources.d/ and
+add the following row.
 
-\begin{smallverbatim}
+\begin{verbatim}
 deb http://apt.postgresql.org/pub/repos/apt/ {codename}-pgdg main
-\end{smallverbatim}
+\end{verbatim}
 
-Change the codename value accordingly with your distribuition. (e.g. wheezy) then you can run the 
-installation in two simple steps.
 
-\begin{smallverbatim}
+The distribution's codename can be found using the command lsb\_release -c. 
+e.g.
+\begin{verbatim}
+thedoctor@tardis:~$ lsb_release -c
+Codename:       wheezy
+\end{verbatim}
+
+After the repository configuration the installation is completed with two simple commands.
+
+\begin{verbatim}
 apt-get update
 apt-get install postgreql-9.3 postgreql-contrib-9.3 postgreql-client-9.3 
-\end{smallverbatim}
-The debian's packaged installation as post installation task, if not yet present, will create a
-new running database cluster in the home directory /var/lib/postgresql.
+\end{verbatim}
+
+Be aware that this method, as automated installation task creates a new database cluster in
+the default directory /var/lib/postgresql.
 
