@@ -18,6 +18,7 @@ appeared after five months.\newline
 
 
 \section{Install from source}
+\label{sec:INSTSOURCE}
 Using the configure script with the default settings requires the root access when installing.
 That's because the permissions in the target location /usr/local don't allow the write for normal
 users. This method adopts a different install location and requires the root access only for the os
@@ -77,15 +78,6 @@ there's no error we can finalise the installation with the command make install.
 make install
 \end{verbatim}
 
-This will create into the folder /home/postgres/bin/9.3 four subfolders \textit{bin} 
-\textit{include} \textit{lib} and \textit{share}.
-
-\begin{itemize}
- \item \textbf{bin} is the location for PostgreSQL's binaries
- \item \textbf{include} contains the server's header files
- \item \textbf{lib} is the location where to put the shared libraries
- \item \textbf{share} is where the example files and the extension configurations are stored
-\end{itemize}
 
 
 \section{Packaged install}

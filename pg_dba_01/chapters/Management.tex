@@ -1,28 +1,31 @@
-\chapter{Managing the instance}
-In this chapter we'll look how to initialise a PostgreSQL cluster and the 
-management tasks.
-Later we'll take a look to the data area structure, the processes and the memory.
+\chapter{Managing the cluster}
+\label{cha:MANAGING}
+A PostgreSQL cluster is made of two components. A physical location initialised as data area 
+and the postgres process attached to a shared memory segment, the shared buffer. The debian's 
+package's installation, automatically set up a fully functional PostgreSQL cluster in the directory 
+/var/lib/postgresql. This is good because it's possible to explore the product immediately. However, 
+it's not uncommon to find clusters used in production with the minimal default configuration's 
+values, just because the binary installation does not make it clear what happens \textit{under the 
+bonnet}.
+
+This chapter will explain how a PostgreSQL cluster works and how critical is its 
+management. 
 
 \section{Initialising the data directory}
-A PostgreSQL instance is composed by a shared memory process and a data area 
-managed by the postgres processes.
-The data area is initialised by initdb\index{initdb} which requires an empty 
-and writable directory to succeed. The binary location depends on the 
-installation method, take a look to the chapters \ref{cha:INSTALLSTRUCT} and 
-\ref{cha:DB_INSTALL} for further informations.
 
-Initdb accepts various parameters. If not supplied then the probam will try to 
-get the informations from the environment variables.\newline
+The data area is initialised by initdb\index{initdb}. The program requires an empty directory to 
+write into to successful complete. Where the initdb binary is located depends from the installation 
+method. We already discussed of this in \ref{cha:INSTALLSTRUCT} and \ref{cha:DB_INSTALL}. 
 
-Its basic usage is 
+The accepted parameters for customising cluster's data area are various. Anyway, running 
+initdb without parameters will make the program to use the value stored into the environment 
+variable PGDATA. If the variable is unset the program will exit without any further action.\newline
 
-\textit{initdb DATADIRECTORY}
-
-If the variable PGDATA is set then the DATADIRECTORY can be omitted.
+For example, using the initdb shipped with the debian archive requires the following commands.
 
 \begin{verbatim}
- e.g
- 
+postgres@tardis:~/$ mkdir tempdata
+postgres@tardis:~/$ cd tempdata
 postgres@tardis:~/tempdata$ export PGDATA=`pwd`
 postgres@tardis:~/tempdata$ /usr/lib/postgresql/9.3/bin/initdb 
 The files belonging to this database system will be owned by user "postgres".
@@ -66,14 +69,17 @@ or
     /usr/lib/postgresql/9.3/bin/pg_ctl -D /var/lib/postgresql/tempdata -l 
 logfile start
 
- 
- 
 \end{verbatim}
 
-After initialising the data area initdb shows the two methods to start the 
-database instance. The first one is useful for debugging and development 
-purposes as starts the database directly from the command line without 
-daemonising the process.
+PostgreSQL 9.3 introduces\index{checksums, data page}\index{data page checksums} the data page 
+checksums used for detecting the data page corruption. This great feature can be enabled only when 
+initialising the data area with initdb and is cluster wide. The extra overhead caused by the 
+checksums is something to consider because the only way to disable the data checksums is a dump 
+and reload on a fresh data area.\newline
+
+After initialising the data directory initdb emits the message with the commands to start the 
+database cluster. The first form is useful for debugging and development purposes because it starts 
+the database directly from the command line with the output displayed on the terminal. 
 
 \begin{verbatim}
 postgres@tardis:~/tempdata$ /usr/lib/postgresql/9.3/bin/postgres -D 
@@ -84,26 +90,61 @@ LOG:  autovacuum launcher started
 
 \end{verbatim}
 
-To stop it simply press ctrl+c
+Pressing CTRL+C stops the cluster with a fast shutdown.\newline
 
-The second method is more interesting as the PostgreSQL process is managed as 
-daemon via pg\_ctl.
+Another reason for running postgres directly is when it needs to be started in single user mode. 
+The --single option is a lifesaver if the cluster refuses to start because one or more 
+databases are near the XID wraparound failure. 
+\begin{verbatim}
 
-The option \textit{-l logfile} is to enable the logfile redirection. Without 
-this option the server's output will appear on the standard output.
+postgres@tardis:~/tempdata$ /usr/lib/postgresql/9.3/bin/postgres --single -D /home/postgres/tempdata
+
+PostgreSQL stand-alone backend 9.3.5
+backend> 
+
+\end{verbatim}
+
+The database interface in single user mode and does not have all the sophisticated features 
+like the client psql. Anywat with a little knowledge of SQL it's possible to find the database(s) 
+causing the shutdown and fix it.
+\index{postgres, single user mode}\index{XID wraparound failure, fix}
 
 \begin{verbatim}
-without -l
+backend> SELECT datname,age(datfrozenxid) FROM pg_database ORDER BY 2 DESC;
+         1: datname     (typeid = 19, len = 64, typmod = -1, byval = f)
+         2: age (typeid = 23, len = 4, typmod = -1, byval = t)
+        ----
+         1: datname = "template1"       (typeid = 19, len = 64, typmod = -1, byval = f)
+         2: age = "2146435072"  (typeid = 23, len = 4, typmod = -1, byval = t)
+        ----
+         1: datname = "template0"       (typeid = 19, len = 64, typmod = -1, byval = f)
+         2: age = "10"  (typeid = 23, len = 4, typmod = -1, byval = t)
+        ----
+         1: datname = "postgres"        (typeid = 19, len = 64, typmod = -1, byval = f)
+         2: age = "10"  (typeid = 23, len = 4, typmod = -1, byval = t)
+        ----
 
-postgres@tardis:~/tempdata$ /usr/lib/postgresql/9.3/bin/pg_ctl -D 
-/var/lib/postgresql/tempdata  start
-server starting
-postgres@tardis:~/tempdata$ LOG:  database system was shut down at 2014-03-23 
-19:00:36 UTC
-LOG:  database system is ready to accept connections
-LOG:  autovacuum launcher started
+\end{verbatim}
 
-with -l 
+The age function shows how old is the last XID not yet frozen. In our example the template1
+database have an age of 2146435072, one million transactions to the wraparound. We can then exit 
+the backend with CTRL+D and restart it again in the in single user mode specifying the database 
+name. A VACUUM will get rid of the problematic xid.
+
+\begin{verbatim}
+postgres@tardis:~/tempdata$ /usr/lib/postgresql/9.3/bin/postgres --single \
+-D /home/postgres/tempdata template1
+
+backend> VACUUM;
+\end{verbatim}
+
+This procedure must be repeated for any database with very old XID.\newline
+
+Starting the cluster with pg\_ctl usage is very simple. This program also accepts the data area as 
+parameter or using the environment variable PGDATA. It's also required to provide the command to 
+execute. The start command for example is used to start the cluster in multi user mode.
+
+\begin{verbatim}
 
 postgres@tardis:~/tempdata$ /usr/lib/postgresql/9.3/bin/pg_ctl -D 
 /var/lib/postgresql/tempdata -l logfile start
@@ -114,19 +155,16 @@ LOG:  database system was shut down at 2014-03-23 19:01:19 UTC
 LOG:  database system is ready to accept connections
 LOG:  autovacuum launcher started
 
-
 \end{verbatim}
+Omitting the logfile with the -l will display the alerts and warnings on the terminal.
 
-As seen in the  subsection \ref{sub:PGCTL} pg\_ctl accepts the command to 
-perform on the cluster.
+The command stop will end the cluster's activity.
 
-In order to stop the running instance simply run
 \begin{verbatim}
 postgres@tardis:~$ /usr/lib/postgresql/9.3/bin/pg_ctl -D 
 /var/lib/postgresql/tempdata -l logfile stop
 waiting for server to shut down.... done
 server stopped
-
 \end{verbatim}
 
 \section{The startup sequence}
