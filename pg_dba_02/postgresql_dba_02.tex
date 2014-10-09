@@ -1,0 +1,75 @@
+\documentclass[oneside]{book}
+\usepackage[utf8]{inputenc}
+\usepackage{makeidx}
+\usepackage{graphicx}
+\setcounter{tocdepth}{2}
+\usepackage{hyperref}
+\hypersetup{pdfborder={0 0 0},colorlinks=false}
+\usepackage{verbatim}
+\newenvironment{smallverbatim}{\endgraf\small\verbatim}{\endverbatim}
+\newenvironment{tinyverbatim}{\endgraf\scriptsize\verbatim}{\endverbatim} 
+\pagestyle{plain}
+\usepackage{float}
+\usepackage{pdfpages}
+\usepackage{listings}
+\usepackage[paperwidth=9.44in,paperheight=10.68in]{geometry}
+
+\author{Federico Campoli}
+\title{PostgreSQL Database Administration \\ Volume 2 \\ The database in action}
+
+
+\makeindex
+
+\lstdefinestyle{pgsql}{
+  belowcaptionskip=1\baselineskip,
+  breaklines=true,
+  frame=l,
+  language=SQL,
+  showstringspaces=false,
+  basicstyle=\footnotesize\ttfamily,
+  keywordstyle=\bfseries\color{green!40!black},
+  commentstyle=\itshape\color{purple!40!black},
+  identifierstyle=\color{blue},
+  stringstyle=\color{orange},
+  morekeywords={VACUUM, FULL, ANALYZE, TABLESPACE,SET}
+}
+
+
+\begin{document}
+
+\maketitle
+
+\newpage{}
+
+
+
+\tableofcontents{}
+
+\chapter*{Preface}
+Here we go, again. I decided to give the second volume a different structure. Each chapter will 
+analyse a single topic with practical examples in the end. 
+
+
+
+
+
+\section*{Intended audience}
+Database administrators, System administrators
+
+\section*{Book structure}
+In this book Starts from the PostgreSQL DBA book 1 ends.\newlinechar
+
+
+\section*{Version and platform}
+This book cover the database version 9.3 on Debian GNU Linux 7.0.
+References to older version or different platform are explicitly specified.
+
+
+
+
+\appendix
+
+\listoffigures
+\listoftables
+\printindex{}
+\end{document}
