@@ -3,7 +3,8 @@
 A PostgreSQL cluster is made of two components. A physical location initialised as data area 
 and the postgres process attached to a shared memory segment, the shared buffer. The debian's 
 package's installation, automatically set up a fully functional PostgreSQL cluster in the directory 
-/var/lib/postgresql. This is good because it's possible to explore the product immediately. However, 
+/var/lib/postgresql. This is good because it's possible to explore the product immediately.
+However, 
 it's not uncommon to find clusters used in production with the minimal default configuration's 
 values, just because the binary installation does not make it clear what happens \textit{under the 
 bonnet}.
@@ -170,10 +171,9 @@ server stopped
 \section{The startup sequence}
 \label{sec:STARTUP}
 
-When the server process is started allocates the shared segment in memory. In
-the versions before the 9.3 this was the a potential point of failure because,
-if the shared\_buffers was bigger than the kernel's max allowed shared memory
-segment the startup will fail with this sort of error
+When PostgreSQL starts the server process then the shared memory is allocated. Before the version
+9.3 this was often cause of trouble because the default kernel's limits. An error like this it
+means the requested amount of memory is not allowed by the OS settings.
 
 \begin{verbatim}
 FATAL: could not create shared memory segment: Cannot allocate memory
@@ -188,13 +188,21 @@ reduce PostgreSQL's shared memory usage, perhaps by reducing shared_buffers or
 max_connections.
 \end{verbatim}
 
-In this case the kernel parameters needs adjustment.
-As from my Oracle experience I take no chance and I do use the values suggested
-for an Oracle installation which incidentally works perfectly for PostgreSQL.
+\index{kernel resources}
+The kernel parameter governing this limit is SHMMAX, the maximum size of
+shared memory segment. The value is measured in bytes and must be bigger than the shared\_buffers
+parameter. Another parameter which needs adjustment is SHMALL. This value sets the amount of shared
+memory available and usually on linux is measured in pages. Unless the kernel is configured to
+allow the huge pages the page size is 4096 byes. The value should be the same as SHMMAX. Changing
+those parameters requires the root privileges. It's a good measure to have a small extra headroom
+for the needed memory instead of setting the exact require value. \newline
 
+For example, setting the shared buffer to 1 GB requires SHMMAX to be at least 1073741824.
+The value 1258291200 (1200 MB) is a reasonable setting. The corresponding SHMALL is 307200. The
+value SHMMNI is the minimum value of shared memory, is safe to set to 4096, one memory page.
 \begin{verbatim}
-kernel.shmall = 2621440
-kernel.shmmax = 18253611008
+kernel.shmmax = 1258291200
+kernel.shmall = 307200
 kernel.shmmni = 4096
 kernel.sem = 250 32000 100 128
 fs.file-max = 658576
@@ -550,5 +558,6 @@ data files in the new location, creating the new symlink and starting the
 cluster.
 More informations about the tablespace management in the 
 chapter \ref{cha:LOGICLAY}. 
+
 
 
