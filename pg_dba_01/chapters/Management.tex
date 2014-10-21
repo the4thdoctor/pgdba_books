@@ -237,60 +237,47 @@ startup and sets the cluster in production state.
 \label{sec:SHUTDOWN_SEQ}
 \index{shutdown sequence}
 
-The PostgreSQL process enters the shutdown status when receive a specific OS 
-signal. The signal can be sent via the os kill or using the program pg\_ctl. \newline
+The PostgreSQL process enters the shutdown status when a specific OS signal is received. The signal
+can be sent via the os kill or using the program pg\_ctl. \newline
 
-As seen in \ref{sub:PGCTL} pg\_ctl for the stop action accepts the -m switch used to specify the
-shutdown mode. If  omitted the default mode is smart, corresponding to the SIGTERM signal. With
-the smart shuthdown the cluster stops accepting new connections waiting for the established
-connections to quit. 
+As seen in \ref{sub:PGCTL} pg\_ctl accepts the -m switch when the command is stop. The -m switch
+is used to specify the shutdown mode and if is omitted it defaults to smart which corresponds to
+the SIGTERM signal. With the smart shuthdown the cluster stops accepting new connections and
+waits for all backends to quit. \newline
 
-When the shutdown mode is set to fast the pg\_ctl program sends the SIGQUIT signal to the running
-process. Again the cluster will stop accepting new connections and the existing backends
-are terminated. Any open transaction is rolled back. \newline
+When the shutdown mode is set to fast pg\_ctl sends the SIGQUIT signal to the postgres main process.
+Same as for the smart shutdown the cluster does not accepts new connections terminates the existing
+backends. Any open transaction is rolled back as well. \newline
 
-Either the smart and the fast fast shutdown result in a clean cluster's status. When the postgres
-process starts the final shutdown starts a final checkpoint which consolidates any dirty block on
-disk. The latest checkpoint's location is the written to the pg\_control file alongside with the
-clean status. The postgres process finally exits and the pid file is removed.\newline
+When the smart and the fast shutdown are complete they leave the cluster in clean state. This is
+true because when the postgres process initiate the final part of the shutdown it starts a
+last checkpoint which consolidates any dirty block on the disk. Before quitting the postgres
+process saves the latest checkpoint's location to the pg\_control file and marks the
+cluster as clean.\newline
 
-The final checkpoint can slow down the entire shutdown sequence because is commonly spread through
-time to avoid any disk IO activity spike. If the shared\_buffer is big and contains many dirty
-blocks, the checkpoint can run for a very long time. In addition, if at the shutdown time, another
-checkpoint is running the postgres process will start the final checkpoint only after the
-running checkpoint is complete. During this time nothing is connected to the cluster and the new
-connections are forbidden.\newline
+The checkpoint can slow down the entire shutdown sequence. In particular if the shared\_buffer is
+big and contains many dirty blocks, the checkpoint can run for a very long time. Also if at
+the shutdown time, another checkpoint is running the postgres process will wait for this
+checkpoint to complete before starting the final checkpoint.\newline
 
-Enabling the log checkpoints in the configuration some visibility on what the cluster is
+Enabling the log checkpoints in the configuration gives us some visibility on what the cluster is
 actually doing. The GUC parameter governing the setting is log\_checkpoints.\newline
 
 
-If the cluster is taking too long to stop, as last resort is possible to 
-use the immediate mode. This will send a SIGQUIT to the running process causing 
-the immediate exit of the main process and all the sessions. 
+If the cluster doesn't stop, there is a shutdown mode which leaves the cluster in dirty state.
+The immiediate shutdown. The equivalent signal is the SIGQUIT and it causes the main process
+alongside with the backends to quit immediately without the checkpoint.\newline
 
-The shutdown in this case is not clean and the subsequent start will perform a 
-crash recovery starting from the last consistent state read from the 
-pg\_control file. The process is usually harmless with one important exception.
+The subsequent start will require a crash recovery. The recovery is usually harmless with one
+important exception. If the cluster contains unlogged tables those relations are recreated from
+scratch when the recovery happens and all the data in those table is lost.
 
-If the cluster have unlogged tables those relations are recreated from scratch 
-when the recovery happens and all the data in those table \textbf{is lost}.
-
-This is the main reason I suggest to avoid the pg\_ctlcluster shipped with 
-debian to stop the cluster. The program doesn't offer any control on the 
-shutdown mode and can result in disastrous data loss. For more details take a 
-look to the subsection \ref{sub:PGCTLDEB}.
-
-A last word about the SIGKILL signal. It can happen the cluster refuse to stop 
-even using the immediate mode. In this case, as last resort the SIGKILL or kill 
--9 can be used. The online manual is very clear on this point. As the SIGKILL 
-cannot be trapped and evicts from the ram the process with the shared memory, 
-its use will results in not freeing the resources used by the killed process.
-
-This will very likely affect the start of a fresh instance. Please refer to 
-your sysadmin to find out the best way to perform a memory and semaphore 
-cleanup before starting PostgreSQL after a SIGKILL. 
-
+A final word about the SIGKILL signal, the dreaded kill -9. It can happen the cluster refuse to
+stop even using the immediate mode. In this case, as last resort the SIGKILL. Because this signal
+cannot be trapped in any way, the resources like the shared memory and the inter process semaphores
+will stay in place after the kill. This will very likely affect the start of a fresh instance.
+Please refer to your sysadmin to find out the best way to cleanup the memory after the
+SIGKILL.
 
 \section{The processes}
 \label{sec:PROCESSES}
