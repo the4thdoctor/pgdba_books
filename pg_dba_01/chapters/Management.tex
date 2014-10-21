@@ -3,7 +3,8 @@
 A PostgreSQL cluster is made of two components. A physical location initialised as data area 
 and the postgres process attached to a shared memory segment, the shared buffer. The debian's 
 package's installation, automatically set up a fully functional PostgreSQL cluster in the directory 
-/var/lib/postgresql. This is good because it's possible to explore the product immediately. However, 
+/var/lib/postgresql. This is good because it's possible to explore the product immediately.
+However, 
 it's not uncommon to find clusters used in production with the minimal default configuration's 
 values, just because the binary installation does not make it clear what happens \textit{under the 
 bonnet}.
@@ -170,10 +171,13 @@ server stopped
 \section{The startup sequence}
 \label{sec:STARTUP}
 
-When the server process is started allocates the shared segment in memory. In
-the versions before the 9.3 this was the a potential point of failure because,
-if the shared\_buffers was bigger than the kernel's max allowed shared memory
-segment the startup will fail with this sort of error
+When the postgres process starts it allocates the shared memory segment called shared buffer. The
+size of this segment is specified with the GUC parameter shared\_buffers.The version 9.3, on the
+unix systems, changed the memory allocation method to mmap(). This eliminated any need to adjust
+the kernel's parameters.
+
+For the versions up to the 9.2, if the requested memory is bigger than the kernel's maximum
+allowed size, the startup sequence will abort with an error like this.
 
 \begin{verbatim}
 FATAL: could not create shared memory segment: Cannot allocate memory
@@ -188,116 +192,92 @@ reduce PostgreSQL's shared memory usage, perhaps by reducing shared_buffers or
 max_connections.
 \end{verbatim}
 
-In this case the kernel parameters needs adjustment.
-As from my Oracle experience I take no chance and I do use the values suggested
-for an Oracle installation which incidentally works perfectly for PostgreSQL.
+\index{kernel resources}
+The kernel's parameters governing this limit is SHMMAX. It sets the maximum allowed size of a shared
+memory segment. The value is measured in bytes and must be big enogh to contain the
+requested shared\_buffers. Another parameter which needs adjustment is SHMALL. This value sets the
+amount of total shared memory available. On linux is usually measured in pages. Unless the
+kernel is configured to allow the huge pages the page size is 4096 byes. The value should be the
+same as SHMMAX. \newline
 
+If we want to set a pre 9.3 with a shared buffer to 1 GB the SHMMAX should be at least 1073741824.
+The value 1258291200 (1200 MB) is a reasonable setting ang gives us some extra headroom. The
+corresponding SHMALL is 307200. The value SHMMNI is the minimum value of the shared memory, is safe
+to set to 4096, just one memory page. 
+
+The settings can be changed on the fly, simply echoing in the corresponding proc entries or setting
+the values persistently into the file /etc/sysctl.conf.
+
+Here's the file from the previous example.
 \begin{verbatim}
-kernel.shmall = 2621440
-kernel.shmmax = 18253611008
+kernel.shmmax = 1258291200
+kernel.shmall = 307200
 kernel.shmmni = 4096
 kernel.sem = 250 32000 100 128
 fs.file-max = 658576
 \end{verbatim}
 
-Put those values into the file /etc/sysctl.conf and, as root, run 
-\textit{sysctl -p}.
+To apply the changes login as root and run \textit{sysctl -p}.\newline
 
-The latest major version PostgreSQL switched from the SysV to Posix shared
-memory and mmap. This solved completely the shared memory tuning on Linux.
 
 When the memory is allocated the postmaster reads the pg\_control
-file to check if the instance requires recovery.
+file to check if the instance requires recovery. The pg\_control file is used to store the locations
+to the last checkpoint and the last known status for the instance.\newline
 
-The pg\_control contains references to the last checkpoint and the last known
-status for the instance. 
+If  the instance is in dirty state, because a crash or an unclean shutdown, the startup
+process reads the last checkpoint location and replays the blocks from the corresponding WAL
+segment in the pg\_xlog directory. Any corruption in the wal files during the recovery or the
+pg\_control file results in a not startable instance.\newline
 
-If  the instance is in dirty state, because a crash or an unclean shutdown, the
-startup replays the blocks from the WAL segments in the pg\_xlog directory
-starting from the last checkpoint position read from the pg\_control file.
-
-Any corruption in the wal files or, even worse, the pg\_control file results in
-a not startable instance.
-
-After the recovery is complete or the cluster is in clean state, then  the
-startup completes opening the database in production state. 
+When the recovery is complete or if the cluster's state is clean the postgres process completes the
+startup and sets the cluster in production state. 
 
 
 \section{The shutdown sequence} 
 \label{sec:SHUTDOWN_SEQ}
 \index{shutdown sequence}
-For those coming from Oracle, the PostgreSQL's shutdown sequence will sound 
-familiar with few, but very important, exceptions.
 
-A PostgreSQL process enters the shutdown status when receive a specific OS 
-signal. 
+The PostgreSQL process enters the shutdown status when a specific OS signal is received. The signal
+can be sent via the os kill or using the program pg\_ctl. \newline
 
-This can happen using the os kill or via pg\_ctl. 
+As seen in \ref{sub:PGCTL} pg\_ctl accepts the -m switch when the command is stop. The -m switch
+is used to specify the shutdown mode and if is omitted it defaults to smart which corresponds to
+the SIGTERM signal. With the smart shuthdown the cluster stops accepting new connections and
+waits for all backends to quit. \newline
 
-As seen in the section \ref{sub:PGCTL} the latter accepts the -m switch to 
-specify the shutdown mode. If not specified defaults to the mode smart which 
-sends the signal SIGTERM to the running PostgreSQL process. This way the 
-database will not accept new connections and will wait for the existing 
-connections to exit before the shutdown. 
+When the shutdown mode is set to fast pg\_ctl sends the SIGQUIT signal to the postgres main process.
+Same as for the smart shutdown the cluster does not accepts new connections terminates the existing
+backends. Any open transaction is rolled back as well. \newline
 
-The most useful PostgreSQL shutdown mode is the fast mode. This way the SIGQUIT 
-is sent to the postgresql process and the database will disconnect all the 
-sessions rolling back the open transactions and then will enter the shutdown 
-sequence. 
+When the smart and the fast shutdown are complete they leave the cluster in clean state. This is
+true because when the postgres process initiate the final part of the shutdown it starts a
+last checkpoint which consolidates any dirty block on the disk. Before quitting the postgres
+process saves the latest checkpoint's location to the pg\_control file and marks the
+cluster as clean.\newline
 
-Either modes, smart and fast, make the database shutdown clean, leaving the 
-cluster in consistent state when the postgres process exits. 
+The checkpoint can slow down the entire shutdown sequence. In particular if the shared\_buffer is
+big and contains many dirty blocks, the checkpoint can run for a very long time. Also if at
+the shutdown time, another checkpoint is running the postgres process will wait for this
+checkpoint to complete before starting the final checkpoint.\newline
 
-As soon as the postgres process enters the shutdown sequence will issue a last 
-checkpoint consolidating the updated physical blocks in the shared buffers to 
-the data files.
-
-As soon as the checkpoint is complete and the last consistent position is 
-logged on the pg\_control file, the database main process exits the accessory 
-processes like the walwriter or the checkpointer and terminates removing the 
-pid file.
-
-The last checkpoint can slow down the entire sequence because is commonly 
-spread through time to avoid any disk IO activity spike. If the shared\_buffer 
-is big and contains many dirty blocks, the checkpoint can run for a very long 
-time. In addition, if at the shutdown time, another checkpoint is running the 
-database will wait the completion before starting the final checkpoint. This 
-meanwhile the new connections are forbidden, whatever shutdown mode you decided 
-to use. 
-
-In order to have an idea  of what's happening on the running cluster, is a good 
-practice to change the GUC log\_checkpoints = off to log\_checkpoints = on.
+Enabling the log checkpoints in the configuration gives us some visibility on what the cluster is
+actually doing. The GUC parameter governing the setting is log\_checkpoints.\newline
 
 
-For more informations about the database processes take a look to the section 
-\ref{sec:PROCESSES}.
+If the cluster doesn't stop, there is a shutdown mode which leaves the cluster in dirty state.
+The immiediate shutdown. The equivalent signal is the SIGQUIT and it causes the main process
+alongside with the backends to quit immediately without the checkpoint.\newline
 
-If the cluster is taking too long to stop, as last resort is possible to 
-use the immediate mode. This will send a SIGQUIT to the running process causing 
-the immediate exit of the main process and all the sessions. 
+The subsequent start will require a crash recovery. The recovery is usually harmless with one
+important exception. If the cluster contains unlogged tables those relations are recreated from
+scratch when the recovery happens and all the data in those table is lost.
 
-The shutdown in this case is not clean and the subsequent start will perform a 
-crash recovery starting from the last consistent state read from the 
-pg\_control file. The process is usually harmless with one important exception.
-
-If the cluster have unlogged tables those relations are recreated from scratch 
-when the recovery happens and all the data in those table \textbf{is lost}.
-
-This is the main reason I suggest to avoid the pg\_ctlcluster shipped with 
-debian to stop the cluster. The program doesn't offer any control on the 
-shutdown mode and can result in disastrous data loss. For more details take a 
-look to the subsection \ref{sub:PGCTLDEB}.
-
-A last word about the SIGKILL signal. It can happen the cluster refuse to stop 
-even using the immediate mode. In this case, as last resort the SIGKILL or kill 
--9 can be used. The online manual is very clear on this point. As the SIGKILL 
-cannot be trapped and evicts from the ram the process with the shared memory, 
-its use will results in not freeing the resources used by the killed process.
-
-This will very likely affect the start of a fresh instance. Please refer to 
-your sysadmin to find out the best way to perform a memory and semaphore 
-cleanup before starting PostgreSQL after a SIGKILL. 
-
+A final word about the SIGKILL signal, the dreaded kill -9. It can happen the cluster refuse to
+stop even using the immediate mode. In this case, as last resort the SIGKILL. Because this signal
+cannot be trapped in any way, the resources like the shared memory and the inter process semaphores
+will stay in place after the kill. This will very likely affect the start of a fresh instance.
+Please refer to your sysadmin to find out the best way to cleanup the memory after the
+SIGKILL.
 
 \section{The processes}
 \label{sec:PROCESSES}
@@ -550,5 +530,6 @@ data files in the new location, creating the new symlink and starting the
 cluster.
 More informations about the tablespace management in the 
 chapter \ref{cha:LOGICLAY}. 
+
 
 
