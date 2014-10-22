@@ -281,34 +281,26 @@ SIGKILL.
 
 \section{The processes}
 \label{sec:PROCESSES}
-Since the early version 7.4, when the only process running the cluster were the 
-old loved postmaster, PostgreSQL has enriched with new dedicated processes, 
-becoming more complex but even more efficient.
-
-With a running cluster there are at least six postgres processes, the one 
-without colon in the process name is is the main database's process, started 
-as seen in the section \ref{sec:STARTUP}.
-
+Alongside with postgres process exist a number of accessory processes of various puprposes. A
+running 9.3 cluster have in memory at least six postgres processes. The postgres process is the main
+database's process seen before. We'll take a look to the others.
 
 \subsection{postgres: checkpointer process}
-As the name suggest this process take care of the cluster's 
-checkpoint\index{checkpoint}. The checkpoint is an important event in the 
-database activity. When a checkpoint starts all the dirty 
-pages in memory are written to the data files. 
-The checkpoint by the time and the number of cluster's WAL switches.
-To adjust the checkpoin's frequency the GUC parameters checkpoint\_timeout and 
-checkpoint\_segments are used. A third parameter, 
-checkpoint\_completion\_target is used to spread the checkpoint over a 
-percentage of the checkpoint\_timeout, in order to avoid a massive disk IO 
-spike.
+As the name suggests this process take care of the cluster's 
+checkpoint\index{checkpoint} activity. A checkpoint is an important event in the 
+cluster's life. When started all the dirty pages in memory are written to the data files. 
+The checkpoint frequency is regulated by the time and the number of cluster's WAL switches.
+The GUC parameters governing this metrics are respectively checkpoint\_timeout and 
+checkpoint\_segments. There is a third parameter, the checkpoint\_completion\_target which sets
+the percentage of the checkpoint\_timeout. The cluster uses this value to spread the checkpoint
+over this time in order to avoid a massive disk IO spike.
 
 \subsection{postgres: writer process}
-To ease down the checkpoint activity the background writer scans the shared 
-buffer for dirty pages to write down to the disk. The process is designed to 
-have a minimal impact on the database activity. It's possible to tune the rounds
-length and delay using the GUC parameters bgwriter\_delay, time between two 
-rounds, and bgwriter\_lru\_maxpages, the number of buffers after the writer's 
-sleep.
+The background writer scans the shared buffer for dirty pages which writes on the data files. The
+process is designed to have a minimal impact on the database activity. It's possible to tune the
+length of a run and the delay between the writer's runs using the GUC parameters
+bgwriter\_lru\_maxpages and bgwriter\_delay. Respectively the number of dirty buffers written before
+the writer's sleep and the time between two runs.
 
 
 \subsection{postgres: wal writer process}
