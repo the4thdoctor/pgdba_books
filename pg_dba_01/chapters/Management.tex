@@ -281,53 +281,46 @@ SIGKILL.
 
 \section{The processes}
 \label{sec:PROCESSES}
-Alongside with postgres process exist a number of accessory processes of various puprposes. A
-running 9.3 cluster have in memory at least six postgres processes. The postgres process is the main
-database's process seen before. We'll take a look to the others.
+Alongside with postgres process there are a number of accessory processes. With a running 9.3
+cluster ps shows at least six postgres processes. 
 
 \subsection{postgres: checkpointer process}
-As the name suggests this process take care of the cluster's 
-checkpoint\index{checkpoint} activity. A checkpoint is an important event in the 
-cluster's life. When started all the dirty pages in memory are written to the data files. 
-The checkpoint frequency is regulated by the time and the number of cluster's WAL switches.
-The GUC parameters governing this metrics are respectively checkpoint\_timeout and 
-checkpoint\_segments. There is a third parameter, the checkpoint\_completion\_target which sets
-the percentage of the checkpoint\_timeout. The cluster uses this value to spread the checkpoint
-over this time in order to avoid a massive disk IO spike.
+As the name suggests this process take care of the cluster's checkpoint\index{checkpoint} activity.
+A checkpoint is an important event in the cluster's life. When it starts all the dirty pages in
+memory are written to the data files. The checkpoint frequency is regulated by the time and the
+number of cluster's WAL switches.The GUC parameters governing this metrics are respectively
+checkpoint\_timeout\index{checkpoint\_timeout} and checkpoint\_segments\index{checkpoint\_segments}.
+There is a third parameter, the checkpoint\_completion\_target\index{checkpoint\_completion\_target}
+which sets the percentage of the checkpoint\_timeout. The cluster uses this value to spread the
+checkpoint over this time in order to avoid a big disk IO spike.
 
 \subsection{postgres: writer process}
-The background writer scans the shared buffer for dirty pages which writes on the data files. The
-process is designed to have a minimal impact on the database activity. It's possible to tune the
-length of a run and the delay between the writer's runs using the GUC parameters
-bgwriter\_lru\_maxpages and bgwriter\_delay. Respectively the number of dirty buffers written before
-the writer's sleep and the time between two runs.
-
+The background writer scans the shared buffer searching for dirty pages which writes on the data
+files. The process is designed to have a minimal impact on the database activity. It's possible to
+tune the length of a run and the delay between the writer's runs using the GUC parameters
+bgwriter\_lru\_maxpages\index{bgwriter\_lru\_maxpages} and bgwriter\_delay\index{bgwriter\_delay}.
+They are respectively the number of dirty buffers written before the writer's sleep and the time
+between two runs.
 
 \subsection{postgres: wal writer process}
-This background process has been introduced recently to have a more efficient 
-wal writing. The process works in rounds were write down the wal buffers to the 
-wal files. The GUC parameter wal\_writer\_delay\index{wal\_writer\_delay} sets 
-the milliseconds to sleep between the rounds. 
+This background process has been introduced with the 9.3 in order to make the WAL writes a more
+efficient. The process works in rounds and writes down the wal buffers to the  wal files. The GUC
+parameter wal\_writer\_delay\index{wal\_writer\_delay} sets the milliseconds to sleep between the
+rounds. 
 
 \subsection{postgres: autovacuum launcher process}
-This process is present if the GUC parameter autovacuum is set to on.
-It's scope is to launch the autovacuum backends at need.
-Anyway autovacuum can run even if autovacuum is turned of, when there's risk 
-of the XID wraparound failure\index{XID wraparound failure}.
+This process is present if the autovacuum\index{autovacuum} is enabled. It's purpose is to launch
+the autovacuum backends when needed. 
 
 \subsection{postgres: stats collector process}
-The process gathers the database's usage statistics for human usage and stores 
-the informations into the location indicated by the GUC stats\_temp\_directory, 
-by default pg\_stat\_temp. Those statistics are useful to understand 
-how the database is performing, from pyshical and logical point of view.
+The process gathers the database's usage statistics and stores the information to the location
+indicated by the GUC stats\_temp\_directory. This is by default pg\_stat\_temp, a relative path to
+the data area. 
 
 \subsection{postgres: postgres postgres [local] idle}
-This kind of process is the database backend, one for each established 
-connection. The values after the colon square brackets show useful 
-informations like the connected database, the username, the host and the 
-executing query. The same informations are stored into the pg\_stat\_activity 
-table.
-
+This is a database backend. There is one backend for each established connection. The values after
+the colon show useful information. In particular between the square brackets there is the query
+the backend is executing. 
 
 \section{The memory}
 \label{sec:MEMORY}
