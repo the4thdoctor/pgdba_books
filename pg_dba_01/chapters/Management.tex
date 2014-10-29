@@ -172,7 +172,9 @@ server stopped
 \label{sec:STARTUP}
 
 When the postgres process starts it allocates the shared memory segment called shared buffer. The
-size of this segment is specified with the GUC parameter shared\_buffers.The version 9.3, on the
+size of this segment is specified with the GUC\footnote{GUC, Grand Unified Configuration, this 
+acronym refers to the configuration parameters} parameter shared\_buffers.The
+version 9.3, on the
 unix systems, changed the memory allocation method to mmap(). This eliminated any need to adjust
 the kernel's parameters.
 
@@ -324,39 +326,27 @@ the backend is executing.
 
 \section{The memory}
 \label{sec:MEMORY}
-The PostgreSQL's memory structure is not complex like other databases.
-In this section we'll take a to the various parts. 
+Externally the PostgreSQL's memory structure is very simple to understand. Alongside with a single
+shared segment there are the per user memories. Behind the scenes things are quite complex and
+beyond the scope of this book.
 
 \subsection{The shared buffer}
 \index{shared buffer}
-The shared buffer, as the name suggests is the segment of shared memory used by 
-PostgreSQL to manage the data pages. 
+The shared buffer, as the name suggests is the segment of shared memory used by PostgreSQL to manage
+the data pages shared across the backends. The shared buffer's size is set using the GUC parameter
+shared\_buffers\index{shared\_buffers}. Any change requires the cluster's restart.\newline
 
-Its size is set using the GUC\footnote{GUC, Grand Unified Configuration, this 
-acronym refers to the parameters used to configure the instance} parameter 
-shared\_buffers and is allocated 
-during the startup process.Any change requires the instance restart.
+The memory segment is formatted in pages like the data files. When a new backend is forked
+from the main process is attached to the shared buffer. Because usually the shared buffer is
+a fraction of the cluster's size, a simple but very efficient mechanism keeps in memory the blocks
+using a combination of LRU and MRU. Since the version 8.3 is also present a protection mechanism
+against the page eviction from the memeory in the case of IO intensive  operations.\newline
 
-The segment is formatted in blocks with the same size of the data file's 
-blocks, usually 8192 bytes. Each backend connected to the cluster is attached 
-to this segment. Because usually its size is a fraction of the cluster's size, 
-a simple but very efficient mechanism keeps in memory the blocks using a 
-combination of LRU and MRU.
+Any data operation is performed loading the data pages in the shared buffer. Alongside with the
+benefits of the memory cache there is the enforcement of the data consistency at any time.\newline
 
-Since the the version 8.3 is present a protection mechanism to avoid the 
-massive block eviction when intensive IO operations, like vacuum or big 
-sequential reads, happens.
-
-Each database operation, read or write, is performed moving the blocks via the 
-shared buffer. This ensure an effective caching process and the memory routines 
-guarantee the consistent read and write at any time.
-
-PostgreSQL, in order to protect the shared buffer from potential corruption, if 
-any unclean disconnection happens, resets by default all the connections. 
-
-This behaviour can be disabled in the configuration file but exposes the shared 
-buffer to data corruption if the unclean disconnections are not correctly 
-managed.
+In particular, if any backend crash happens PostgreSQL resets all the existing connections to
+protect the shared buffer from potential corruption. 
 
 
 
