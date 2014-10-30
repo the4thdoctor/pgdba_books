@@ -352,28 +352,14 @@ protect the shared buffer from potential corruption.
 
 \subsection{The work memory}\index{work memory}
 \label{sub:WORKMEM}
-This memory segment is allocated per user and its default value is set using 
-the GUC parameter work\_mem. The value can be altered for the session on the 
-fly. When changed in the global configuration file becomes effective to the 
-next transaction after the instance reload. 
+The work memory is allocated for each connected session. Its size  is set using the GUC parameter
+work\_mem. The value can be set just for the current session using the SET statement or globally in
+the postgresql.conf file.In this case the change becomes effective immediately after the cluster
+reloads the configuration file.\newline
 
-This segment is used mainly for expensive operations like the sort or the 
-hash.
-
-If the operation's memory usage exceeds the work\_mem value then the PostgreSQL 
-switches to a disk sort/hash. 
-
-Increasing the work\_mem value results generally in better performances for 
-sort/hash operations. 
-
-Because is a per user memory segment, the potential amount of memory 
-required in a running instance is max\_connections * work\_mem. It's very 
-important to set this value to a reasonable size in order to avoid any risk of 
-out of memory error or unwanted swap.
-
-In complex queries is likely to have many sort or hash operations in parallel 
-and each one consumes the amount of work\_mem for the 
-session.
+A correct size for this memory can improve the performance of any memory intensive operation like
+the sorts. It's very important to set this value to a reasonable size in order to avoid any risk of 
+out of memory error or unwanted swap.\newline
 
 
 \subsection{The maintenance work memory}\index{maintenance work memory}
