@@ -363,20 +363,18 @@ out of memory error or unwanted swap.\newline
 
 
 \subsection{The maintenance work memory}\index{maintenance work memory}
-The maintenance work memory is set using the GUC parameter 
-maintenance\_work\_mem and follow the same rules of work\_mem. This memory 
-segment is allocated per user and is used for the maintenance operations 
-like VACUUM or REINDEX. As usually this kind of operations happens on one 
-relation at time, this parameter can be safely set to a bigger value than 
-work\_mem.
+The maintenance work memory is set with the parameter maintenance\_work\_mem and like the work\_mem
+is allocated for each connected session. PostgreSQL uses this memory in the maintenance operations 
+like VACUUM or REINDEX. The value can be bigger than work\_mem. In \ref{sec:VACUUM}
+there are more information about it. The maintenance\_work\_mem value can be set on the session or
+globally like the work memory.
 
 \subsection{The temporary memory}
 \label{sub:TEMPBUF}
-The temporary memory is set using the GUC parameter temp\_buffers. This is the 
-amount of memory per user for the temporary table creation before the disk is 
-used. Same as for the work memory and the maintenance work memory it's possible 
-to change the value for the current session but only before any temporary table 
-creation. After this the parameter cannot be changed anymore.
+The temporary memory is set using the parameter temp\_buffers. The main usage is for storing the the
+temporary tables. If the table doesn't fit in the allocated memory then the relation is saved
+on on disk. It's possible to change the temp\_buffers value for the current session but only before
+creating a temporary table.
 
 
 \section{The data area}
