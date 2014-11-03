@@ -13,7 +13,7 @@ This chapter will explain how a PostgreSQL cluster works and how critical is its
 management. 
 
 \section{Initialising the data directory}
-
+\label{sec:INITPGDATA}
 The data area is initialised by initdb\index{initdb}. The program requires an empty directory to 
 write into to successful complete. Where the initdb binary is located depends from the installation 
 method. We already discussed of this in \ref{cha:INSTALLSTRUCT} and \ref{cha:DB_INSTALL}. 
@@ -379,31 +379,26 @@ creating a temporary table.
 
 \section{The data area}
 \label{sec:PGDATA}\index{data area}
-As seen before the data storage area is initialized by initdb \index{initdb}.
-Its structure didn't change too much from the old fashioned 7.4.
-In this section we'll take a look to the various subdirectories and how their 
-usage can affect the performances. 
+As seen in \ref{sec:INITPGDATA} the data area is initialised using initdb \index{initdb}. In this
+section we'll take a look to some of the PGDATA's sub directories.
 
 
 \subsection{base}\index{data area,base}
 \label{sub:BASE}
-As the name suggests, the base directory contains the database files. Each 
-database have a dedicated subdirectory, named after the internal database's 
-object id.
-A freshly initialised data directory shows only three 
-subdirectories in the base folder.
+This directory it does what name suggests, it holds the database files. For each database in the
+cluster there is a dedicated sub directory in base named after the database's object id.
+A new installation shows only three sub directories in the base folder.\newline
 
-Those corresponds to the two template databases,template0 and template1, plus 
-the postgres database. Take a look to chapter \ref{cha:LOGICLAY} for more 
-informations.
+Two of them are the template databases,template0 and template1. The third is the postgres database.
+In \ref{cha:LOGICLAY}  there are more information about the logical structure.\newline
 
-The numerical directories contains various files, also with the numerical name 
-which are actualy the database's relations, tables and indices. 
+Each database directory contains many files with the numerical names. They are the
+physical database's files, tables indices etc.\newline 
 
-The relation's name is set initially from the relation's object id. Any file 
-altering operation like VACUUM FULL or REINDEX, will generate a new file 
-with a different name. To find out the real relation's file name the 
-relfilenode inside the pg\_class system table  must be queried.
+The relation's file name is set initially using the relation's object id. Because there are
+operations that  can change the file name (e.g. VACUUM FULL, REINDEX) PostgreSQL tracks the file
+name in a different pg\_class's field, the relfilenode. In \ref{cha:PHYLAY} there are
+more information about the physical data file structure.
 
 \subsection{global}\index{data area,global}
 The global directory contains all the cluster wide relations.
