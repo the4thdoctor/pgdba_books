@@ -385,7 +385,7 @@ section we'll take a look to some of the PGDATA's sub directories.
 
 \subsection{base}\index{data area,base}
 \label{sub:BASE}
-This directory it does what name suggests, it holds the database files. For each database in the
+This directory it does what the name suggests. It holds the database files. For each database in the
 cluster there is a dedicated sub directory in base named after the database's object id.
 A new installation shows only three sub directories in the base folder.\newline
 
@@ -401,30 +401,18 @@ name in a different pg\_class's field, the relfilenode. In \ref{cha:PHYLAY} ther
 more information about the physical data file structure.
 
 \subsection{global}\index{data area,global}
-The global directory contains all the cluster wide relations.
-In addition there's the very critical  control file mentioned in 
-\ref{sub:PGCONTROLDATA} \index{control file}.
-
-This small file is big exactly one database block, usually 8192 bytes, and 
-contains critical informations for the cluster. 
-With a corrupted control file the instance cannot start. 
-The control file is written usually when a checkpoint occurs.
+The global directory holds all the shared relations. Alongside with the data files there is a small
+file, just one page, called pg\_control. This file is vital for the cluster's activity
+\index{control file}. If there is any corruption on the control file the cluster cannot start.
 
 \subsection{pg\_xlog}\index{data area,pg\_xlog}
-This is the most important and critical directory, for the performances and for 
-the reliability. 
-
-The directory contains the transaction's logs, \index{wal files} named wal 
-file. Each file is usually 16 Mb and contains all the data blocks changed during 
-the database activity. 
-The blocks are written first on this not volatile area to ensure the cluster's 
-recovery in case of cras. The data blocks are then written later to the 
-corresponding data files. If the cluster's shutdown is not clean then the wal 
-files are replayed during the startup process from the last known consistent 
-location read from control file.
-
-In order to ensure good performance this location should stay on a dedicated 
-device. 
+This is probably the most important and critical directory in the data area. The directory holds
+the write ahead logs, \index{wal files} or WAL files. Each segment is by default 16 MB and is used
+to store the records pages modified during the cluster's activity. Writing the changes first on
+this durable storage ensures the cluster's recovery capability. In the case of a crash WAL
+records are replayed during the initial startup's crash recovery. The last checkpoint location
+is read from control file and is from where the replay starts. Because this directory is heavily
+written, putting it on a dedicated device improves the performance. 
 
 \subsection{pg\_clog}\index{data area, pg\_clog}
 This directory contains the committed transactions in small 8k files, except 
