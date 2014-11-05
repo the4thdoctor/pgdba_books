@@ -402,47 +402,41 @@ more information about the physical data file structure.
 
 \subsection{global}\index{data area,global}
 The global directory holds all the shared relations. Alongside with the data files there is a small
-file, just one page, called pg\_control. This file is vital for the cluster's activity
+file, just one data page, called pg\_control. This file is vital for the cluster's activity
 \index{control file}. If there is any corruption on the control file the cluster cannot start.
 
 \subsection{pg\_xlog}\index{data area,pg\_xlog}
 This is probably the most important and critical directory in the data area. The directory holds
-the write ahead logs, \index{wal files} or WAL files. Each segment is by default 16 MB and is used
-to store the records pages modified during the cluster's activity. Writing the changes first on
-this durable storage ensures the cluster's recovery capability. In the case of a crash WAL
-records are replayed during the initial startup's crash recovery. The last checkpoint location
-is read from control file and is from where the replay starts. Because this directory is heavily
-written, putting it on a dedicated device improves the performance. 
+the write ahead logs, \index{wal files} also known as WAL files. Each segment is by default 16 MB
+and is used to store the records for the pages changed in the shared buffer. The write first
+on on this durable storage ensures the cluster's crash recovery. In the event of a crash
+the WAL are replayed when the startup begins from the last checkpoint location read from control
+file.Because this directory is heavily written, putting it on a dedicated device improves the
+performance. 
 
 \subsection{pg\_clog}\index{data area, pg\_clog}
-This directory contains the committed transactions in small 8k files, except 
-for the serializable transactions.
-The the files are managed by the cluster and the amount is related with 
-the two GUC parameters autovacuum\_freeze\_max\_age and 
-vacuum\_freeze\_table\_age.
-Increasing the values for the two parameters the pg\_clog must store the commit 
-status to the ``event horizon'' of the oldest frozen transaction id. 
-More informations about vacuum and the maintenance are in 
-the chapter \ref{cha:MAINTENANCE}.
+This directory contains the status of the committed transactions stored in many files, each one
+big like a data page. The directory does not store the status of the transactions executed
+with the SERIALIZABLE isolation. The directory is managed by PostgreSQL. The number of files is
+controlled by the two parameters autovacuum\_freeze\_max\_age and vacuum\_freeze\_table\_age.
+They control the ``event horizon'' of the oldest frozen transaction id and the pg\_clog must
+store the commit status accordingly. 
 
 \subsection{pg\_serial}\index{data area, pg\_serial}
-Same as pg\_clog this directory stores the informations about the commited 
-transactions in serializable transaction isolation level.
+This directory is similar to the pg\_clog except the commit statuses are only for the transactions
+executed with the  SERIALIZABLE isolation level.
 
 \subsection{pg\_multixact}\index{data area, pg\_multixact}
-Stores the informations about the multi transaction status, used generally for  
-the row share locks.
+The directory stores the statuses of the multi transactions. They are used in general for the
+row share locks.
 
 \subsection{pg\_notify}\index{data area, pg\_notify}
-Stores informations about the LISTEN/NOTIFY operations.
+The directory is used to stores the LISTEN/NOTIFY operations.
 
 \subsection{pg\_snapshots}\index{data area, pg\_snapshots}
-This directory is used to store the exported snapshots. From the version 9.2 
-PostgreSQL offers the transaction's snapshot export where one session can 
-open a transaction and export a consistent snapshot. This way different session 
-can access the snapshot and read all togheter the same consistent data 
-snapshot. This feature is used, for example, by pg\_dump for the parallel 
-export.
+This directory stores the exported transaction's snapshots. From the version 9.2 PostgreSQL
+can export a consistent snapshot to the other sessions. More details about the snapshots are in
+\ref{sub:SNAPEXPORT}.
 
 \subsection{pg\_stat}\index{data area, pg\_stat}
 This directory contains the permanent files for the statistic subsystem. 
