@@ -138,7 +138,7 @@ individual tables.\newline
 The -j option specifies the number of jobs to run in parallel for dumping the data. This feature 
 appeared in the version 9.3 and uses the transaction's snapshot export to give a consistent data 
 snapshot to the export jobs. The switch is usable only with the directory format and only 
-against PostgreSQL 9.2 and later.\newline 
+with PostgreSQL 9.2 and later.\newline 
 
 The option -Z specifies the compression level for the compressed formats. The default is 5 
 resulting in a dumped archive from 5 to 8 times smaller than the original database. 
@@ -220,10 +220,10 @@ slow and should be used only for reloading data into non-PostgreSQL databases.\n
 
 The --no-security-labels doesn't include the security labels into the dump file.\newline
 
-The --no-synchronized-snapshots  allows the parallel export against pre 9.2 databases. Because the 
-snapshot export feature is missing this means the database shall not change its status meanwhile 
-the export is running. Otherwise there will be a not consistent data export. If in doubt do not 
-use this option.\newline
+The --no-synchronized-snapshots  allows the parallel export with the pre 9.2 databases. Because
+the snapshot export feature is missing this means the database shall not change until all the export
+job are connected. When all the dump jobs are connected the write operations on the
+exported database can resume safely.\newline
 
 The --no-tablespaces skips the tablespace assignments.\newline
 

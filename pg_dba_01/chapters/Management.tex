@@ -13,7 +13,7 @@ This chapter will explain how a PostgreSQL cluster works and how critical is its
 management. 
 
 \section{Initialising the data directory}
-
+\label{sec:INITPGDATA}
 The data area is initialised by initdb\index{initdb}. The program requires an empty directory to 
 write into to successful complete. Where the initdb binary is located depends from the installation 
 method. We already discussed of this in \ref{cha:INSTALLSTRUCT} and \ref{cha:DB_INSTALL}. 
@@ -379,116 +379,88 @@ creating a temporary table.
 
 \section{The data area}
 \label{sec:PGDATA}\index{data area}
-As seen before the data storage area is initialized by initdb \index{initdb}.
-Its structure didn't change too much from the old fashioned 7.4.
-In this section we'll take a look to the various subdirectories and how their 
-usage can affect the performances. 
+As seen in \ref{sec:INITPGDATA} the data area is initialised using initdb \index{initdb}. In this
+section we'll take a look to some of the PGDATA's sub directories.
 
 
 \subsection{base}\index{data area,base}
 \label{sub:BASE}
-As the name suggests, the base directory contains the database files. Each 
-database have a dedicated subdirectory, named after the internal database's 
-object id.
-A freshly initialised data directory shows only three 
-subdirectories in the base folder.
+This directory it does what the name suggests. It holds the database files. For each database in the
+cluster there is a dedicated sub directory in base named after the database's object id.
+A new installation shows only three sub directories in the base folder.\newline
 
-Those corresponds to the two template databases,template0 and template1, plus 
-the postgres database. Take a look to chapter \ref{cha:LOGICLAY} for more 
-informations.
+Two of them are the template databases,template0 and template1. The third is the postgres database.
+In \ref{cha:LOGICLAY}  there are more information about the logical structure.\newline
 
-The numerical directories contains various files, also with the numerical name 
-which are actualy the database's relations, tables and indices. 
+Each database directory contains many files with the numerical names. They are the
+physical database's files, tables indices etc.\newline 
 
-The relation's name is set initially from the relation's object id. Any file 
-altering operation like VACUUM FULL or REINDEX, will generate a new file 
-with a different name. To find out the real relation's file name the 
-relfilenode inside the pg\_class system table  must be queried.
+The relation's file name is set initially using the relation's object id. Because there are
+operations that  can change the file name (e.g. VACUUM FULL, REINDEX) PostgreSQL tracks the file
+name in a different pg\_class's field, the relfilenode. In \ref{cha:PHYLAY} there are
+more information about the physical data file structure.
 
 \subsection{global}\index{data area,global}
-The global directory contains all the cluster wide relations.
-In addition there's the very critical  control file mentioned in 
-\ref{sub:PGCONTROLDATA} \index{control file}.
-
-This small file is big exactly one database block, usually 8192 bytes, and 
-contains critical informations for the cluster. 
-With a corrupted control file the instance cannot start. 
-The control file is written usually when a checkpoint occurs.
+The global directory holds all the shared relations. Alongside with the data files there is a small
+file, just one data page, called pg\_control. This file is vital for the cluster's activity
+\index{control file}. If there is any corruption on the control file the cluster cannot start.
 
 \subsection{pg\_xlog}\index{data area,pg\_xlog}
-This is the most important and critical directory, for the performances and for 
-the reliability. 
-
-The directory contains the transaction's logs, \index{wal files} named wal 
-file. Each file is usually 16 Mb and contains all the data blocks changed during 
-the database activity. 
-The blocks are written first on this not volatile area to ensure the cluster's 
-recovery in case of cras. The data blocks are then written later to the 
-corresponding data files. If the cluster's shutdown is not clean then the wal 
-files are replayed during the startup process from the last known consistent 
-location read from control file.
-
-In order to ensure good performance this location should stay on a dedicated 
-device. 
+This is probably the most important and critical directory in the data area. The directory holds
+the write ahead logs, \index{wal files} also known as WAL files. Each segment is by default 16 MB
+and is used to store the records for the pages changed in the shared buffer. The write first
+on on this durable storage ensures the cluster's crash recovery. In the event of a crash
+the WAL are replayed when the startup begins from the last checkpoint location read from control
+file.Because this directory is heavily written, putting it on a dedicated device improves the
+performance. 
 
 \subsection{pg\_clog}\index{data area, pg\_clog}
-This directory contains the committed transactions in small 8k files, except 
-for the serializable transactions.
-The the files are managed by the cluster and the amount is related with 
-the two GUC parameters autovacuum\_freeze\_max\_age and 
-vacuum\_freeze\_table\_age.
-Increasing the values for the two parameters the pg\_clog must store the commit 
-status to the ``event horizon'' of the oldest frozen transaction id. 
-More informations about vacuum and the maintenance are in 
-the chapter \ref{cha:MAINTENANCE}.
+This directory contains the status of the committed transactions stored in many files, each one
+big like a data page. The directory does not store the status of the transactions executed
+with the SERIALIZABLE isolation. The directory is managed by PostgreSQL. The number of files is
+controlled by the two parameters autovacuum\_freeze\_max\_age and vacuum\_freeze\_table\_age.
+They control the ``event horizon'' of the oldest frozen transaction id and the pg\_clog must
+store the commit status accordingly. 
 
 \subsection{pg\_serial}\index{data area, pg\_serial}
-Same as pg\_clog this directory stores the informations about the commited 
-transactions in serializable transaction isolation level.
+This directory is similar to the pg\_clog except the commit statuses are only for the transactions
+executed with the  SERIALIZABLE isolation level.
 
 \subsection{pg\_multixact}\index{data area, pg\_multixact}
-Stores the informations about the multi transaction status, used generally for  
-the row share locks.
+The directory stores the statuses of the multi transactions. They are used in general for the
+row share locks.
 
 \subsection{pg\_notify}\index{data area, pg\_notify}
-Stores informations about the LISTEN/NOTIFY operations.
+The directory is used to stores the LISTEN/NOTIFY operations.
 
 \subsection{pg\_snapshots}\index{data area, pg\_snapshots}
-This directory is used to store the exported snapshots. From the version 9.2 
-PostgreSQL offers the transaction's snapshot export where one session can 
-open a transaction and export a consistent snapshot. This way different session 
-can access the snapshot and read all togheter the same consistent data 
-snapshot. This feature is used, for example, by pg\_dump for the parallel 
-export.
+This directory stores the exported transaction's snapshots. From the version 9.2 PostgreSQL
+can export a consistent snapshot to the other sessions. More details about the snapshots are in
+\ref{sub:SNAPEXPORT}.
 
-\subsection{pg\_stat}\index{data area, pg\_stat}
-This directory contains the permanent files for the statistic subsystem. 
 
 \subsection{pg\_stat\_tmp}\index{data area, pg\_stat\_tmp}
-This directory contains the temporary files for the statistic subsystem. 
-As this directory is constantly written, is very likely to become an 
-IO bottleneck. Setting the GUC parameter stats\_temp\_directory to a ramdisk 
-speeds can improve the database performances.
+This directory contains the temporary files generated by the statistic subsystem. 
+Because the directory is constantly written, changing its location to a ramdisk can improve the
+performance. The parameter stats\_temp\_directory can be changed with a simple reload.
 
+\subsection{pg\_stat}\index{data area, pg\_stat}
+This directory contains the files saved permanently by the statistic subsystem to keep them
+persistent between the restarts. 
 
 \subsection{pg\_subtrans}\index{data area, pg\_subtrans}
-Stores the subtransactions status data. 
+In this folder there are the subtransactions statuses. 
 
 \subsection{pg\_twophase}\index{data area, pg\_twophase}
-Stores the two phase commit data. The two phase commit allows the transaction 
-opening independently from the session. This way even a different session can 
-commit or rollback the transaction later.
+There is where PostgreSQL saves the two phase commit's data. This feature allow a transaction to
+become independent from the backend status. If the backend disconnects, for example in a network
+outage, the transaction does not rollbacks waiting for another backend to pick it up and complete
+the commit. 
 
 \subsection{pg\_tblspc}\index{data area, pg\_tblspc}
 \label{sub:TABLESPACE}
-The directory contains the symbolic links to the tablespace locations.
-A tablespace is a logical name pointing a physical location. As from PostgreSQL 
-9.2 the location is read directly from the symbolic link. This make possible 
-to change the tablespace's position simply stopping the cluster, moving the 
-data files in the new location, creating the new symlink and starting the 
-cluster.
-More informations about the tablespace management in the 
-chapter \ref{cha:LOGICLAY}. 
+In this folder there are the symbolic links to the tablespace locations.
+In \ref{sub:TBS-LOGICAL} and \ref{sub:TBS-PHYSICAL} there are more informations about it. 
 
 
 
