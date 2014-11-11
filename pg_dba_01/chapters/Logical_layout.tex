@@ -1,22 +1,20 @@
 \chapter{The logical layout}
 \label{cha:LOGICLAY}\index{Logical layout}
-This chapter is dedicated to the PostgreSQL logical layout.
-After the connection process we'll look to the logical objects, the 
-relations like tables, indices and views. The chapter will end with the 
-tablespaces logical aspect and how PostgreSQL handle the transactions.
+In this we'll take a look to the PostgreSQL logical layout.
+We'll start with the connection process. Then we'll see the logical relations like tables, indices
+and views. The chapter will end with the tablespaces and the MVCC.
 
 \section{The connection}
-When a client tries to connect to a PostgreSQL cluster the process 
-follow few stages which can result in rejection or connection.
+When a client begins a connection to PostgreSQL the process pass through few steps. 
 
-The first stage is the host based authentication where the cluster 
-scans the pg\_hba.conf file searching a  match for the connection's 
-parameters, like the host, the username etc. This file is usually stored into 
-the data area amongst the postgresql.conf file and is read from the top to the 
-bottom. If there's match the corresponding method is used, otherwise if 
-there's no match then the connection is refused.
+The first connection's stage is the check using host based authentication. The cluster scans the
+pg\_hba.conf file searching a  match for the connection's parameters. Those are, for example, the
+client's host, the user etc. The host file is usually saved inside the the data area alongside the
+configuration file postgresql.conf. The pg\_hba.conf is read from the top to the bottom and the
+first matching row for the client's parameters is used to determine the authentication method to
+use. If PostgreSQL reaches the end of the file without match the connection is refused.\newline
 
-The pg\_hba.conf is structured as shown in table \ref{tab:PGHBA}
+The pg\_hba.conf structure is shown in \ref{tab:PGHBA}
 
 \begin{table}[H]
   \begin{tabular}{ccccc}
@@ -39,22 +37,21 @@ The pg\_hba.conf is structured as shown in table \ref{tab:PGHBA}
   \caption{\label{tab:PGHBA}pg\_hba.conf}
 \end{table}
 
-The column type specifies if the connection is local and happens via unix 
-socket or host,hostssl,hostnossl, in this case the tcp/ip is used.The host 
-type matches either an SSL or plain connection, the hostssl only a SSL 
-connection and hostnossl only a plain connection.
+The column type specifies if the connection is local or host. The former is when the connection is
+made using a socket. The latter when the connection uses the network. It's also possible to
+specify if the host connection should be secure or plain using hostssl and hostnossl.\newline
 
-The Database and User columns are used to match specific databases or 
-users from the incoming connection. It's possible to use a wildcard to specify 
-everything. 
+The Database and User columns are used to match specific databases and users.\newline
 
-The column address is used only if the type uses the tcp/ip and can be an ip 
-address with network mask or a hostname. Both ipv4 and ipv6 are supported.
+The column address have sense only if the connection is host, hostssl or hostnossl. The value can
+be an ip address plus the network mask. Is also possible to specify the hostname. There is the
+full support for ipv4 and ipv6.
 
-The last column is the authentication method. PostgreSQL supports many 
-methods, from the password challenge to the sophisticated radius or kerberos.
+The pg\_hba.conf's last column is the authentication method for the matched row. The action to
+perform after the match is done. PostgreSQL supports many methods ranging from the plain password
+challenge to kerberos.\newline
 
-For now we'll take a look to the most common.
+We'll now take a look to the simplest authentication's method.
 
 \begin{itemize}
  \item \textbf{trust} allow the connection without any request. Is quite useful 
