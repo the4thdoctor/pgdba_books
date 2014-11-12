@@ -5,9 +5,9 @@ We'll start with the connection process. Then we'll see the logical relations li
 and views. The chapter will end with the tablespaces and the MVCC.
 
 \section{The connection}
-When a client begins a connection to PostgreSQL the process pass through few steps. 
+When a client starts a connection to a running cluster, the process pass through few steps. \newline
 
-The first connection's stage is the check using host based authentication. The cluster scans the
+The first connection's stage is the check using the host based authentication. The cluster scans the
 pg\_hba.conf file searching a  match for the connection's parameters. Those are, for example, the
 client's host, the user etc. The host file is usually saved inside the the data area alongside the
 configuration file postgresql.conf. The pg\_hba.conf is read from the top to the bottom and the
@@ -51,63 +51,57 @@ The pg\_hba.conf's last column is the authentication method for the matched row.
 perform after the match is done. PostgreSQL supports many methods ranging from the plain password
 challenge to kerberos.\newline
 
-We'll now take a look to the simplest authentication's method.
+We'll now take a look to the built in methods.
 
 \begin{itemize}
- \item \textbf{trust} allow the connection without any request. Is quite useful 
-if the password is lost but represent a threat on production.
+ \item \textbf{trust}: The connection is authorised without any further action. Is quite useful 
+if the password is lost. Use it with caution.
 
-\item \textbf{peer} allow the connection if the OS user matches the 
-database user. Useful to authenticate to the database on the local boxes. 
-Initdb sets this as default method for the local connections.
+\item \textbf{peer}: The connection is authorised if the OS user matches the 
+database user. It's useful for the local connections. 
 
-\item \textbf{password} allow the connection matching the user and 
-password with pg\_shadow system table. Beware asthis method sends the password 
-in clear over the network.
+\item \textbf{password}: The connection establishes if the connection's user and the password
+matches with the values stored in the pg\_shadow system table. This method sends the password in
+clear text. Should be used only on trusted networks.
 
-\item \textbf{md5} same as for password this method offer a md5 encryption for 
-the passwords. As the md5 is deterministic a pseudo random subroutine is used 
-during the password challenge to avoid the same string to be sent over the 
-network.
+\item \textbf{md5}: This method is similar to password. It uses a better security encoding the
+passwords using the md5 algorithm. Because md5 is deterministic, there is pseudo random
+subroutine which prevents to have the same string sent over the network.
+
+\item \textbf{reject}: The connection is rejected. This method is very useful to keep the sessions
+out of the database. e.g. maintenance requiring single user mode.
 
 \end{itemize}
 
-When the connection request matches the pg\_hba.conf and the authentication 
-method is cleared, the connection becomes established. The postgres main 
-process forks a new backend process which attaches to the shared buffer. 
+When the connection establishes the postgres main process forks a new backend process attached to
+the shared buffer. The fork process is expensive. This makes the connection a potential
+bottleneck. Opening new connections can degrade the operating system performance and eventually
+produce zombie processes. Keeping the connections constantly connected maybe is a reasonable fix.
+Unfortunately this approach have a couple of unpleasant side effects.\newline
 
-As the fork process is expensive the connection is a potential bottleneck. 
-A great amount of opening connections can degenerate in zombies 
-resulting in the worst case in a denial of service.
+Changing any connection related parameter like the max\_connections, requires a cluster restart.
+For this reason planning the resources is absolutely vital. For each connection present in
+ max\_connections the cluster allocates 400 bytes of shared memory. For each connection established 
+the cluster allocates a per user memory area wich size is determined by the parameter
+work\_mem.\newline
 
-A solution could be to keep all the needed connections 
-constantly established. Even if it seems reasonable, this approach have a 
-couple of unpleasant side effects.
+For example let's consider a cluster with a shared\_buffer set to 512 MB and the work\_mem 
+set to 100MB. Setting the max\_connections to only 500 requires a potentially 49 GB of total memory
+if all the connections are in use. Because the work\_mem can affects the performances, its
+value should be determined carefully. Being a per user memory any change to work\_mem does not
+require the cluster's start but a simple reload.\newline 
 
-Each connection's slot in the GUC max\_connections, consumes about 400 bytes of 
-shared memory; each established connection requires the allocation of the 
-work\_mem and the os management of the extra backend process. \newline
+In this kind of situations a connection pooler can be a good solutions. The sophisticated
+\href{http://www.pgpool.net/}{pgpool}  or the
+lightweight \href{http://pgfoundry.org/projects/pgbouncer/}{pgbouncer}  can help to boost the
+connection's performance.\newline
 
-For example a 512 MB shared\_buffer and 100MB work\_mem, with with 500 
-established connections consumes  about 49 GB. Even reducing the work\_mem to 
-10MB the required memory is still 5 GB; in addiction, as seen 
-in \ref{sub:WORKMEM}, this parameter affects the sorts and subsequently the 
-performance, his value requires then extra care.
+By default a fresh data area initialisation listens only on the localhost. The GUC parameter
+governing this aspect is listen\_addresses. In order to have the cluster accepting connections from
+the rest of the network the values should change to the correct listening addresses specified
+as values separated by commas. It's also possible to set it to * as wildcard.
 
-In this case a connection pooler like pgpool http://www.pgpool.net/ or the 
-lightweight pgbouncer http://pgfoundry.org/projects/pgbouncer is a 
-good solution. In particular the latter offers a very simple to use 
-configuration, with different pooling levels. 
-
-The GUC parameter listen\_addresses in a freshly initialised 
-data area is set to localhost. This way the cluster accepts only tcp 
-connections from the local machine. In order to have the cluster listening on 
-the network this parameter must be changed to the correct address to listen 
-or to * for 'all'. The parameter accepts multiple values separated by commas.
-
-Changing the parameters max\_connections and listen\_addresses require the 
-cluster shutdown and startup as described in \ref{sec:STARTUP} and 
-\ref{sec:SHUTDOWN_SEQ}
+Changing the parameters max\_connections and listen\_addresses require the cluster restart.
 
 
 
