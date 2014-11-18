@@ -107,16 +107,14 @@ Changing the parameters max\_connections and listen\_addresses require the clust
 
 \section{Databases}
 \label{sec:DATABASES}
-In order to establish the connection, PostgreSQL requires a 
-target database.
+Unlikely other DBMS, PostgreSQL requires a database name in the connection's parameters.
+Sometimes this can be omitted when, for example, psql have this information supplied in
+another way.\newline
 
-When the connection happens via the client psql, the database can be omitted. 
-In this case the environment variable \$PGDATABASE \index{\$PGDATABASE 
-variable} is used. If the variable is not set then the target database defaults 
-to the login user.
-
-This can be confusing because even if the pg\_hba.conf authorises 
-the connection, this aborts with the message 
+When psql tries to connect and the database name is omitted the program checks if the environment
+variable \$PGDATABASE \index{\$PGDATABASE variable} is set. If \$PGDATABASE is missing then psql
+uses the supplied username  as target database. This leads to confusing error messages. For
+example, if we have a username named test but not a database named test this the result.
 
 \begin{verbatim}
 postgres@tardis:~$ psql -U test -h localhost
@@ -124,12 +122,13 @@ Password for user test:
 psql: FATAL:  database "test" does not exist
 \end{verbatim}
 
-In this case if the database to connect to is unknown, the connection should 
-contain the \textit{template1} as last parameter. This way the connection will 
-establish to the always present template1 database \index{template1 database}. 
-After the connection is 
-established a query to the pg\_database system table will return the database 
-list.
+This error appears because the pg\_hba.conf allow the connection for any database even a not
+existing one. The connection is terminated when the backend ask to connect to the test database
+test which doesn't exists.\newline
+
+This is a very common case for the new users. The solution is incredibly simple because in a
+PostgreSQL cluster there are at least three databases. Passing the name template1 as last parameter
+will establish the connection.
 
 \begin{verbatim}
 postgres@tardis:~$ psql -U test -h localhost template1
@@ -138,6 +137,10 @@ psql (9.3.4)
 SSL connection (cipher: DHE-RSA-AES256-SHA, bits: 256)
 Type "help" for help.
 \end{verbatim}
+
+When the connection is made we can query the system table pg\_database to get the full list of
+databases.
+
 \begin{lstlisting}[style=pgsql]
 template1=> SELECT datname FROM pg_database;
     datname    
@@ -149,26 +152,23 @@ template1=> SELECT datname FROM pg_database;
 
 \end{lstlisting}
 
-A brief note for the database administrators coming from MS SQL or MySql.
-The database postgres can be confused for the system database, like the master 
-db or the mysql database. 
+The DBA coming from other DBMS, open or closed source can be confused by the postgres database.
+This database have nothing special. Its creation was added in an older PostgreSQL version because
+was used as default database by specific tools like pg\_bench. You can leave it alone, but dropping
+the postgres does not corrupts the cluster.\newline
 
-That's not correct, the postgres database\index{postgres database} have nothing 
-special and it's created by default only in the recent major PostgreSQL 
-versions because is required by specific tools like pg\_bench.
-
-The template0 and template1 \index{template1 database} \index{template0 
-database} are the template databases. A template database \index{template 
+The databases template0 and template1 \index{template1 database} \index{template0 
+database} like the name suggests are the template databases. A template database \index{template 
 database} is used to build new database copies via the physical file copy. 
 
-During the initdb the template1 is initialised with the correct references to 
-the WAL records. The system views and the procedural language PL/PgSQL are then
-loaded into the template1. Finally the template0 and postgres databases are 
-created from template1.
+When initdb initialises the data area the database template1 is populated with the correct
+references to the WAL records, the system views and the procedural language PL/PgSQL. When
+this is done the database template0 and the postgres databases are then created using the template1
+database.
 
-The database template0 doesn't allow the connections and is used to rebuild 
-template1 if gets corrupted or to build a new database with 
-character encoding or ctype an different from the cluster wide values. 
+The database template0 doesn't allow the connections. It's main usage is to rebuild the
+database template1 if gets corrupted. It's also used for creating databases with a character
+encoding or ctype, different from the cluster's settings. 
 \index{CREATE DATABASE}
 
 \begin{lstlisting}[style=pgsql]
@@ -185,13 +185,12 @@ postgres=#
 
 \end{lstlisting}
 
-If not specified, the CREATE DATABASE  statement will use template1. 
+If the template is omitted the CREATE DATABASE statement will use template1. 
 \index{ALTER DATABASE}\index{DROP DATABASE}
-A database can be renamed or dropped with the ALTER DATABASE and DROP DATABASE 
-statements. Those operations require the exclusive access to the database. If 
-any connection except the one performing the operation is present on the 
-database the operation will abort.
 
+A database can be renamed or dropped with ALTER DATABASE and DROP DATABASE 
+statements. Those operations require the exclusive access to the affected database. If there are
+connections on the affected database the drop or rename operation will abort.
 
 \begin{lstlisting}[style=pgsql]
 postgres=# ALTER DATABASE db_test RENAME TO db_to_drop;
