@@ -229,7 +229,7 @@ modified in memory do not write their changes to the WAL. The main advantage is 
 are considerably faster at the cost of the data durability. The data stored into an ulogged table
 should be considered partially volatile. The database will truncate those tables when the crash
 recovery occurs. Because the unlogged table don't write to the WAL, the data in those tables is not
-accessible to the physical standby. 
+accessible on the physical standby. 
 
 
 \subsection{Temporary tables}\index{Temporary tables}
