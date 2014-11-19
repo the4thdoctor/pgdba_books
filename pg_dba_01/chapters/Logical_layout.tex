@@ -206,35 +206,31 @@ DROP DATABASE
 
 \section{Tables}\index{Tables}
 \label{sec:TABLES}
-A database is the logical container of the relations.
-A relation is the relational object making the data accessible.
+In our top down approach to the PostgreSQL's logical model, the next step is the relation.
+In the PostgreSQL jargon a relation is an object which carries the data or the way to
+retrieve the data. We'll take a look in particular to three of them starting with the
+tables.\newline
 
-The first kind of relation we'll take a look is the table.
-
-This is the fundamental storage unit for the data. PostgreSQL implements 
-various kind of tables having the full support, a partial implementation or no 
-support at all for the durability.
-
-The table creation is performed using the standard SQL command CREATE TABLE. 
-
-The PostgreSQL implementation does not guarantee the data is stored in a 
-particular order. This is a straight MVCC consequence Take a look to 
-more information in \ref{sec:MVCC}. 
+A table is the fundamental storage unit for the data. PostgreSQL implements many kind of tables
+with different levels of durability. A table is created using the SQL command CREATE TABLE. The data
+is stored into a table without any specific order. Because the MVCC implementation a row update can
+change the row's physical position. For more informations look to \ref{sec:MVCC}. PostgreSQL
+implements three kind of tables.
 
 \subsection{Logged tables}\index{Logged tables}
-If executed without options, CREATE TABLE creates a logged table. This kind of 
-table implements fully the durability being WAL logged at any time. The data is 
-managed in the shared buffer, logged to the WAL and finally consolidated to the 
-data file. 
+By default CREATE TABLE creates a logged table. This kind of table implements the durability
+logging any change to the write ahead log. The data pages are loaded in the shared buffer and any
+change is logged first to the WAL. The consolidation to the to the data file happens later. 
 
 \subsection{Unlogged tables}\index{Unlogged tables}
 \label{sub:UNLOGGEDTABLES}
-This kind of table were introduced in the 9.1. The data is still consolidated 
-to the data file but the blocks aren't WAL logged. This make the write 
-operations considerably faster at the cost of the data consistency. This kind 
-of table is not crash safe and the database truncate any existing data during 
-the crash recovery. Also, because there's no WAL record the unlogged tables 
-aren't replicated to the physical standby. 
+An unlogged table is not crash safe. The data is still consolidated to the data file but the pages
+modified in memory do not write their changes to the WAL. The main advantage is the write operations
+are considerably faster at the cost of the data durability. The data stored into an ulogged table
+should be considered partially volatile. The database will truncate those tables when the crash
+recovery occurs. Because the unlogged table don't write to the WAL, the data in those tables is not
+accessible to the physical standby. 
+
 
 \subsection{Temporary tables}\index{Temporary tables}
 A temporary table's lifespan lasts the time of the connection. This kind of 
@@ -242,7 +238,18 @@ tables are useful for any in memory operation. The temporary table stays in
 memory as long as the amount of data is no bigger than 
 temp\_buffers seen in \ref{sub:TEMPBUF}. 
 
-\subsection{Table inheritance}\index{Table inheritance}
+
+\subsection{Foreign tables}\index{Foreign tables}
+The foreign tables were first introduced with PostgreSQL 9.1, improving 
+considerably the way the remote data can be accessed. 
+A foreign table requires a called foreign data wrapper to define a foreign 
+server. This can be literally anything. Between the contrib modules PostgreSQL 
+has the file\_fdw to create foreign tables referring CSV or COPY formatted flat 
+files. In the the version 9.3 finally appeared the postgres\_fdw with the read 
+write for the foreign tables. The postgres\_fdw implementation is similar to 
+dblink with a more efficient performance management and the connection caching.
+
+\section{Table inheritance}\index{Table inheritance}
 As PostgreSQL is an Object Relational Database Management System, some of the 
 object oriented programming concepts are implemented. The relations are 
 referred generally as classes and the columns as attributes. 
@@ -256,17 +263,6 @@ The PostgreSQL implementation is rather confusing as the unique constraints
 aren't globally enforced on the inheritance tree and this prevents the foreign 
 key to refer inherited tables. This limitation makes the table 
 partitioning tricky.
-
-\subsection{Foreign tables}\index{Foreign tables}
-The foreign tables were first introduced with PostgreSQL 9.1, improving 
-considerably the way the remote data can be accessed. 
-A foreign table requires a called foreign data wrapper to define a foreign 
-server. This can be literally anything. Between the contrib modules PostgreSQL 
-has the file\_fdw to create foreign tables referring CSV or COPY formatted flat 
-files. In the the version 9.3 finally appeared the postgres\_fdw with the read 
-write for the foreign tables. The postgres\_fdw implementation is similar to 
-dblink with a more efficient performance management and the connection caching.
-
 
 \section{Indices}
 An index is a relation capable to map the values in an structured way pointing
