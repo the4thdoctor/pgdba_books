@@ -233,36 +233,79 @@ accessible on the physical standby.
 
 
 \subsection{Temporary tables}\index{Temporary tables}
-A temporary table's lifespan lasts the time of the connection. This kind of 
-tables are useful for any in memory operation. The temporary table stays in 
-memory as long as the amount of data is no bigger than 
-temp\_buffers seen in \ref{sub:TEMPBUF}. 
+A temporary table is a relation created just for the client. When the connection ends the table is
+then dropped. Those table can have the same name for all the sessions because they are completely
+isolated. If the amount of data stored into the table is lesser than temp\_buffers the table will
+fit in memory. Otherwise the database will create a temporary relation on disk. The parameter
+temp\_buffers can be altered for the current session but only if is unused. After the first
+temporary table is created the value becomes immutable for the session.
 
 
 \subsection{Foreign tables}\index{Foreign tables}
-The foreign tables were first introduced with PostgreSQL 9.1, improving 
-considerably the way the remote data can be accessed. 
-A foreign table requires a called foreign data wrapper to define a foreign 
-server. This can be literally anything. Between the contrib modules PostgreSQL 
-has the file\_fdw to create foreign tables referring CSV or COPY formatted flat 
-files. In the the version 9.3 finally appeared the postgres\_fdw with the read 
-write for the foreign tables. The postgres\_fdw implementation is similar to 
-dblink with a more efficient performance management and the connection caching.
+The foreign tables were first introduced with PostgreSQL 9.1, improving considerably the way the
+remote data can be accessed. A foreign table acts like a local table and uses a foreign data
+wrapper to send and retrieve data from the foreign data source.\newline
+
+In the PostgreSQL's contrib modules there is the file\_fdw which allow the database to create
+foreign tables over a CSV file. The version 9.3 introduced the federated postgres\_fdw and the read
+write for the foreign tables. The postgres\_fdw implementation is similar to old dblink with a more
+efficient performance management and the connection's caching.
 
 \section{Table inheritance}\index{Table inheritance}
-As PostgreSQL is an Object Relational Database Management System, some of the 
-object oriented programming concepts are implemented. The relations are 
-referred generally as classes and the columns as attributes. 
+PostgreSQL is an Object Relational Database Management System. Its model implements some of the
+concepts of the object oriented programming. The relations are often called classes and the table's 
+columns attributes. \newline
 
-The inheritance binds a parent table to one or more child tables which have 
-the same parent's attribute structure. The inheritance can be defined at 
-creation time or later. If a manually defined table shall inherit another the 
-attribute structure shall be the same as the parent's.
+The table inheritance binds a parent table to one or more child tables. Those tables inherit
+parent's attribute structure. 
 
-The PostgreSQL implementation is rather confusing as the unique constraints 
-aren't globally enforced on the inheritance tree and this prevents the foreign 
-key to refer inherited tables. This limitation makes the table 
-partitioning tricky.
+\begin{lstlisting}[style=pgsql]
+db_test=#CREATE TABLE t_parent
+                      (
+                          i_id_data     integer,
+                          v_data        character varying(300)
+                      );
+
+CREATE TABLE                     
+
+db_test=#CREATE TABLE t_child_01
+                      
+                      ()
+             INHERITS (t_parent)
+                      ;                      
+db_test=# \d t_parent
+            Table "public.t_parent"
+  Column   |          Type          | Modifiers 
+-----------+------------------------+-----------
+ i_id_data | integer                | 
+ v_data    | character varying(300) | 
+Number of child tables: 1 (Use \d+ to list them.)
+
+db_test=# \d t_child_01 
+           Table "public.t_child_01"
+  Column   |          Type          | Modifiers 
+-----------+------------------------+-----------
+ i_id_data | integer                | 
+ v_data    | character varying(300) | 
+Inherits: t_parent
+
+\end{lstlisting}
+
+The inheritance can be defined at creation time or later. It's also
+possible to create a completely new table and create the inheritance with another one. In this
+case tables structure must be exactly the same.
+
+\begin{lstlisting}[style=pgsql]
+
+db_test=# ALTER TABLE t_child_01 NO INHERIT t_parent;
+ALTER TABLE
+db_test=# ALTER TABLE t_child_01 INHERIT t_parent;
+ALTER TABLE
+
+\end{lstlisting}
+
+With this implementation the unique constraints aren't globally enforced on the inheritance tree and
+this prevents the foreign key to refer inherited tables. This makes the table partitioning tricky.
 
 \section{Indices}
 An index is a relation capable to map the values in an structured way pointing
