@@ -107,14 +107,13 @@ Changing the parameters max\_connections and listen\_addresses require the clust
 
 \section{Databases}
 \label{sec:DATABASES}
-Unlikely other DBMS, PostgreSQL requires a database name in the connection's parameters.
-Sometimes this can be omitted when, for example, psql have this information supplied in
-another way.\newline
+Unlikely other DBMS, a PostgreSQL connection requires the database name in the connection string.
+Sometimes this can be omitted in psql when this information is supplied in another way.\newline
 
-When psql tries to connect and the database name is omitted the program checks if the environment
-variable \$PGDATABASE \index{\$PGDATABASE variable} is set. If \$PGDATABASE is missing then psql
-uses the supplied username  as target database. This leads to confusing error messages. For
-example, if we have a username named test but not a database named test this the result.
+When omitted psql checks if the environment variable \$PGDATABASE \index{\$PGDATABASE variable} is 
+set. If \$PGDATABASE is missing then psql defaults the database name to connection's username. This 
+leads to confusing error messages. For example, if we have a username named test but not a database 
+named test the connection will fail even with the correct credentials.
 
 \begin{verbatim}
 postgres@tardis:~$ psql -U test -h localhost
@@ -122,13 +121,13 @@ Password for user test:
 psql: FATAL:  database "test" does not exist
 \end{verbatim}
 
-This error appears because the pg\_hba.conf allow the connection for any database even a not
-existing one. The connection is terminated when the backend ask to connect to the test database
-test which doesn't exists.\newline
+This error appears because the pg\_hba.conf allow the connection for any database. Even for a not
+existing one. The connection is then terminated when the backend ask to connect to the database 
+named test which does not exists.\newline
 
-This is a very common case for the new users. The solution is incredibly simple because in a
-PostgreSQL cluster there are at least three databases. Passing the name template1 as last parameter
-will establish the connection.
+This is very common for the new users. The solution is incredibly simple because in a PostgreSQL 
+cluster there are at least three databases. Passing the name template1 as last parameter will do 
+the trick.
 
 \begin{verbatim}
 postgres@tardis:~$ psql -U test -h localhost template1
@@ -138,8 +137,8 @@ SSL connection (cipher: DHE-RSA-AES256-SHA, bits: 256)
 Type "help" for help.
 \end{verbatim}
 
-When the connection is made we can query the system table pg\_database to get the full list of
-databases.
+When the connection is established we can query the system table pg\_database to get the 
+cluster's database list. 
 
 \begin{lstlisting}[style=pgsql]
 template1=> SELECT datname FROM pg_database;
@@ -152,10 +151,11 @@ template1=> SELECT datname FROM pg_database;
 
 \end{lstlisting}
 
-The DBA coming from other DBMS, open or closed source can be confused by the postgres database.
-This database have nothing special. Its creation was added in an older PostgreSQL version because
-was used as default database by specific tools like pg\_bench. You can leave it alone, but dropping
-the postgres does not corrupts the cluster.\newline
+Database administrators coming from other DBMS can be confused by the postgres database.
+This database have nothing special. Its creation was added since the version 8.4 because it was 
+useful to have it. You can just ignore it or use it for testing purposes. Dropping the postgres 
+database does not corrupts the cluster. Because this database is often used by third party 
+tools before dropping it check if is in use in any way.\newline
 
 The databases template0 and template1 \index{template1 database} \index{template0 
 database} like the name suggests are the template databases. A template database \index{template 
@@ -167,8 +167,8 @@ this is done the database template0 and the postgres databases are then created 
 database.
 
 The database template0 doesn't allow the connections. It's main usage is to rebuild the
-database template1 if gets corrupted. It's also used for creating databases with a character
-encoding or ctype, different from the cluster's settings. 
+database template1 if it gets corrupted or for creating databases with a character encoding/ctype, 
+different from the cluster wide settings. 
 \index{CREATE DATABASE}
 
 \begin{lstlisting}[style=pgsql]
@@ -185,12 +185,12 @@ postgres=#
 
 \end{lstlisting}
 
-If the template is omitted the CREATE DATABASE statement will use template1. 
-\index{ALTER DATABASE}\index{DROP DATABASE}
+If the template is omitted the CREATE DATABASE statement will use template1 by default. 
 
-A database can be renamed or dropped with ALTER DATABASE and DROP DATABASE 
-statements. Those operations require the exclusive access to the affected database. If there are
-connections on the affected database the drop or rename operation will abort.
+
+A database can be renamed or dropped with ALTER DATABASE and DROP DATABASE \index{ALTER 
+DATABASE}\index{DROP DATABASE} statements. Those operations require the exclusive access to the 
+affected database. If there are connections established the drop or rename will fail.
 
 \begin{lstlisting}[style=pgsql]
 postgres=# ALTER DATABASE db_test RENAME TO db_to_drop;
@@ -208,8 +208,8 @@ DROP DATABASE
 \label{sec:TABLES}
 In our top down approach to the PostgreSQL's logical model, the next step is the relation.
 In the PostgreSQL jargon a relation is an object which carries the data or the way to
-retrieve the data. We'll take a look in particular to three of them starting with the
-tables.\newline
+retrieve the data. A relation can have a physical counterpart or be purely logical. We'll take a 
+look in particular to three of them starting with the tables.\newline
 
 A table is the fundamental storage unit for the data. PostgreSQL implements many kind of tables
 with different levels of durability. A table is created using the SQL command CREATE TABLE. The data
@@ -220,44 +220,45 @@ implements three kind of tables.
 \subsection{Logged tables}\index{Logged tables}
 By default CREATE TABLE creates a logged table. This kind of table implements the durability
 logging any change to the write ahead log. The data pages are loaded in the shared buffer and any
-change is logged first to the WAL. The consolidation to the to the data file happens later. 
+change to them is logged first to the WAL. The consolidation to the the data file happens later. 
 
 \subsection{Unlogged tables}\index{Unlogged tables}
 \label{sub:UNLOGGEDTABLES}
-An unlogged table is not crash safe. The data is still consolidated to the data file but the pages
-modified in memory do not write their changes to the WAL. The main advantage is the write operations
+An unlogged table have the same structure like the logged table. The difference is such kind of 
+tables are not crash safe. The data is still consolidated to the data file but the pages modified 
+in memory do not write their changes to the WAL. The main advantage is the write operations which 
 are considerably faster at the cost of the data durability. The data stored into an ulogged table
 should be considered partially volatile. The database will truncate those tables when the crash
-recovery occurs. Because the unlogged table don't write to the WAL, the data in those tables is not
-accessible on the physical standby. 
-
+recovery occurs. Because the unlogged table don't write to the WAL, those tables are not accessible 
+on a physical standby. 
 
 \subsection{Temporary tables}\index{Temporary tables}
-A temporary table is a relation created just for the client. When the connection ends the table is
-then dropped. Those table can have the same name for all the sessions because they are completely
-isolated. If the amount of data stored into the table is lesser than temp\_buffers the table will
-fit in memory. Otherwise the database will create a temporary relation on disk. The parameter
-temp\_buffers can be altered for the current session but only if is unused. After the first
-temporary table is created the value becomes immutable for the session.
+A temporary table is a relation which lives into the backend's local memory. When the connection 
+ends the table is dropped. Those table can have the same name for all the sessions because 
+they are completely isolated. If the amount of data stored into the table is lesser than 
+the temp\_buffers value the table will fit in memory with great speed advantage. Otherwise the 
+database will create a temporary relation on disk. The parameter temp\_buffers can be altered for 
+the session but only before the first temporary table is created. 
 
 
 \subsection{Foreign tables}\index{Foreign tables}
-The foreign tables were first introduced with PostgreSQL 9.1, improving considerably the way the
-remote data can be accessed. A foreign table acts like a local table and uses a foreign data
-wrapper to send and retrieve data from the foreign data source.\newline
+The foreign tables were first introduced with PostgreSQL 9.1 as read only relations, improving 
+considerably the DBMS interconnection's capability. A foreign table works exactly like a local table 
+using a foreign data
+wrapper to interact with the foreign data source.\newline
 
-In the PostgreSQL's contrib modules there is the file\_fdw which allow the database to create
-foreign tables over a CSV file. The version 9.3 introduced the federated postgres\_fdw and the read
-write for the foreign tables. The postgres\_fdw implementation is similar to old dblink with a more
-efficient performance management and the connection's caching.
+There are many different foreign data wrappers available for very exotic data sources. With the 
+PostgreSQL 9.3 there is the postgres\_fdw and the the foreign tables are writable. In particular 
+the postgres\_fdw implementation is similar to old dblink module with a more efficient performance 
+management and the connection's caching.
 
 \section{Table inheritance}\index{Table inheritance}
-PostgreSQL is an Object Relational Database Management System. Its model implements some of the
-concepts of the object oriented programming. The relations are often called classes and the table's 
-columns attributes. \newline
+Being more precise, PostgreSQL is an Object Relational Database Management System. Its intenal logic
+implements some of the concepts of the object oriented programming. The relations are also called 
+classes and the table's columns attributes. \newline
 
-The table inheritance binds a parent table to one or more child tables. Those tables inherit
-parent's attribute structure. 
+The table inheritance is a logical relationship between a parent table and one or more child 
+tables. The child tables inherit the parent's attribute structure but not the physical storage. 
 
 \begin{lstlisting}[style=pgsql]
 db_test=#CREATE TABLE t_parent
@@ -291,9 +292,9 @@ Inherits: t_parent
 
 \end{lstlisting}
 
-The inheritance can be defined at creation time or later. It's also
-possible to create a completely new table and create the inheritance with another one. In this
-case tables structure must be exactly the same.
+The inheritance can be defined at creation time or later. It's also possible to create a completely 
+new table and create the inheritance with another one. In this case the child structure must match 
+exactly the parent.
 
 \begin{lstlisting}[style=pgsql]
 
@@ -304,28 +305,25 @@ ALTER TABLE
 
 \end{lstlisting}
 
-With this implementation the unique constraints aren't globally enforced on the inheritance tree and
-this prevents the foreign key to refer inherited tables. This makes the table partitioning tricky.
+Because the physical storage is not shared the unique constraints aren't globally enforced on the 
+inheritance tree and this prevents the foreign keys to refer efficiently the inherited tables. This 
+makes the table partitioning tricky.
 
 \section{Indices}
-An index is a relation capable to map the values in an structured way pointing
-the table's position where the rows are stored. The presence of an index 
-doesn't mean this will be used for read. By default and index block read have 
-an estimated cost four times than the table block read. However the optimiser
-can be controlled using the two GUC parameters seq\_page\_cost for the table 
- sequential read read and random\_page\_cost for the index. Lowering the latter 
-will make more probable the optimiser will choose the indices when building the 
-execution plan.
+An index is a relation which stores the indexed values in an structured way. The index entries are 
+associated to pointers to the corresponding table's pages. Because PostgreSQL have a cost based 
+optimiser, having an an index doesn't guarantee its usage.The index pages require a random disk 
+seek which cost is estimated by default four times more than a sequential page read. Those values 
+can be controlled using the two GUC parameters seq\_page\_cost and random\_page\_cost. They set 
+respectively the arbitrary cost of a table's page and an index page. \newline
 
-Creating indices is a complex task. At first sight adding an index could seem a 
-harmless action. Unfortunately their presence adds overhead to the write 
-operations unpredictably. The rule of thumb is \textit{add an index only 
-if really needed}. Monitoring the index usage is crucial. Querying the 
-statistics view pg\_stat\_all\_indexes is possible to find out if the indices 
-are used or not.
+Designing the indices is a complex task. An unused index adds overhead to the write 
+operations without any benefit, slowing down the database operations. If uncertain the best choice 
+is do not add it. Querying system views like the pg\_stat\_all\_indexes will give us vital 
+informations about the usage.
 
-For example, the following query finds all the indices in che public 
-schema, with zero usage from the last database statistics reset.
+This handy query finds all the indices in the public schema never used from the last statistics 
+reset.
 
 \begin{lstlisting}[style=pgsql]
 SELECT
@@ -340,44 +338,42 @@ WHERE
         AND     idx_scan=0
 ;
 
-
 \end{lstlisting}
 
 
 
-PostgreSQL supports many index types. 
+The indices implemented in PostgreSQL are various unfortunately there's still no bitmap index. The 
+executor have an execution plan which can emulate partially the bitmap indices doing a sequential 
+read over the B-tree and matching the pages's occurrences using the bitmap generated on the fly. 
 
-The general purpose B-tree\index{index,b-tree}, implementing the Lehman and 
-Yao's high-concurrency B-tree management algorithm. The B-tree can handle 
-equality and range queries and returns ordered data. As the data is actually 
-stored in the page and because the index is not TOASTable, the max length for an 
-index entry is 1/3 of the page size. This is the limitation for the variable 
-length indexed data (e.g. text). \newline
+The index type can be specified at create time. If omitted then the index type defaults to the 
+B-tree.
+
+\subsection{b-tree}
+The general purpose B-tree\index{index,b-tree} index implements the Lehman and 
+Yao's high-concurrency B-tree management algorithm. The B-tree can handle equality and range queries 
+returning ordered data. As the data is actually stored in the page and because the index is not 
+TOASTable  the max length for an index entry is 1/3 of the page size. \newline
+
+\subsection{hash}
 
 The hash indices\index{index,hash} can handle only equality and aren't WAL 
-logged. That means their changes are not replayed if the crash recovery occurs, 
-requiring a reindex in case of unclean shutdown.\newline
+logged. That means their changes are not replayed if the crash recovery occurs and aren't 
+propagated to the standby servers.\newline
 
+\subsection{GiST}
 The GiST indices\index{index,GiST} are the Generalised Search Tree. The GiST 
-is a collection of indexing strategies organized under an 
-infrastructure. They can implement arbitrary indexing schemes like B-trees, 
-R-trees  or other. The operator classes shipped with PostgreSQL are for the two 
-elements geometrical data and for the nearest-neighbor search. As the GiST 
-indices are not exact , when scanned the returned set doesn't requires a to 
-remove the false positives.\newline
+is a collection of indexing strategies organised under a common infrastructure. They can implement 
+arbitrary indexing schemes like B-trees, R-trees  or other. The operator classes shipped with 
+PostgreSQL are for the geometrical data with two elements and for the nearest-neighbour searches. 
+The GiST indices don't perform an exact match. The false positive need a second match on 
+the table's data.\newline
 
-The GIN indices \index{index,GIN} are the Generalised Inverted Indices. This 
-kind of index is optimised for indexing the composite data types or vectors 
-like the full text search elements. The GIN are exact indices, when scanned the 
-returned set doesn't require recheck.
+\subsection{GIN}
+The GIN indices \index{index,GIN} are the Generalised Inverted Indices. This kind of index is 
+optimised for indexing the composite data types or vectors like the full text search elements. The 
+GIN are exact indices, when scanned the returned set doesn't require recheck.
 
-There's no bitmap index implementation in PostgreSQL. 
-At runtime the executor can emulate partially the bitmap indices reading the 
-B-tree sequentially and matching the occurrences in the on the fly generated 
-bitmap. 
-
-The index type shall be specified in the create statement. If the type is 
-omitted then the index will default to the B-tree.
 
 \begin{lstlisting}[style=pgsql]
  CREATE INDEX idx_test ON t_test USING hash (t_contents);
