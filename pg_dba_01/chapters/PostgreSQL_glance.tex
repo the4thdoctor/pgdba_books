@@ -104,7 +104,8 @@ supported the anonymous function's code block with the DO keyword.
 
 \subsection{Partitioning}
 Despite the partitioning\index{partitioning}\index{constraint exclusion} implementation in
-PostgreSQL is still very basic it's not complex to build an efficient partitioned structure using 
+PostgreSQL is still very basic it's not complicated to build an efficient partitioned structure 
+using 
 the table inheritance.\newline
 
 Unfortunately because the physical storage is distinct for each partition, is not possible to 
@@ -126,26 +127,25 @@ The tablespace support permits a fine grained distribution of the data files acr
 filesystems. In \ref{sub:TBS-LOGICAL} and \ref{sub:TBS-PHYSICAL} we'll see how to take advantage of 
 this powerful feature.
 
-\subsection{Triggers} TODO
-The trigger are well supported on the tables and views. A basic implementation of the events 
-triggers is also present.
+\subsection{Triggers} 
+The triggers are well supported on tables and views. A basic implementation of the events 
+triggers is also present. The triggers can emulate completely the updatable views feature. 
 
 \subsection{Views}
 The read only views are well consodlidated in PostgreSQL.
-The version 9.3 introduced the support for the materialised and updatable views.
-Unfortunately the implementation is still very basic. There is no incremental refresh for the
-materialised views and the complex views don't have yet the updatable feature. In this case the 
-only way to have an updatable view is to use the triggers.
+The version 9.3 introduced the basic support for the materialised and updatable views.
+For the materialised views there is no incremental refresh. The complex views, like views 
+joining two or more tables, are not updatable. 
 
 \subsection{Constraint enforcement}
 PostgreSQL supports primary keys and unique keys to enforce table's data. The referential integrity 
 is guaranteed with the foreign keys. We'll take a look to the data integrity in \ref{cha:DATAINT}
 
 \subsection{Extension system}
-PostgreSQL from the version 9.1 implements a very efficient extension system. New features can be 
-installed with a simple SQL command.
+PostgreSQL from the version 9.1 implements a very efficient extension system. The command CREATE 
+EXTENSION makes the new features installation easy.
 
 \subsection{Federated}
 From PostgreSQL 9.1 is possible to have foreign tables pointing to external data sources. 
-PostgreSQL 9.3 introduced also the foreign table's write functionality and the PostgreSQL's 
-connector.
+PostgreSQL 9.3 introduced also the foreign table's write the PostgreSQL's foreign data 
+wrapper.

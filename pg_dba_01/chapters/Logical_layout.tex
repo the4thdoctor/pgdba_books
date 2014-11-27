@@ -1,22 +1,20 @@
 \chapter{The logical layout}
 \label{cha:LOGICLAY}\index{Logical layout}
-This chapter is dedicated to the PostgreSQL logical layout.
-After the connection process we'll look to the logical objects, the 
-relations like tables, indices and views. The chapter will end with the 
-tablespaces logical aspect and how PostgreSQL handle the transactions.
+In this we'll take a look to the PostgreSQL logical layout.
+We'll start with the connection process. Then we'll see the logical relations like tables, indices
+and views. The chapter will end with the tablespaces and the MVCC.
 
 \section{The connection}
-When a client tries to connect to a PostgreSQL cluster the process 
-follow few stages which can result in rejection or connection.
+When a client starts a connection to a running cluster, the process pass through few steps. \newline
 
-The first stage is the host based authentication where the cluster 
-scans the pg\_hba.conf file searching a  match for the connection's 
-parameters, like the host, the username etc. This file is usually stored into 
-the data area amongst the postgresql.conf file and is read from the top to the 
-bottom. If there's match the corresponding method is used, otherwise if 
-there's no match then the connection is refused.
+The first connection's stage is the check using the host based authentication. The cluster scans the
+pg\_hba.conf file searching a  match for the connection's parameters. Those are, for example, the
+client's host, the user etc. The host file is usually saved inside the the data area alongside the
+configuration file postgresql.conf. The pg\_hba.conf is read from the top to the bottom and the
+first matching row for the client's parameters is used to determine the authentication method to
+use. If PostgreSQL reaches the end of the file without match the connection is refused.\newline
 
-The pg\_hba.conf is structured as shown in table \ref{tab:PGHBA}
+The pg\_hba.conf structure is shown in \ref{tab:PGHBA}
 
 \begin{table}[H]
   \begin{tabular}{ccccc}
@@ -39,93 +37,83 @@ The pg\_hba.conf is structured as shown in table \ref{tab:PGHBA}
   \caption{\label{tab:PGHBA}pg\_hba.conf}
 \end{table}
 
-The column type specifies if the connection is local and happens via unix 
-socket or host,hostssl,hostnossl, in this case the tcp/ip is used.The host 
-type matches either an SSL or plain connection, the hostssl only a SSL 
-connection and hostnossl only a plain connection.
+The column type specifies if the connection is local or host. The former is when the connection is
+made using a socket. The latter when the connection uses the network. It's also possible to
+specify if the host connection should be secure or plain using hostssl and hostnossl.\newline
 
-The Database and User columns are used to match specific databases or 
-users from the incoming connection. It's possible to use a wildcard to specify 
-everything. 
+The Database and User columns are used to match specific databases and users.\newline
 
-The column address is used only if the type uses the tcp/ip and can be an ip 
-address with network mask or a hostname. Both ipv4 and ipv6 are supported.
+The column address have sense only if the connection is host, hostssl or hostnossl. The value can
+be an ip address plus the network mask. Is also possible to specify the hostname. There is the
+full support for ipv4 and ipv6.
 
-The last column is the authentication method. PostgreSQL supports many 
-methods, from the password challenge to the sophisticated radius or kerberos.
+The pg\_hba.conf's last column is the authentication method for the matched row. The action to
+perform after the match is done. PostgreSQL supports many methods ranging from the plain password
+challenge to kerberos.\newline
 
-For now we'll take a look to the most common.
+We'll now take a look to the built in methods.
 
 \begin{itemize}
- \item \textbf{trust} allow the connection without any request. Is quite useful 
-if the password is lost but represent a threat on production.
+ \item \textbf{trust}: The connection is authorised without any further action. Is quite useful 
+if the password is lost. Use it with caution.
 
-\item \textbf{peer} allow the connection if the OS user matches the 
-database user. Useful to authenticate to the database on the local boxes. 
-Initdb sets this as default method for the local connections.
+\item \textbf{peer}: The connection is authorised if the OS user matches the 
+database user. It's useful for the local connections. 
 
-\item \textbf{password} allow the connection matching the user and 
-password with pg\_shadow system table. Beware asthis method sends the password 
-in clear over the network.
+\item \textbf{password}: The connection establishes if the connection's user and the password
+matches with the values stored in the pg\_shadow system table. This method sends the password in
+clear text. Should be used only on trusted networks.
 
-\item \textbf{md5} same as for password this method offer a md5 encryption for 
-the passwords. As the md5 is deterministic a pseudo random subroutine is used 
-during the password challenge to avoid the same string to be sent over the 
-network.
+\item \textbf{md5}: This method is similar to password. It uses a better security encoding the
+passwords using the md5 algorithm. Because md5 is deterministic, there is pseudo random
+subroutine which prevents to have the same string sent over the network.
+
+\item \textbf{reject}: The connection is rejected. This method is very useful to keep the sessions
+out of the database. e.g. maintenance requiring single user mode.
 
 \end{itemize}
 
-When the connection request matches the pg\_hba.conf and the authentication 
-method is cleared, the connection becomes established. The postgres main 
-process forks a new backend process which attaches to the shared buffer. 
+When the connection establishes the postgres main process forks a new backend process attached to
+the shared buffer. The fork process is expensive. This makes the connection a potential
+bottleneck. Opening new connections can degrade the operating system performance and eventually
+produce zombie processes. Keeping the connections constantly connected maybe is a reasonable fix.
+Unfortunately this approach have a couple of unpleasant side effects.\newline
 
-As the fork process is expensive the connection is a potential bottleneck. 
-A great amount of opening connections can degenerate in zombies 
-resulting in the worst case in a denial of service.
+Changing any connection related parameter like the max\_connections, requires a cluster restart.
+For this reason planning the resources is absolutely vital. For each connection present in
+ max\_connections the cluster allocates 400 bytes of shared memory. For each connection established 
+the cluster allocates a per user memory area wich size is determined by the parameter
+work\_mem.\newline
 
-A solution could be to keep all the needed connections 
-constantly established. Even if it seems reasonable, this approach have a 
-couple of unpleasant side effects.
+For example let's consider a cluster with a shared\_buffer set to 512 MB and the work\_mem 
+set to 100MB. Setting the max\_connections to only 500 requires a potentially 49 GB of total memory
+if all the connections are in use. Because the work\_mem can affects the performances, its
+value should be determined carefully. Being a per user memory any change to work\_mem does not
+require the cluster's start but a simple reload.\newline 
 
-Each connection's slot in the GUC max\_connections, consumes about 400 bytes of 
-shared memory; each established connection requires the allocation of the 
-work\_mem and the os management of the extra backend process. \newline
+In this kind of situations a connection pooler can be a good solutions. The sophisticated
+\href{http://www.pgpool.net/}{pgpool}  or the
+lightweight \href{http://pgfoundry.org/projects/pgbouncer/}{pgbouncer}  can help to boost the
+connection's performance.\newline
 
-For example a 512 MB shared\_buffer and 100MB work\_mem, with with 500 
-established connections consumes  about 49 GB. Even reducing the work\_mem to 
-10MB the required memory is still 5 GB; in addiction, as seen 
-in \ref{sub:WORKMEM}, this parameter affects the sorts and subsequently the 
-performance, his value requires then extra care.
+By default a fresh data area initialisation listens only on the localhost. The GUC parameter
+governing this aspect is listen\_addresses. In order to have the cluster accepting connections from
+the rest of the network the values should change to the correct listening addresses specified
+as values separated by commas. It's also possible to set it to * as wildcard.
 
-In this case a connection pooler like pgpool http://www.pgpool.net/ or the 
-lightweight pgbouncer http://pgfoundry.org/projects/pgbouncer is a 
-good solution. In particular the latter offers a very simple to use 
-configuration, with different pooling levels. 
-
-The GUC parameter listen\_addresses in a freshly initialised 
-data area is set to localhost. This way the cluster accepts only tcp 
-connections from the local machine. In order to have the cluster listening on 
-the network this parameter must be changed to the correct address to listen 
-or to * for 'all'. The parameter accepts multiple values separated by commas.
-
-Changing the parameters max\_connections and listen\_addresses require the 
-cluster shutdown and startup as described in \ref{sec:STARTUP} and 
-\ref{sec:SHUTDOWN_SEQ}
+Changing the parameters max\_connections and listen\_addresses require the cluster restart.
 
 
 
 \section{Databases}
 \label{sec:DATABASES}
-In order to establish the connection, PostgreSQL requires a 
-target database.
+Unlikely other DBMS, a PostgreSQL connection requires the database name in the connection string.
+Sometimes this can be omitted in psql when this information is supplied in another way.\newline
 
-When the connection happens via the client psql, the database can be omitted. 
-In this case the environment variable \$PGDATABASE \index{\$PGDATABASE 
-variable} is used. If the variable is not set then the target database defaults 
-to the login user.
-
-This can be confusing because even if the pg\_hba.conf authorises 
-the connection, this aborts with the message 
+When omitted psql checks if the environment variable \$PGDATABASE \index{\$PGDATABASE variable} is 
+set. If \$PGDATABASE is missing then psql defaults the database name to connection's username. This 
+leads to confusing error messages. For example, if we have a username named test but not a database 
+named test the connection will fail even with the correct credentials.
 
 \begin{verbatim}
 postgres@tardis:~$ psql -U test -h localhost
@@ -133,12 +121,13 @@ Password for user test:
 psql: FATAL:  database "test" does not exist
 \end{verbatim}
 
-In this case if the database to connect to is unknown, the connection should 
-contain the \textit{template1} as last parameter. This way the connection will 
-establish to the always present template1 database \index{template1 database}. 
-After the connection is 
-established a query to the pg\_database system table will return the database 
-list.
+This error appears because the pg\_hba.conf allow the connection for any database. Even for a not
+existing one. The connection is then terminated when the backend ask to connect to the database 
+named test which does not exists.\newline
+
+This is very common for the new users. The solution is incredibly simple because in a PostgreSQL 
+cluster there are at least three databases. Passing the name template1 as last parameter will do 
+the trick.
 
 \begin{verbatim}
 postgres@tardis:~$ psql -U test -h localhost template1
@@ -147,6 +136,10 @@ psql (9.3.4)
 SSL connection (cipher: DHE-RSA-AES256-SHA, bits: 256)
 Type "help" for help.
 \end{verbatim}
+
+When the connection is established we can query the system table pg\_database to get the 
+cluster's database list. 
+
 \begin{lstlisting}[style=pgsql]
 template1=> SELECT datname FROM pg_database;
     datname    
@@ -158,26 +151,24 @@ template1=> SELECT datname FROM pg_database;
 
 \end{lstlisting}
 
-A brief note for the database administrators coming from MS SQL or MySql.
-The database postgres can be confused for the system database, like the master 
-db or the mysql database. 
+Database administrators coming from other DBMS can be confused by the postgres database.
+This database have nothing special. Its creation was added since the version 8.4 because it was 
+useful to have it. You can just ignore it or use it for testing purposes. Dropping the postgres 
+database does not corrupts the cluster. Because this database is often used by third party 
+tools before dropping it check if is in use in any way.\newline
 
-That's not correct, the postgres database\index{postgres database} have nothing 
-special and it's created by default only in the recent major PostgreSQL 
-versions because is required by specific tools like pg\_bench.
-
-The template0 and template1 \index{template1 database} \index{template0 
-database} are the template databases. A template database \index{template 
+The databases template0 and template1 \index{template1 database} \index{template0 
+database} like the name suggests are the template databases. A template database \index{template 
 database} is used to build new database copies via the physical file copy. 
 
-During the initdb the template1 is initialised with the correct references to 
-the WAL records. The system views and the procedural language PL/PgSQL are then
-loaded into the template1. Finally the template0 and postgres databases are 
-created from template1.
+When initdb initialises the data area the database template1 is populated with the correct
+references to the WAL records, the system views and the procedural language PL/PgSQL. When
+this is done the database template0 and the postgres databases are then created using the template1
+database.
 
-The database template0 doesn't allow the connections and is used to rebuild 
-template1 if gets corrupted or to build a new database with 
-character encoding or ctype an different from the cluster wide values. 
+The database template0 doesn't allow the connections. It's main usage is to rebuild the
+database template1 if it gets corrupted or for creating databases with a character encoding/ctype, 
+different from the cluster wide settings. 
 \index{CREATE DATABASE}
 
 \begin{lstlisting}[style=pgsql]
@@ -194,13 +185,12 @@ postgres=#
 
 \end{lstlisting}
 
-If not specified, the CREATE DATABASE  statement will use template1. 
-\index{ALTER DATABASE}\index{DROP DATABASE}
-A database can be renamed or dropped with the ALTER DATABASE and DROP DATABASE 
-statements. Those operations require the exclusive access to the database. If 
-any connection except the one performing the operation is present on the 
-database the operation will abort.
+If the template is omitted the CREATE DATABASE statement will use template1 by default. 
 
+
+A database can be renamed or dropped with ALTER DATABASE and DROP DATABASE \index{ALTER 
+DATABASE}\index{DROP DATABASE} statements. Those operations require the exclusive access to the 
+affected database. If there are connections established the drop or rename will fail.
 
 \begin{lstlisting}[style=pgsql]
 postgres=# ALTER DATABASE db_test RENAME TO db_to_drop;
@@ -216,87 +206,124 @@ DROP DATABASE
 
 \section{Tables}\index{Tables}
 \label{sec:TABLES}
-A database is the logical container of the relations.
-A relation is the relational object making the data accessible.
+In our top down approach to the PostgreSQL's logical model, the next step is the relation.
+In the PostgreSQL jargon a relation is an object which carries the data or the way to
+retrieve the data. A relation can have a physical counterpart or be purely logical. We'll take a 
+look in particular to three of them starting with the tables.\newline
 
-The first kind of relation we'll take a look is the table.
-
-This is the fundamental storage unit for the data. PostgreSQL implements 
-various kind of tables having the full support, a partial implementation or no 
-support at all for the durability.
-
-The table creation is performed using the standard SQL command CREATE TABLE. 
-
-The PostgreSQL implementation does not guarantee the data is stored in a 
-particular order. This is a straight MVCC consequence Take a look to 
-more information in \ref{sec:MVCC}. 
+A table is the fundamental storage unit for the data. PostgreSQL implements many kind of tables
+with different levels of durability. A table is created using the SQL command CREATE TABLE. The data
+is stored into a table without any specific order. Because the MVCC implementation a row update can
+change the row's physical position. For more informations look to \ref{sec:MVCC}. PostgreSQL
+implements three kind of tables.
 
 \subsection{Logged tables}\index{Logged tables}
-If executed without options, CREATE TABLE creates a logged table. This kind of 
-table implements fully the durability being WAL logged at any time. The data is 
-managed in the shared buffer, logged to the WAL and finally consolidated to the 
-data file. 
+By default CREATE TABLE creates a logged table. This kind of table implements the durability
+logging any change to the write ahead log. The data pages are loaded in the shared buffer and any
+change to them is logged first to the WAL. The consolidation to the the data file happens later. 
 
 \subsection{Unlogged tables}\index{Unlogged tables}
 \label{sub:UNLOGGEDTABLES}
-This kind of table were introduced in the 9.1. The data is still consolidated 
-to the data file but the blocks aren't WAL logged. This make the write 
-operations considerably faster at the cost of the data consistency. This kind 
-of table is not crash safe and the database truncate any existing data during 
-the crash recovery. Also, because there's no WAL record the unlogged tables 
-aren't replicated to the physical standby. 
+An unlogged table have the same structure like the logged table. The difference is such kind of 
+tables are not crash safe. The data is still consolidated to the data file but the pages modified 
+in memory do not write their changes to the WAL. The main advantage is the write operations which 
+are considerably faster at the cost of the data durability. The data stored into an ulogged table
+should be considered partially volatile. The database will truncate those tables when the crash
+recovery occurs. Because the unlogged table don't write to the WAL, those tables are not accessible 
+on a physical standby. 
 
 \subsection{Temporary tables}\index{Temporary tables}
-A temporary table's lifespan lasts the time of the connection. This kind of 
-tables are useful for any in memory operation. The temporary table stays in 
-memory as long as the amount of data is no bigger than 
-temp\_buffers seen in \ref{sub:TEMPBUF}. 
+A temporary table is a relation which lives into the backend's local memory. When the connection 
+ends the table is dropped. Those table can have the same name for all the sessions because 
+they are completely isolated. If the amount of data stored into the table is lesser than 
+the temp\_buffers value the table will fit in memory with great speed advantage. Otherwise the 
+database will create a temporary relation on disk. The parameter temp\_buffers can be altered for 
+the session but only before the first temporary table is created. 
 
-\subsection{Table inheritance}\index{Table inheritance}
-As PostgreSQL is an Object Relational Database Management System, some of the 
-object oriented programming concepts are implemented. The relations are 
-referred generally as classes and the columns as attributes. 
-
-The inheritance binds a parent table to one or more child tables which have 
-the same parent's attribute structure. The inheritance can be defined at 
-creation time or later. If a manually defined table shall inherit another the 
-attribute structure shall be the same as the parent's.
-
-The PostgreSQL implementation is rather confusing as the unique constraints 
-aren't globally enforced on the inheritance tree and this prevents the foreign 
-key to refer inherited tables. This limitation makes the table 
-partitioning tricky.
 
 \subsection{Foreign tables}\index{Foreign tables}
-The foreign tables were first introduced with PostgreSQL 9.1, improving 
-considerably the way the remote data can be accessed. 
-A foreign table requires a called foreign data wrapper to define a foreign 
-server. This can be literally anything. Between the contrib modules PostgreSQL 
-has the file\_fdw to create foreign tables referring CSV or COPY formatted flat 
-files. In the the version 9.3 finally appeared the postgres\_fdw with the read 
-write for the foreign tables. The postgres\_fdw implementation is similar to 
-dblink with a more efficient performance management and the connection caching.
+The foreign tables were first introduced with PostgreSQL 9.1 as read only relations, improving 
+considerably the DBMS interconnection's capability. A foreign table works exactly like a local table 
+using a foreign data
+wrapper to interact with the foreign data source.\newline
 
+There are many different foreign data wrappers available for very exotic data sources. With the 
+PostgreSQL 9.3 there is the postgres\_fdw and the the foreign tables are writable. In particular 
+the postgres\_fdw implementation is similar to old dblink module with a more efficient performance 
+management and the connection's caching.
+
+\section{Table inheritance}\index{Table inheritance}
+Being more precise, PostgreSQL is an Object Relational Database Management System. Its intenal logic
+implements some of the concepts of the object oriented programming. The relations are also called 
+classes and the table's columns attributes. \newline
+
+The table inheritance is a logical relationship between a parent table and one or more child 
+tables. The child tables inherit the parent's attribute structure but not the physical storage. 
+
+\begin{lstlisting}[style=pgsql]
+db_test=#CREATE TABLE t_parent
+                      (
+                          i_id_data     integer,
+                          v_data        character varying(300)
+                      );
+
+CREATE TABLE                     
+
+db_test=#CREATE TABLE t_child_01
+                      
+                      ()
+             INHERITS (t_parent)
+                      ;                      
+db_test=# \d t_parent
+            Table "public.t_parent"
+  Column   |          Type          | Modifiers 
+-----------+------------------------+-----------
+ i_id_data | integer                | 
+ v_data    | character varying(300) | 
+Number of child tables: 1 (Use \d+ to list them.)
+
+db_test=# \d t_child_01 
+           Table "public.t_child_01"
+  Column   |          Type          | Modifiers 
+-----------+------------------------+-----------
+ i_id_data | integer                | 
+ v_data    | character varying(300) | 
+Inherits: t_parent
+
+\end{lstlisting}
+
+The inheritance can be defined at creation time or later. It's also possible to create a completely 
+new table and create the inheritance with another one. In this case the child structure must match 
+exactly the parent.
+
+\begin{lstlisting}[style=pgsql]
+
+db_test=# ALTER TABLE t_child_01 NO INHERIT t_parent;
+ALTER TABLE
+db_test=# ALTER TABLE t_child_01 INHERIT t_parent;
+ALTER TABLE
+
+\end{lstlisting}
+
+Because the physical storage is not shared the unique constraints aren't globally enforced on the 
+inheritance tree and this prevents the foreign keys to refer efficiently the inherited tables. This 
+makes the table partitioning tricky.
 
 \section{Indices}
-An index is a relation capable to map the values in an structured way pointing
-the table's position where the rows are stored. The presence of an index 
-doesn't mean this will be used for read. By default and index block read have 
-an estimated cost four times than the table block read. However the optimiser
-can be controlled using the two GUC parameters seq\_page\_cost for the table 
- sequential read read and random\_page\_cost for the index. Lowering the latter 
-will make more probable the optimiser will choose the indices when building the 
-execution plan.
+An index is a relation which stores the indexed values in an structured way. The index entries are 
+associated to pointers to the corresponding table's pages. Because PostgreSQL have a cost based 
+optimiser, having an an index doesn't guarantee its usage.The index pages require a random disk 
+seek which cost is estimated by default four times more than a sequential page read. Those values 
+can be controlled using the two GUC parameters seq\_page\_cost and random\_page\_cost. They set 
+respectively the arbitrary cost of a table's page and an index page. \newline
 
-Creating indices is a complex task. At first sight adding an index could seem a 
-harmless action. Unfortunately their presence adds overhead to the write 
-operations unpredictably. The rule of thumb is \textit{add an index only 
-if really needed}. Monitoring the index usage is crucial. Querying the 
-statistics view pg\_stat\_all\_indexes is possible to find out if the indices 
-are used or not.
+Designing the indices is a complex task. An unused index adds overhead to the write 
+operations without any benefit, slowing down the database operations. If uncertain the best choice 
+is do not add it. Querying system views like the pg\_stat\_all\_indexes will give us vital 
+informations about the usage.
 
-For example, the following query finds all the indices in che public 
-schema, with zero usage from the last database statistics reset.
+This handy query finds all the indices in the public schema never used from the last statistics 
+reset.
 
 \begin{lstlisting}[style=pgsql]
 SELECT
@@ -311,44 +338,42 @@ WHERE
         AND     idx_scan=0
 ;
 
-
 \end{lstlisting}
 
 
 
-PostgreSQL supports many index types. 
+The indices implemented in PostgreSQL are various unfortunately there's still no bitmap index. The 
+executor have an execution plan which can emulate partially the bitmap indices doing a sequential 
+read over the B-tree and matching the pages's occurrences using the bitmap generated on the fly. 
 
-The general purpose B-tree\index{index,b-tree}, implementing the Lehman and 
-Yao's high-concurrency B-tree management algorithm. The B-tree can handle 
-equality and range queries and returns ordered data. As the data is actually 
-stored in the page and because the index is not TOASTable, the max length for an 
-index entry is 1/3 of the page size. This is the limitation for the variable 
-length indexed data (e.g. text). \newline
+The index type can be specified at create time. If omitted then the index type defaults to the 
+B-tree.
+
+\subsection{b-tree}
+The general purpose B-tree\index{index,b-tree} index implements the Lehman and 
+Yao's high-concurrency B-tree management algorithm. The B-tree can handle equality and range queries 
+returning ordered data. As the data is actually stored in the page and because the index is not 
+TOASTable  the max length for an index entry is 1/3 of the page size. \newline
+
+\subsection{hash}
 
 The hash indices\index{index,hash} can handle only equality and aren't WAL 
-logged. That means their changes are not replayed if the crash recovery occurs, 
-requiring a reindex in case of unclean shutdown.\newline
+logged. That means their changes are not replayed if the crash recovery occurs and aren't 
+propagated to the standby servers.\newline
 
+\subsection{GiST}
 The GiST indices\index{index,GiST} are the Generalised Search Tree. The GiST 
-is a collection of indexing strategies organized under an 
-infrastructure. They can implement arbitrary indexing schemes like B-trees, 
-R-trees  or other. The operator classes shipped with PostgreSQL are for the two 
-elements geometrical data and for the nearest-neighbor search. As the GiST 
-indices are not exact , when scanned the returned set doesn't requires a to 
-remove the false positives.\newline
+is a collection of indexing strategies organised under a common infrastructure. They can implement 
+arbitrary indexing schemes like B-trees, R-trees  or other. The operator classes shipped with 
+PostgreSQL are for the geometrical data with two elements and for the nearest-neighbour searches. 
+The GiST indices don't perform an exact match. The false positive need a second match on 
+the table's data.\newline
 
-The GIN indices \index{index,GIN} are the Generalised Inverted Indices. This 
-kind of index is optimised for indexing the composite data types or vectors 
-like the full text search elements. The GIN are exact indices, when scanned the 
-returned set doesn't require recheck.
+\subsection{GIN}
+The GIN indices \index{index,GIN} are the Generalised Inverted Indices. This kind of index is 
+optimised for indexing the composite data types or vectors like the full text search elements. The 
+GIN are exact indices, when scanned the returned set doesn't require recheck.
 
-There's no bitmap index implementation in PostgreSQL. 
-At runtime the executor can emulate partially the bitmap indices reading the 
-B-tree sequentially and matching the occurrences in the on the fly generated 
-bitmap. 
-
-The index type shall be specified in the create statement. If the type is 
-omitted then the index will default to the B-tree.
 
 \begin{lstlisting}[style=pgsql]
  CREATE INDEX idx_test ON t_test USING hash (t_contents);
