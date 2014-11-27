@@ -310,19 +310,19 @@ inheritance tree and this prevents the foreign keys to refer efficiently the inh
 makes the table partitioning tricky.
 
 \section{Indices}
-An index is a relation which stores the indexed values in an structured way. The index entries are 
-associated to pointers to the corresponding table's pages. Because PostgreSQL have a cost based 
-optimiser, having an an index doesn't guarantee its usage.The index pages require a random disk 
-seek which cost is estimated by default four times more than a sequential page read. Those values 
-can be controlled using the two GUC parameters seq\_page\_cost and random\_page\_cost. They set 
-respectively the arbitrary cost of a table's page and an index page. \newline
+An index is a structured relation where the indexed values are stored. The index entries are 
+associated with pointers to the corresponding table's pages. Because PostgreSQL have a cost based 
+optimiser, having an an index doesn't guarantee its usage. Reading an index page requires a random
+disk seek. The cost for random is estimated by default four times more than a sequential page read
+used by the sequential table scan. Those values can be adjusted using the two GUC parameters
+seq\_page\_cost and random\_page\_cost, respectively the arbitrary cost of a table's page and an
+index page. \newline
 
-Designing the indices is a complex task. An unused index adds overhead to the write 
-operations without any benefit, slowing down the database operations. If uncertain the best choice 
-is do not add it. Querying system views like the pg\_stat\_all\_indexes will give us vital 
-informations about the usage.
+Designing the indices is a complex task. An unused index adds overhead and slowness to the write
+operations with no benefit. Querying system views like the pg\_stat\_all\_indexes will give us
+vital informations about the indices usage.
 
-This handy query finds all the indices in the public schema never used from the last statistics 
+This simple finds all the indices in the public schema never used from the last statistics 
 reset.
 
 \begin{lstlisting}[style=pgsql]
@@ -341,66 +341,65 @@ WHERE
 \end{lstlisting}
 
 
-
-The indices implemented in PostgreSQL are various unfortunately there's still no bitmap index. The 
-executor have an execution plan which can emulate partially the bitmap indices doing a sequential 
-read over the B-tree and matching the pages's occurrences using the bitmap generated on the fly. 
-
-The index type can be specified at create time. If omitted then the index type defaults to the 
-B-tree.
-
-\subsection{b-tree}
-The general purpose B-tree\index{index,b-tree} index implements the Lehman and 
-Yao's high-concurrency B-tree management algorithm. The B-tree can handle equality and range queries 
-returning ordered data. As the data is actually stored in the page and because the index is not 
-TOASTable  the max length for an index entry is 1/3 of the page size. \newline
-
-\subsection{hash}
-
-The hash indices\index{index,hash} can handle only equality and aren't WAL 
-logged. That means their changes are not replayed if the crash recovery occurs and aren't 
-propagated to the standby servers.\newline
-
-\subsection{GiST}
-The GiST indices\index{index,GiST} are the Generalised Search Tree. The GiST 
-is a collection of indexing strategies organised under a common infrastructure. They can implement 
-arbitrary indexing schemes like B-trees, R-trees  or other. The operator classes shipped with 
-PostgreSQL are for the geometrical data with two elements and for the nearest-neighbour searches. 
-The GiST indices don't perform an exact match. The false positive need a second match on 
-the table's data.\newline
-
-\subsection{GIN}
-The GIN indices \index{index,GIN} are the Generalised Inverted Indices. This kind of index is 
-optimised for indexing the composite data types or vectors like the full text search elements. The 
-GIN are exact indices, when scanned the returned set doesn't require recheck.
+PostgreSQL implements many index type. Unfortunately the bitmap index, useful in the datawarehouse,
+is not present. There is a plan node which can emulate partially the bitmap indices. This is
+done with a sequential read over the index followed by a table's read for rematch. The tuples
+are found using a bitmap generated from the index's sequential read.\newline 
 
 
+The keyword USING specifies the index type at create time.
 \begin{lstlisting}[style=pgsql]
  CREATE INDEX idx_test ON t_test USING hash (t_contents);
 \end{lstlisting}
 
+If omitted then the index type defaults to the B-tree.
 
-As the index maintenance is a delicate matter, the argument is described in 
-depth in \ref{cha:MAINTENANCE}.
+The index maintenance is a delicate matter, the argument is described in depth
+in \ref{cha:MAINTENANCE}.
+
+
+\subsection{b-tree}
+The general purpose B-tree\index{index,b-tree} index implements the Lehman and Yao's
+high-concurrency B-tree management algorithm. The B-tree can handle equality and range queries 
+returning ordered data. The indexed values are stored into the index pages with pointers to the
+table's pages. The index is not TOASTable, this limit the max length for an index entry to 1/3 of
+the page size. \newline
+
+\subsection{hash}
+The hash indices\index{index,hash} can handle only equality and are not WAL logged. Their changes
+are not replayed if the crash recovery occurs and do not propagate to the standby servers.\newline
+
+\subsection{GiST}
+The GiST indices\index{index,GiST} are the Generalised Search Tree. The GiST is a collection of
+indexing strategies organised under a common infrastructure. They can implement arbitrary indexing
+schemes like B-trees, R-trees  or other. The operator classes shipped with PostgreSQL are for the
+geometrical data with two elements and for the nearest-neighbour searches. The GiST indices do not
+perform an exact match. The false positives are removed with second rematch on the
+table's data.\newline
+
+\subsection{GIN}
+The GIN indices \index{index,GIN} are the Generalised Inverted Indices. This kind of index
+is optimised for indexing the composite data types or vectors like the full text search elements.
+The GIN are exact indices, when scanned the returned set doesn't require recheck.
+
 
 
 \section{Views}
 \index{views}
 \label{sec:VIEWS}
-A view is the representation of a query, stored in the system catalogue 
-for quick access. All the objects involved in the view are translated to the 
-internal identifiers at the creation time; the same happens for any wild card 
-which is expanded to the column list.
+A view is a relation storing the logical representation of a query. At create time all the objects
+involved in the view definition are translated in the internal representation. Any wildcard is
+expanded.
 
-An example will explain better the concept. Let's create a simple table. Using 
-the generate\_series() function let's put some data into it.
+An example will explain better this concept. Let's consider a simple table populated with the
+generate\_series() function.
 
 \begin{lstlisting}[style=pgsql]
 
 
 CREATE TABLE t_data 
         ( 
-                i_id serial,
+                i_id            serial,
                 t_content       text
         );
 
@@ -432,14 +431,13 @@ AS
 
 \end{lstlisting}
 
-The SELECT * from t\_data or v\_data looks exactly the same, the view 
-simply runs the stored SQL used at creation time.
-If we look to the stored definition in pg\_views we'll find the wildcard is 
-expanded into the table's columns.
+Running a select from the view or the table returns the same columns and rows.
+The stored definition in pg\_views does not have any wildcard though.
 
 
 \begin{lstlisting}[style=pgsql]
- db_test=# SELECT * FROM pg_views where viewname='v_data';
+db_test=# \x
+db_test=# SELECT * FROM pg_views where viewname='v_data';
 -[ RECORD 1 ]--------------------
 schemaname | public
 viewname   | v_data
@@ -451,8 +449,7 @@ definition |  SELECT t_data.i_id,
 
 \end{lstlisting}
 
-Now let's add a new column to the t\_data table and run again the select on the 
-table and the view.
+Adding a new column to the t\_data table will break the equality between the table and the view.
 
 \begin{lstlisting}[style=pgsql]
  ALTER TABLE t_data ADD COLUMN d_date date NOT NULL default now()::date;
@@ -474,8 +471,8 @@ db_test=# SELECT * FROM v_data LIMIT 1;
  
 \end{lstlisting}
 
-The view doesn't show the new column. To update the view definition a new 
-CREATE OR REPLACE VIEW statement must be issued.
+In order to have the view in sync with the table we need to refresh it using the CREATE OR REPLACE
+VIEW statement.
 
 \begin{lstlisting}[style=pgsql]
  CREATE OR REPLACE VIEW v_data 
@@ -493,93 +490,74 @@ db_test=# SELECT * FROM v_data LIMIT 1;
 
 \end{lstlisting}
 
-Because the views are referring the objects identifiers they will never 
-invalidate when the referred objects are altered. 
-The CREATE OR REPLACE statement updates the view definition only if the column 
-list adds new attributes in the end. 
-Otherwise, any change to the existing columns requires the view's drop and 
-recreate. 
+PostgreSQL implements the views using the the objects identifiers. They never invalidate when
+the objects are renamed. \newline
 
-When one or more view are pointing a relation this cannot be dropped. 
-The option CASCADE in the drop statement will drop the dependant objects before 
-the final drop. This is a dangerous approach though. Dropping objects 
-regardless can result in data or functionality loss.
+The CREATE OR REPLACE statement can update the view definition only if the column 
+list adds new attributes in the end. When one or more view are pointing a relation this cannot be
+dropped unless the clause CASCADE is used. Because the dependencies can be very complicated, this
+approach is quite dangerous. The best is querying on the pg\_depend table and find out the full
+list of dependencies.\newline
 
-When a drop is blocked by dependant objects the database emits a message with 
-the informations about the dependencies. If the amount of objects is too much 
-big it's better to query the pg\_depend table to find out the correct 
-dependencies. This table lists all the dependencies for each object using a 
-peculiar logic.
+Because a view is a logical short cut to a stored SQL, PostgreSQL will run the query in the same
+way as it was sent from the client. This excludes the network overhead.
 
+A view can refer other views becoming a potential cause of performance regression. Because any view
+have a specific execution plan, mixing different plans can confuse the planner causing
+poor performance.
 
-As seen before a view is a logical short cut to a pre saved query. This means 
-the database will follow all the steps to execute exactly the same way if the 
-entire query has been sent via client, except for the network overhead.
-
-Nothing forbids a view to point another view inside the definition or join 
-the one or more views in a different query. This can cause massive 
-regression on the overall performance because each view require an execution 
-plan and mixing the views will cause not efficient planning. 
-
-To mark a relation is a view it's a good idea to use a naming prefix like v\_. 
-This will distinguish them from the tables marked with the prefix t\_.
-In \ref{cha:COUPLETHINGS} we'll take a to the naming conventions to let the 
-database schema self explanatory.
+To avoid this it's a a good practice using the naming  v\_ to distinguish the views from the
+tables. In \ref{cha:COUPLETHINGS} there is an example for the self explanatory database schema.
 
 \index{view, updatable}
-PostgreSQL from the version 9.3 supports the updatable simple views. 
-A view is simple if
+PostgreSQL from the version 9.3 supports the updatable views. This feature is limited just to the
+simple views. A view is simple  if have the following features.
 
 \begin{itemize}
 
 
- \item   Have exactly one entry in its FROM list, which must be a table or 
-another updatable view
+ \item   Have exactly one entry in its FROM list, which must be a table or another updatable view.
 
- \item Does not contain WITH, DISTINCT, GROUP BY, HAVING,LIMIT, or OFFSET 
-clauses at the top level
+ \item Does not contain WITH, DISTINCT, GROUP BY, HAVING,LIMIT, or OFFSET clauses at the top level.
 
- \item  Does not contain set operations (UNION, INTERSECT or EXCEPT) at the 
-top level
+ \item  Does not contain set operations (UNION, INTERSECT or EXCEPT) at the top level
+ 
+ \item   All columns in the view's select list must be simple references to columns of the
+underlying relation. They cannot be expressions, literals or functions. System columns cannot be
+referenced, either.
 
- \item   All columns in the view's select list must be simple references to 
-columns of the underlying relation. They cannot be expressions, literals or 
-functions. System columns cannot be referenced, either
+ \item   Columns of the underlying relation do not appear more than once in the view's select list.
 
- \item   columns of the underlying relation do not appear more than once in 
-the view's select list
-
- \item   does not have the security\_barrier property
+ \item   Does not have the security\_barrier property.
 
 \end{itemize}
 
-If the view doesn't fit those rules it's still possible to make it updatable 
-using the triggers with the INSTEAD OF clause.
+A complex view can be updatable using the triggers or rules.\newline
 
 \index{view, materialised}
-The major version 9.3 introduces also the materialised view concept. This is a 
-physical snapshot of the saved SQL and can be refreshed with the statement 
-REFRESH MATERIALIZED VIEW.  
+Another feature introduced by the 9.3 is the materialised views. This is a physical snapshot of the
+saved SQL and can be refreshed with the statement REFRESH MATERIALIZED VIEW.  
 
 
 \section{Tablespaces}\index{tablespaces,logical}
 \label{sub:TBS-LOGICAL}
-A tablespace\index{tablespace} is a logical shortcut for a physical location. 
-This feature was first introduced with the major release 8.0, recently with the 
-9.2 had a small adjustment to make the dba life easier.
+A tablespace\index{tablespace} is a logical name pointing to a physical location. 
+This feature was introduced with the release 8.0 and its implementation did not change since
+then. From the version 9.2 was introduced the function pg\_tablespace\_location(tablespace\_oid)
+which gets the tablespace's location from the OID making the dba life easier.
 
-When a new relation is created without tablespace specification, the relation's
-tablespace is set to the GUC prameter default\_tablespace or, if this is 
-missing, is set to the database's default tablespace. 
-Anyway, without any specification the default tablespace is the pg\_default, 
-corresponding to the \$PGDATA/base directory.
+When a new relation is created without the tablespace specification this defaults to the GUC
+parameter default\_tablespace or to the database's default tablespace. 
+On a fresh initialised cluster the initial value for the default tablespace is pg\_default which
+points to to the directory \$PGDATA/base . Alongside with pg\_default there is the pg\_global as
+well. This tablespace is reserved for the shared objects and points to the directory
+\$PGDATA/global.
 
-In order to create a new tablespace the chosen directory must be owned by 
-the os user which started the postgres process and must be specified as 
-absolute path. 
+Creating a new tablespace is very simple. The physical location must be owned by the postgres
+process user. 
 
-For example, having a folder named /var/lib/postgresql/pg\_tbs/ts\_test a 
-tablespace we can create a new tablespace ts\_test.
+For example let's create a tablespace pointing to the folder /var/lib/postgresql/pg\_tbs/ts\_test
+with the name ts\_test.
 
 \begin{lstlisting}[style=pgsql]
 CREATE TABLESPACE ts_test 
@@ -589,14 +567,11 @@ LOCATION '/var/lib/postgresql/pg_tbs/ts_test' ;
 \end{lstlisting}
 
 Only superusers can create tablespaces. The OWNER clause is optional, if 
-omitted the tablespace is owned by the user issuing the command.
+omitted the tablespace's owner defaults to the database user logged in. The tablespaces are cluster
+wide and are listed into the pg\_tablespace system table.\newline
 
-The tablespaces are cluster wide, each database sees the same list in the 
-pg\_tablespace system table.
-
-To create a relation into the tablespace ts\_test just add the TABLESPACE 
-clause followed by the tablespace name at creation 
-time.
+Creating a new relation into the tablespace ts\_test requires the TABLESPACE clause followed by the
+tablespace name.
 
 \begin{lstlisting}[style=pgsql]
 CREATE TABLE t_ts_test
@@ -608,32 +583,22 @@ TABLESPACE ts_test ;
 
 \end{lstlisting}
 
-It's possible to move a relation from a tablespace to another using the 
-ALTER command.
-
-For example, this is the command to move the previously created table to the 
-pg\_default tablespace.
+A relation can be moved from a tablespace to another using the ALTER command. For example let's
+move the table t\_ts\_test to the  pg\_default tablespace.
 
 \begin{lstlisting}[style=pgsql]
 ALTER TABLE t_ts_test SET TABLESPACE pg_default;
 \end{lstlisting}
 
-The move is transaction safe but requires an exclusive lock on the affected 
-relation. If the relation have a significant size this means no access to 
-the data for the time required by the move.
+Changing the relation's tablespace is transaction safe but requires an exclusive lock on the
+affected relation. The lock prevents accessing the relation's data for the time required by the
+move.If the relation have a significant size this should be considered carefully. Because the
+exclusive lock conflicts with the locks issued by the backup, it's not possible to change the
+relation's tablespace when pg\_dump is running.\newline
 
-In addition, changing the tablespaces is not permitted when the backup is in 
-progress, the exclusive lock is not compatible with the locks issued by the 
-schema and data export.
 
-The tablespace feature adds flexibility to the space management. Even if is 
-still primitive a careful design can improve sensibly the performances, for 
-example, putting tables and indices on different devices to maximise the disks 
-bandwidth.
-
-To remove a tablespace there is the  DROP TABLESPACE command. The tablespace 
-must be empty before the drop. There's no CASCADE clause to have the 
-tablespace's contents dropped with the tablespace.
+A tablespace can be removed with DROP TABLESPACE command. The tablespace must be empty before the
+drop. There's no CASCADE clause to have the tablespace's contents dropped with the tablespace.
 
 \begin{lstlisting}[style=pgsql]
 postgres=# DROP TABLESPACE ts_test;
@@ -646,8 +611,15 @@ DROP TABLESPACE
 
 \end{lstlisting}
 
-In \ref{sub:TBS-PHYSICAL} we'll take a look to the how PostgreSQL 
-implements the tablespaces on the physical side.
+
+The tablespace feature adds flexibility to the space management. Even if not sophisticated like
+other DBMS this implementation, combined with a careful design can improve sensibly the
+performances.\newline
+
+In \ref{sub:TBS-PHYSICAL} we'll take a look to the how PostgreSQL implements the tablespaces on the
+physical side.
+
+
 
 \section{Transactions}
 \label{sec:TRANSACTION}
