@@ -541,22 +541,23 @@ saved SQL and can be refreshed with the statement REFRESH MATERIALIZED VIEW.
 
 \section{Tablespaces}\index{tablespaces,logical}
 \label{sub:TBS-LOGICAL}
-A tablespace\index{tablespace} is a logical shortcut for a physical location. 
-This feature was first introduced with the major release 8.0, recently with the 
-9.2 had a small adjustment to make the dba life easier.
+A tablespace\index{tablespace} is a logical name pointing to a physical location. 
+This feature was introduced with the release 8.0 and its implementation did not change since
+then. From the version 9.2 was introduced the function pg\_tablespace\_location(tablespace\_oid)
+which gets the tablespace's location from the OID making the dba life easier.
 
-When a new relation is created without tablespace specification, the relation's
-tablespace is set to the GUC prameter default\_tablespace or, if this is 
-missing, is set to the database's default tablespace. 
-Anyway, without any specification the default tablespace is the pg\_default, 
-corresponding to the \$PGDATA/base directory.
+When a new relation is created without the tablespace specification this defaults to the GUC
+parameter default\_tablespace or to the database's default tablespace. 
+On a fresh initialised cluster the initial value for the default tablespace is pg\_default which
+points to to the directory \$PGDATA/base . Alongside with pg\_default there is the pg\_global as
+well. This tablespace is reserved for the shared objects and points to the directory
+\$PGDATA/global.
 
-In order to create a new tablespace the chosen directory must be owned by 
-the os user which started the postgres process and must be specified as 
-absolute path. 
+Creating a new tablespace is very simple. The physical location must be owned by the postgres
+process user. 
 
-For example, having a folder named /var/lib/postgresql/pg\_tbs/ts\_test a 
-tablespace we can create a new tablespace ts\_test.
+For example let's create a tablespace pointing to the folder /var/lib/postgresql/pg\_tbs/ts\_test
+with the name ts\_test.
 
 \begin{lstlisting}[style=pgsql]
 CREATE TABLESPACE ts_test 
@@ -566,14 +567,11 @@ LOCATION '/var/lib/postgresql/pg_tbs/ts_test' ;
 \end{lstlisting}
 
 Only superusers can create tablespaces. The OWNER clause is optional, if 
-omitted the tablespace is owned by the user issuing the command.
+omitted the tablespace's owner defaults to the database user logged in. The tablespaces are cluster
+wide and are listed into the pg\_tablespace system table.\newline
 
-The tablespaces are cluster wide, each database sees the same list in the 
-pg\_tablespace system table.
-
-To create a relation into the tablespace ts\_test just add the TABLESPACE 
-clause followed by the tablespace name at creation 
-time.
+Creating a new relation into the tablespace ts\_test requires the TABLESPACE clause followed by the
+tablespace name.
 
 \begin{lstlisting}[style=pgsql]
 CREATE TABLE t_ts_test
@@ -585,32 +583,22 @@ TABLESPACE ts_test ;
 
 \end{lstlisting}
 
-It's possible to move a relation from a tablespace to another using the 
-ALTER command.
-
-For example, this is the command to move the previously created table to the 
-pg\_default tablespace.
+A relation can be moved from a tablespace to another using the ALTER command. For example let's
+move the table t\_ts\_test to the  pg\_default tablespace.
 
 \begin{lstlisting}[style=pgsql]
 ALTER TABLE t_ts_test SET TABLESPACE pg_default;
 \end{lstlisting}
 
-The move is transaction safe but requires an exclusive lock on the affected 
-relation. If the relation have a significant size this means no access to 
-the data for the time required by the move.
+Changing the relation's tablespace is transaction safe but requires an exclusive lock on the
+affected relation. The lock prevents accessing the relation's data for the time required by the
+move.If the relation have a significant size this should be considered carefully. Because the
+exclusive lock conflicts with the locks issued by the backup, it's not possible to change the
+relation's tablespace when pg\_dump is running.\newline
 
-In addition, changing the tablespaces is not permitted when the backup is in 
-progress, the exclusive lock is not compatible with the locks issued by the 
-schema and data export.
 
-The tablespace feature adds flexibility to the space management. Even if is 
-still primitive a careful design can improve sensibly the performances, for 
-example, putting tables and indices on different devices to maximise the disks 
-bandwidth.
-
-To remove a tablespace there is the  DROP TABLESPACE command. The tablespace 
-must be empty before the drop. There's no CASCADE clause to have the 
-tablespace's contents dropped with the tablespace.
+A tablespace can be removed with DROP TABLESPACE command. The tablespace must be empty before the
+drop. There's no CASCADE clause to have the tablespace's contents dropped with the tablespace.
 
 \begin{lstlisting}[style=pgsql]
 postgres=# DROP TABLESPACE ts_test;
@@ -623,8 +611,15 @@ DROP TABLESPACE
 
 \end{lstlisting}
 
-In \ref{sub:TBS-PHYSICAL} we'll take a look to the how PostgreSQL 
-implements the tablespaces on the physical side.
+
+The tablespace feature adds flexibility to the space management. Even if not sophisticated like
+other DBMS this implementation, combined with a careful design can improve sensibly the
+performances.\newline
+
+In \ref{sub:TBS-PHYSICAL} we'll take a look to the how PostgreSQL implements the tablespaces on the
+physical side.
+
+
 
 \section{Transactions}
 \label{sec:TRANSACTION}
