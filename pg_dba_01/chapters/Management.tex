@@ -171,6 +171,7 @@ server stopped
 \section{The startup sequence}
 \label{sec:STARTUP}
 
+<<<<<<< HEAD
 When the postgres process starts it allocates the shared memory segment called shared buffer. The
 size of this segment is specified with the GUC\footnote{GUC, Grand Unified Configuration, this 
 acronym refers to the configuration parameters} parameter shared\_buffers.The
@@ -180,6 +181,11 @@ the kernel's parameters.
 
 For the versions up to the 9.2, if the requested memory is bigger than the kernel's maximum
 allowed size, the startup sequence will abort with an error like this.
+=======
+When PostgreSQL starts the server process then the shared memory is allocated. Before the version
+9.3 this was often cause of trouble because the default kernel's limits. An error like this it
+means the requested amount of memory is not allowed by the OS settings.
+>>>>>>> cf0576855cd9808aa732385d23d2fbcc5937b450
 
 \begin{verbatim}
 FATAL: could not create shared memory segment: Cannot allocate memory
@@ -195,6 +201,7 @@ max_connections.
 \end{verbatim}
 
 \index{kernel resources}
+<<<<<<< HEAD
 The kernel's parameters governing this limit is SHMMAX. It sets the maximum allowed size of a shared
 memory segment. The value is measured in bytes and must be big enogh to contain the
 requested shared\_buffers. Another parameter which needs adjustment is SHMALL. This value sets the
@@ -211,6 +218,19 @@ The settings can be changed on the fly, simply echoing in the corresponding proc
 the values persistently into the file /etc/sysctl.conf.
 
 Here's the file from the previous example.
+=======
+The kernel parameter governing this limit is SHMMAX, the maximum size of
+shared memory segment. The value is measured in bytes and must be bigger than the shared\_buffers
+parameter. Another parameter which needs adjustment is SHMALL. This value sets the amount of shared
+memory available and usually on linux is measured in pages. Unless the kernel is configured to
+allow the huge pages the page size is 4096 byes. The value should be the same as SHMMAX. Changing
+those parameters requires the root privileges. It's a good measure to have a small extra headroom
+for the needed memory instead of setting the exact require value. \newline
+
+For example, setting the shared buffer to 1 GB requires SHMMAX to be at least 1073741824.
+The value 1258291200 (1200 MB) is a reasonable setting. The corresponding SHMALL is 307200. The
+value SHMMNI is the minimum value of shared memory, is safe to set to 4096, one memory page.
+>>>>>>> cf0576855cd9808aa732385d23d2fbcc5937b450
 \begin{verbatim}
 kernel.shmmax = 1258291200
 kernel.shmall = 307200
