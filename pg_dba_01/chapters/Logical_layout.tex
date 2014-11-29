@@ -624,71 +624,57 @@ physical side.
 \section{Transactions}
 \label{sec:TRANSACTION}
 \index{transactions}
-PostgreSQL implements the MVCC\index{MVCC} which stands for Multi Version 
-Concurrency Control\index{Multi Version Concurrency Control}. 
-This offers high efficiency in multi user access for read and write queries.
-When a new query starts a transaction identifier is assigned, the XID 
-\index{XID} a 32 bit quantity. To determine the transaction's snapshot 
-visibility, all the committed transactions with XID lesser than the current XID 
-are in the past and then visible. Otherwise, all the transactions with XID 
-greater than the current XID are in the future and not visible.\newline
+The atomicity the consistency and the isolation is implemented in PostgreSQL via the
+MVCC\index{MVCC}. This is the acronym for Multi Version Concurrency Control\index{Multi Version
+Concurrency Control}. This solution offers high efficiency in the concurrent user access for read
+and write queries.\newline 
 
-This comparison happens at tuple level using two system fields xmin and xmax 
-having the xid data type. 
-When a transaction creates a new tuple then the transaction's xid is put into 
-the tuple's xmin value. 
-When a transaction deletes a tuple then the xmax value is set to the 
-transaction's xid leaving the tuple in place for read consistency. 
-When a tuple is visible to any transaction is called a live tuple, a tuple 
-which is no longer visible is a dead tuple.\newline
+When a transaction starts a write operation receives an identifier, the XID \index{XID}. This is
+a 32 bit quantity and is used to determine the transaction's visibility. All the transactions with
+XID lesser than the current XID and committed are considered in the past and then visible. All the
+transactions with XID greater than the current XID are in the future and not
+visible. The not committed transactions are considered invisible as well.\newline
 
-PostgreSQL have no dedicated field for the update's xid. That's because when an 
-UPDATE is issued PostgreSQL creates a new tuple's version with the updated 
-data and sets the xmax value in the old version making it disappear.\newline
+This comparison happens at tuple level using two system fields xmin and xmax. When a transaction
+creates a new tuple the xmin is set with the transaction's xid. This field is also referred as the
+insert's transaction id. When a tuple is deleted then the xmax value is updated to the transaction's
+xid. The tuple when deleted is left in place, ensuring the read consistency for any transaction
+which should see the previous version. The last tuple's version is a live tuple. The tuples which
+versions are outdated are called dead tuples.\newline
 
-A dead tuple can be reclaimed by VACUUM if no longer required by running 
-transactions, anyway tables updated often can result in data bloat for the dead 
-tuples and for the eventual indices.
-Look to \ref{sec:TUPLES} for more information on the 
-tuples.\newline
+There is no field for the update. In PostgreSQL the update is a a complete new insert. The update's
+transaction id is used either for the new tuple's xmin and the old tuple's xmax. The dead tuples are
+removed by VACUUM if no longer needed by existing transactions. In \ref{sec:TUPLES}
+there is the tuple structure's description.\newline
 
-When designing a new data model, the PostgreSQL's peculiar behaviour on the 
-update should be the first thing to consider, in order to limit the table 
-and index bloat. \newline
-
-Among the xmin,xmax two other system fields the cmin and cmax which data type 
-is CID, command id. Those are similar to the xmin/xmax quantities and usage 
-and their usage is to track the internal transaction's commands, in order to 
-avoid the command execution on the same tuple more than one time. The pratical 
-issue is explained in the well known Halloween Problem. For more informations 
-take a look here 
+Alongside with xmin and xmax there are two other system fields, the cmin and cmax. Their data
+type is the command id, CID. Those fields are similar to xmin and xmax. They are used to track the
+internal transaction's commands in order to avoid the command to be executed on the same
+tuple multiple times. This solve the database's Halloween Problem described there
 \href{http://en.wikipedia.org/wiki/Halloween_Problem}{
 http://en.wikipedia.org/wiki/Halloween\_Problem}.\newline
 
 The SQL standard defines four level of transaction's isolation levels where 
 some phenomena are permitted or forbidden.
 \index{transactions, isolation levels}
-Those phenomena are the following.
 
 \begin{itemize}
- \item \textbf{dirty read} A transaction reads data written by a concurrent 
+ \item \textbf{dirty read}, when a transaction reads the data written by a concurrent 
 uncommitted transaction
 
-\item \textbf{nonrepeatable read} A transaction re reads the data previously 
-read and finds the data changed by another transaction which has
-committed since the initial read
+\item \textbf{nonrepeatable read} when a transaction re reads the same data and finds it changed by
+another transaction which has committed since the initial read
 
-\item \textbf{phantom read} A transaction re executes a query returning a set 
-of rows satisfying a search condition and finds that the set of rows 
-satisfying the condition has changed because another recently-committed 
+\item \textbf{phantom read} when a transaction re executes a query returning a set 
+of rows for a search condition and finds that results are changed by a recently committed 
 transaction
 
 \end{itemize}
 
-Table \ref{tab:TRNISOLATION} shows the isolation levels with the 
-allowed phenomena. In PostgreSQL it's possible to set all the four 
-isolation levels but only the three more strict are supported. Setting the 
-isolation level to read uncommited fallback to the read committed in any case.
+The table \ref{tab:TRNISOLATION} shows the transaction's isolation levels with the phenomena
+possible. In PostgreSQL it's possible to set all the four isolation levels but only the three
+strictest levels are supported. Setting the  isolation level to read uncommited is
+equivalent to set it to the read committed.
 
 \begin{table}[H]
   \begin{tabular}{cccc}
@@ -703,15 +689,15 @@ Read\\
   \caption{\label{tab:TRNISOLATION}SQL Transaction isolation levels}
 \end{table}
 
-By default the global isolation level is set to read committed, it's possible 
-to change the session's transaction isolation level using the command:
+The default the global isolation level is read committed. However is possible to change the
+isolation level per session with the command:
 \begin{lstlisting}[style=pgsql]
 SET TRANSACTION ISOLATION LEVEL { SERIALIZABLE | REPEATABLE READ | READ 
 COMMITTED | READ UNCOMMITTED }; 
 \end{lstlisting}
 
-To change the default transaction isolation level cluster wide there is the GUC 
-parameter transaction\_isolation.
+Changing the default transaction isolation for the entire cluster is made using the GUC parameter
+transaction\_isolation.
 
 
 \subsection{Snapshot exports}
