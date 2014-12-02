@@ -702,14 +702,15 @@ transaction\_isolation.
 
 \subsection{Snapshot exports}
 \label{sub:SNAPEXPORT}\index{transactions, snapshot export}
-Since PostgreSQL 9.2 are supported the transaction's snapshot exports. A session with an open 
-transaction, can export its consistent snapshot to any other session. The snapshot remains valid 
-meanwhile the transaction is open. Using this functionality offers a way to run multiple backends 
-on a consistent data set frozen in time. This feature resulted in the brilliant parallel export in 
+PostgreSQL 9.2 introduced the transaction's snapshot exports. Meanwhile a session is in
+transaction its snapshot can be exported to other sessions. The snapshot is valid as long as the
+exporting transaction is in progress. This feature opens many scenarios where multiple backends
+can see a consistent snapshot. One of the first implementation is the brilliant parallel export in 
 the 9.3's pg\_dump as described in \ref{sec:PGDUMPINT}.\newline
 
-In the following example, let's consider the table created in \ref{sec:VIEWS}. We'll first start an 
-explicit transaction and then we'll export the current snapshot.
+An example will explain better the concept. We'll use the table created in \ref{sec:VIEWS}.
+The first thing to do is connecting to the cluster and start a new transaction. The function
+pg\_export\_snapshot() creates a new snapshot and returns its identifier.
 
 \begin{lstlisting}[style=pgsql]
 postgres=# BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;
@@ -728,11 +729,10 @@ postgres=# SELECT count(*) FROM t_data;
 
 \end{lstlisting}
 
-We are first starting a transaction with the REPEATABLE READ isolation level. The second 
-statement exports the current snapshot using the function pg\_export\_snapshot(). Finally we are 
-checking with a simple row count the table t\_data have data inside.\newline
+It's important to specify the isolation level to REPEATABLE READ. 
 
-We can now login with in a different session and delete all the rows from the t\_data table.
+
+With another backend we'll delete all the rows from the table t\_data table.
 
 \begin{lstlisting}[style=pgsql]
 postgres=# DELETE FROM t_data;
@@ -745,7 +745,7 @@ postgres=# SELECT count(*) FROM t_data;
 
 \end{lstlisting}
 
-With the table now empty let's import the snapshot exported by the first backend.
+In the same backend let's import the snapshot using the identifier.
 
 \begin{lstlisting}[style=pgsql]
 postgres=# BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;
@@ -760,10 +760,10 @@ postgres=# SELECT count(*) FROM t_data;
 
 \end{lstlisting}
 
-The function pg\_export\_snapshot saves the current snapshot returning the text string which 
-identifies the snapshot. Passing the string to clients that want to import the snapshot gives to 
-independent sessions a single consistent vision. The import is possible only until the end of the 
-transaction that exported it. The export is useful only in the READ COMMITTED transactions, 
-because the REPEATABLE READ and higher isolation levels use the same snapshot within their 
-lifetime. 
+The rows are back again.
+
+The import is possible only until the end of the 
+transaction that exported it. The export requires at least the REPEATABLE READ as isolation level.
+Using the READ COMMITTED for the export does not generates an error. However the snapshot is
+discarded immediately because the READ COMMITTED takes a new snapshot for each command.
 
