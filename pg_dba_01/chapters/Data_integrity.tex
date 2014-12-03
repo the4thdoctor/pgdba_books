@@ -1,21 +1,26 @@
 \chapter{Data integrity}
-\label{cha:DATAINT}
-There's just one thing worse than losing the database. Having the data set full of rubbish. The 
-data integrity has been part of PostgreSQL since the beginning. It offers various levels of 
-strength ensuring the data is clean and consistent. In this chapter we'll have a brief look to the 
-various constraints available. The PostgreSQL's constraints can be grouped in two kind. The table 
-constraints and the column constraints. 
+\label{cha:DATAINT}\index{data integrity}
+Losing the database is bad. Having the data full of rubbish is worse. In this chapter we'll have a
+brief look to the constraints available in PostgreSQL which can help us to prevent this
+disastrous scenario.\newline
 
-The table constraints are defined on the table's definition after the field's list. The column 
-constraints appear in the field's definition after the data type. Usually for the primary keys and 
-the unique keys the definition is  written as table constraint. 
+A constraint\index{constraint}, like the name suggest enforces one or more restrictions over the
+table's data. The restriction can be just on the local data or to an external table. In the former
+case we have a local constraint in the latter there is a foreign constraint which enforces the
+referential integrity.\newline
 
-The constraint applies the enforcement to any table's row without exclusion. When creating a table 
-constraint on a fully populated table the data is validated first. Any validation error aborts the 
-constraint creation. However, the foreign keys and check constraints accept the clause NOT VALID. 
-With this clause the database  assumes the data is valid and skips the validation. The cration is 
-almost immediate. The new constraint is then enforced only for the new data. When using this 
-option  the data must be consistent.
+The constraints can be defined like table or column constraint. The table constraints are defined on
+the table's definition after the field's list. A column constraint appears in the field's
+definition after the data type.\newline
+
+When a constraint is created the enforcement applies to any table's row with no exclusion. At
+creation time the table's data is validated against the constraint. Any validation error aborts
+the creation. However, the foreign keys and the check constraints can be created without the initial
+validation. When the clause NOT VALID\index{constraint, NOT VALID} is specified PostgreSQL does not
+validate the constraint and the creation is immediate. The new constraint is then enforced only for
+the new data and marked as not valid in the system catalogue. It's possible to validate the
+constraint later with the command ALTER TABLE table\_name VALIDATE CONSTRAINT
+constraint\_name;\index{constraint, VALIDATE CONSTRAINT} .
 
 \section{Primary keys} 
 A primary key is the unique row identifier. Having this constraint enforced ensures the row can be 
