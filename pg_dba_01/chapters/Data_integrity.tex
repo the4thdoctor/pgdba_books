@@ -23,16 +23,14 @@ constraint later with the command ALTER TABLE table\_name VALIDATE CONSTRAINT
 constraint\_name;\index{constraint, VALIDATE CONSTRAINT} .
 
 \section{Primary keys} 
-A primary key is the unique row identifier. Having this constraint enforced ensures the row can be 
-addressed directly using the key value. A primary key can be enforced on a single or multi column. 
-The data aspect must be unique with the strictest level. That means the NULL values are not 
-permitted in columns participating to the primary key. When creating a primary key this 
-implicitly adds a new unique index on the affected fields. In order to avoid the exclusive lock 
-on the affected  table the unique index can be built before the primary using the CONCURRENTLY 
-clause and then used in the primary key definition as shown in \ref{sec:REINDEX}. Using the primary 
-key is the fastest way to access the table's contents.\newline
+A primary key is a constraint enforcing the uniqueness on the participating field. The rows
+can be addressed directly using the key value. The constraint can involve one or more field. The
+uniqueness is guaranteed at the maximum level. The NULL values are not allowed. The primary key
+creates implicitly a new unique index on the key's fields. The index creation requires the table
+lock read. In \ref{sec:REINDEX} is explained a method which in some cases can help to minimise the
+disruption.\newline
 
-There is the primary key definition as table and column constraint.\newpage
+The primary key can be defined as table or column constraint.\newpage
 
 \begin{lstlisting}[style=pgsql]
 
@@ -57,23 +55,21 @@ CREATE TABLE t_column_cons
 
 \end{lstlisting}
 
-With the table's constraint definition is possible to specify the constraint name and to have a 
-multi column constraint. When writing a multi column constraint the participating columns should be 
-listed separate by commas.\newline
+The table constraint form allows to specify the constraint name and is possible to specify more than
+one field separated by comma.\newline
 
-The most common primary key implementation, and probably the best, is to have a serial column as 
-primary key. A serial field is short for integer NOT NULL which default value is associated to the 
-nextval for an auto generated sequence. Because the sequence have its upper limit to the bigint 
-upper limit, this ensures the data does not wraps in the table's lifetime. In the case the primary 
-key is expected to reach the value of 2,147,483,647 the type of choice should be bigserial rather 
-serial. This will create the primary key's field as bigint which upper limit is 
-9,223,372,036,854,775,807.\newline
+The example shows the most common primary key implementation when the constraint is created on a
+serial field. The serial\index{serial} type is a shortcut for the long definition \textbf{integer
+NOT NULL} with the default value set by an auto generated sequence. A sequence is a big integer
+quantity. Because, by default the upper limit is set to 9,223,372,036,854,775,807, the tables with a
+very high key's generation rate can hit the maximum value allowed for the integer, 2,147,483,647. At
+design time this should be considered and eventually the bigserial\index{bigserial} should be used
+instead of serial.\newline
 
-However it's still possible to alter the field later in order to match the new requirements. 
-Because changing the data type requires a complete table's rewrite, any view referencing the 
-affected column will abort the change. \newline 
+However is still possible to alter the field later in order to match the new requirements. 
+Unfortunately this requires a complete table's rewrite. \newline 
 
-Here's the t\_data's type change output with the client message level set to debug3.
+Here's the verbose output for the the type alteration.
 
 \begin{lstlisting}[style=pgsql]
 postgres=# ALTER TABLE t_data ALTER COLUMN i_id SET DATA TYPE  bigint; 
@@ -99,25 +95,9 @@ ALTER TABLE
 
 \end{lstlisting}
 
-
-Dealing with a big amount of data presents also the problem to have enough space for fitting twice 
-of the original table plus the downtime caused by the exclusive lock on the affected relation. A 
-far better approach is to add a new bigint NULLable column without default value. Setting up a 
-trigger for the inserts will keep in sync the new values with the original primary key. Then an 
-update procedure will set the value for the rows. This should run in small batches to avoid to 
-overfill the pg\_xlog directory with long running transactions. When everything is in place the new 
-column could then become NOT NULL and a unique index will finally enforce the uniqueness for the 
-new 
-field. \newline
-
-The primary key can then be dropped and recreated using the new unique index. This is permitted 
-only if there's no foreign key referencing the field. In this case a multi drop and create 
-statement is required. The final cleanup should include the trigger's drop and the old primary key 
-removal. Any view using the old primary key should be rebuilt before the drop.\newline
-
-Another approach for the primary keys is the so called natural keys. A natural key, in opposition 
-to the surrogate keys, have meaning in the real world. For example a table with the cities will 
-have the field v\_city as primary key. 
+Another approach for the primary keys is the usage of the natural keys. A natural key, in
+opposition to the surrogate keys seen before, are meaningful in the real world. For example a table
+with the cities will have the field v\_city as primary key. 
 
 \begin{lstlisting}[style=pgsql]
 --PRIMARY NATURAL KEY 
