@@ -1,0 +1,75 @@
+\documentclass[oneside]{book}
+\usepackage[utf8]{inputenc}
+\usepackage{makeidx}
+\usepackage{graphicx}
+\setcounter{tocdepth}{2}
+\usepackage{hyperref}
+\hypersetup{pdfborder={0 0 0},colorlinks=false}
+\usepackage{verbatim}
+\newenvironment{smallverbatim}{\endgraf\small\verbatim}{\endverbatim}
+\newenvironment{tinyverbatim}{\endgraf\scriptsize\verbatim}{\endverbatim}
+\pagestyle{plain}
+\usepackage{float}
+\usepackage{pdfpages}
+\usepackage{listings}
+\usepackage[paperwidth=21.59cm,paperheight=27.94cm]{geometry}
+\usepackage{xcolor}
+
+\author{Federico Campoli}
+\title{PostgreSQL  \\ SQL development and database design}
+
+
+\makeindex
+
+\lstdefinestyle{pgsql}{
+  belowcaptionskip=1\baselineskip,
+  breaklines=true,
+  frame=l,
+  language=SQL,
+  showstringspaces=false,
+  basicstyle=\footnotesize\ttfamily,
+  keywordstyle=\bfseries\color{green!40!black},
+  commentstyle=\itshape\color{purple!40!black},
+  identifierstyle=\color{blue},
+  stringstyle=\color{orange},
+  morekeywords={VACUUM, FULL, ANALYZE, TABLESPACE,SET}
+}
+
+
+\begin{document}
+\maketitle
+
+\newpage{}
+
+
+
+\tableofcontents{}
+
+\chapter*{Preface}
+Here we go, again. 
+
+
+
+
+\section*{Intended audience}
+Developers
+
+\section*{Book structure}
+SQL and design.\newline
+
+
+\section*{Version and platform}
+This book covers the database version 9.3 on Debian GNU Linux 7.0.
+References to older version or different platform are explicitly specified.
+
+\part{SQL}
+\part{Procedural Languages}
+\part{Database Design}
+\part{Tuning}
+
+\appendix
+
+\listoffigures
+\listoftables
+\printindex{}
+\end{document}
