@@ -46,23 +46,37 @@
 \tableofcontents{}
 
 \chapter*{Preface}
-Here we go, again. 
-
-
+I decided to start this book in order to share my knowledge and best practice, refined and built
+over eleven years of database experience. The book is specifically written for the developers
+interested in the SQL and the database design. Probably the entire approach will sound quite odd. I
+don't make a mystery I have virtually no theoretical knowledge on the relational databases. The
+entire writing is based on pure experience and the final goal of this book leave the readers with
+the capability to find not conventional ways to solve the problems. This is not a cookbook.
+I consider the cookbooks a nice thing for cooking. In my humble opinion for complex tasks on
+complex systems such books are useless and even dangerous. 
 
 
 \section*{Intended audience}
-Developers
+Developers, database designers, database architects, performance tuners
 
 \section*{Book structure}
-SQL and design.\newline
+The book is divided in several parts. Each part is organised like a standalone book focusing
+on a particular aspect of the language and the design. Many of the problems are
+explained by example trying to build a logical approach on the practical solution. I decided to
+write this book with a colloquial style. Think about me more like a mechanic wearing a motor
+oil stained overall, rather a professor behind his desk. After all, working with the databases is
+low level interaction with the system's infrastructure. \newline
+
 
 
 \section*{Version and platform}
-This book covers the database version 9.3 on Debian GNU Linux 7.0.
-References to older version or different platform are explicitly specified.
+This book focus on PostgreSQL 9.3 installed on Debian GNU Linux 7.0. The concepts are almost the
+same for the latest major versions. Change of compatibility are explicitly specified.
+
+\input{chapters/Nuts_bolts}
 
 \part{SQL}
+
 \part{Procedural Languages}
 \part{Database Design}
 \part{Tuning}
