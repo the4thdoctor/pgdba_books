@@ -7,7 +7,20 @@ There is a visual match between the query's sections and the logic which require
 and well defined formatting to make it understandable.\newline
 Let's start then with a todo list for our workshop.
 \section{The editor}
-There are various reasons to use a specific SQL client rather a multi purpose tool. With
-the databases is quite difficult to use different clients. Somtimes there is a third party product
-to use but their cost can be high. In PostgreSQL there are many choices on various platforms.
-Some free others commercial._NAME\_HERE}.  
+Unlikely many commercial RDBMS PostgreSQL, alongside his command line psql, have many unofficial
+clients. Those products have generally a good support for the database features and  a good
+connectivity layer. There is an exhaustive list on the PostgreSQL wiki\newline
+\href{https://wiki.postgresql.org/wiki/Community\_Guide\_to\_PostgreSQL\_GUI\_Tools}{
+https://wiki.postgresql.org/wiki/Community\_Guide\_to\_PostgreSQL\_GUI\_Tools}. I'm not telling you
+which editor is the best. I tested some of them, TOra, SQL workbench and SQL Maestro. I finally
+decided to use PgAdmin 3 because it offered me the best compromise between editing and database
+schema browsing.\newline
+
+The tool of choice should have the following features.
+
+\subsection{Native connector}
+One of the reasons I did not considered SQL workbench it was the JDBC connector. For me writing and
+testing the SQL is a process similar to the compulsive obsessive disorder. I write, I test, I
+change the query I test again. In this context the quick reaction from the client is absolutely
+important. The native connector have virtually no lag, except the disk/network bandwidth.
+
