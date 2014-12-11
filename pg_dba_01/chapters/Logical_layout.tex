@@ -243,22 +243,26 @@ the session but only before the first temporary table is created.
 
 \subsection{Foreign tables}\index{Foreign tables}
 The foreign tables were first introduced with PostgreSQL 9.1 as read only relations, improving 
-considerably the DBMS interconnection's capability. A foreign table works exactly like a local table 
-using a foreign data
-wrapper to interact with the foreign data source.\newline
+considerably the DBMS connectivity with other data sources. A foreign table works exactly like a
+local table. A foreign data wrapper interacts with the foreign data source and handles the
+data flow.\newline
 
-There are many different foreign data wrappers available for very exotic data sources. With the 
-PostgreSQL 9.3 there is the postgres\_fdw and the the foreign tables are writable. In particular 
-the postgres\_fdw implementation is similar to old dblink module with a more efficient performance 
-management and the connection's caching.
+There are many different foreign data wrappers available for very exotic data sources. From the
+version 9.3 the postgres\_fdw becomes available and the the foreign tables are writable. The
+implementation of the postgres\_fdw implementation is similar to old dblink module with a more
+efficient performance management and the connection's caching.
 
 \section{Table inheritance}\index{Table inheritance}
-Being more precise, PostgreSQL is an Object Relational Database Management System. Its intenal logic
-implements some of the concepts of the object oriented programming. The relations are also called 
-classes and the table's columns attributes. \newline
+PostgreSQL is an Object Relational Database Management System rather a simple DBMS. Some of the
+concepts present in the object oriented programming are implemented in the PostgreSQL logic. The
+relations are also known as classes and the table's columns as attributes. \newline
 
 The table inheritance is a logical relationship between a parent table and one or more child 
-tables. The child tables inherit the parent's attribute structure but not the physical storage. 
+tables. The child table inherits the parent's attribute structure but not the physical
+storage.\newline 
+
+
+Creating a parent/child structure is straightforward.
 
 \begin{lstlisting}[style=pgsql]
 db_test=#CREATE TABLE t_parent
@@ -292,9 +296,9 @@ Inherits: t_parent
 
 \end{lstlisting}
 
-The inheritance can be defined at creation time or later. It's also possible to create a completely 
-new table and create the inheritance with another one. In this case the child structure must match 
-exactly the parent.
+The inheritance is usually defined at creation time. It's possible to enforce the inheritance
+between two existing tables with the ALTER TABLE ... INHERIT command. The two table's structure
+must be identical.
 
 \begin{lstlisting}[style=pgsql]
 
@@ -305,9 +309,10 @@ ALTER TABLE
 
 \end{lstlisting}
 
-Because the physical storage is not shared the unique constraints aren't globally enforced on the 
-inheritance tree and this prevents the foreign keys to refer efficiently the inherited tables. This 
-makes the table partitioning tricky.
+Because the physical storage is not shared then the unique constraints aren't globally enforced on
+the inheritance tree. This prevents the creation of any global foreign key. Using the table
+inheritance, combined with the constraint exclusion and the triggers/rules, is a partial workaround
+for the table partitioning.
 
 \section{Indices}
 An index is a structured relation where the indexed values are stored. The index entries are 
