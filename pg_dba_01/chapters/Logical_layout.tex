@@ -315,20 +315,15 @@ inheritance, combined with the constraint exclusion and the triggers/rules, is a
 for the table partitioning.
 
 \section{Indices}
-An index is a structured relation where the indexed values are stored. The index entries are 
-associated with pointers to the corresponding table's pages. Because PostgreSQL have a cost based 
-optimiser, having an an index doesn't guarantee its usage. Reading an index page requires a random
-disk seek. The cost for random is estimated by default four times more than a sequential page read
-used by the sequential table scan. Those values can be adjusted using the two GUC parameters
-seq\_page\_cost and random\_page\_cost, respectively the arbitrary cost of a table's page and an
-index page. \newline
+An index is a structured relation. The indexed entries are used to access the tuples stored in the
+tables. The index entries are the actual data with a pointer to the corresponding table's pages.\newline
 
-Designing the indices is a complex task. An unused index adds overhead and slowness to the write
-operations with no benefit. Querying system views like the pg\_stat\_all\_indexes will give us
-vital informations about the indices usage.
+It's important to bear in mind that the indices add overhead to the write operations. Creating an index
+does not guarantee its usage.The cost based optimiser, for example, can simply consider the index access
+more expensive than a sequential access. The stats system views, like the pg\_stat\_all\_indexes,
+store the usage counters for the indices.\newline
 
-This simple finds all the indices in the public schema never used from the last statistics 
-reset.
+For example this simple query finds all the indices in the public schema with index scan counter zero.
 
 \begin{lstlisting}[style=pgsql]
 SELECT
@@ -345,30 +340,23 @@ WHERE
 
 \end{lstlisting}
 
+Having an efficient maintenance plan can improve sensibly the database performance. Take a look to 
+\ref{cha:MAINTENANCE} for more information.
 
-PostgreSQL implements many index type. Unfortunately the bitmap index, useful in the datawarehouse,
-is not present. There is a plan node which can emulate partially the bitmap indices. This is
-done with a sequential read over the index followed by a table's read for rematch. The tuples
-are found using a bitmap generated from the index's sequential read.\newline 
+PostgreSQL implements many kind of indices. The keyword USING specifies the index type at create time.
 
-
-The keyword USING specifies the index type at create time.
 \begin{lstlisting}[style=pgsql]
  CREATE INDEX idx_test ON t_test USING hash (t_contents);
 \end{lstlisting}
 
-If omitted then the index type defaults to the B-tree.
-
-The index maintenance is a delicate matter, the argument is described in depth
-in \ref{cha:MAINTENANCE}.
-
+If the clause USING is omitted the index defaults to the B-tree.
 
 \subsection{b-tree}
 The general purpose B-tree\index{index,b-tree} index implements the Lehman and Yao's
 high-concurrency B-tree management algorithm. The B-tree can handle equality and range queries 
-returning ordered data. The indexed values are stored into the index pages with pointers to the
-table's pages. The index is not TOASTable, this limit the max length for an index entry to 1/3 of
-the page size. \newline
+returning ordered data. The indexed values are stored into the index pages with the pointers to the
+table's pages. Because the index is a relation not TOASTable the max length for an indexed key is 1/3
+of the page size. More informations about TOAST are in \ref{sec:TOAST} \newline
 
 \subsection{hash}
 The hash indices\index{index,hash} can handle only equality and are not WAL logged. Their changes
@@ -377,17 +365,15 @@ are not replayed if the crash recovery occurs and do not propagate to the standb
 \subsection{GiST}
 The GiST indices\index{index,GiST} are the Generalised Search Tree. The GiST is a collection of
 indexing strategies organised under a common infrastructure. They can implement arbitrary indexing
-schemes like B-trees, R-trees  or other. The operator classes shipped with PostgreSQL are for the
-geometrical data with two elements and for the nearest-neighbour searches. The GiST indices do not
-perform an exact match. The false positives are removed with second rematch on the
-table's data.\newline
+schemes like B-trees, R-trees  or other. The default installation comes with operator classes working on 
+two elements geometrical data and for the nearest-neighbour searches. The GiST indices do not perform an
+exact match. The false positives are removed with second rematch on the table's data.\newline
 
 \subsection{GIN}
 The GIN indices \index{index,GIN} are the Generalised Inverted Indices. This kind of index
-is optimised for indexing the composite data types or vectors like the full text search elements.
-The GIN are exact indices, when scanned the returned set doesn't require recheck.
-
-
+is optimised for indexing the composite data types, arrays and vectors like the full text search
+elements. This is the only index supported by the range types. The GIN are exact indices, when scanned
+the returned set doesn't require recheck.
 
 \section{Views}
 \index{views}
