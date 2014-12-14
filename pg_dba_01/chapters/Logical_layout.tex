@@ -378,12 +378,13 @@ the returned set doesn't require recheck.
 \section{Views}
 \index{views}
 \label{sec:VIEWS}
-A view is a relation storing the logical representation of a query. At create time all the objects
-involved in the view definition are translated in the internal representation. Any wildcard is
-expanded.
+A view is a relation composed by a name and a query definition. This permits a faster access to complex
+SQL. When a view is created the query is validated and all the objects involved are translated to their
+binary representation. All the wildcards are expanded to the corresponding field's list.\newline
 
-An example will explain better this concept. Let's consider a simple table populated with the
-generate\_series() function.
+A simple example will help us to understand better this important concept. Let's create a table
+populated using the function generate\_series(). We'll then create a view with a simple SELECT * from the
+original table.
 
 \begin{lstlisting}[style=pgsql]
 
@@ -422,8 +423,8 @@ AS
 
 \end{lstlisting}
 
-Running a select from the view or the table returns the same columns and rows.
-The stored definition in pg\_views does not have any wildcard though.
+We can select from the view and from the the table with a SELECT and get the same data. The view's
+definition in pg\_views shows no wildcard though. 
 
 
 \begin{lstlisting}[style=pgsql]
@@ -440,7 +441,7 @@ definition |  SELECT t_data.i_id,
 
 \end{lstlisting}
 
-Adding a new column to the t\_data table will break the equality between the table and the view.
+If we add a new field to the table t\_data this will not applies to the view.
 
 \begin{lstlisting}[style=pgsql]
  ALTER TABLE t_data ADD COLUMN d_date date NOT NULL default now()::date;
@@ -462,8 +463,7 @@ db_test=# SELECT * FROM v_data LIMIT 1;
  
 \end{lstlisting}
 
-In order to have the view in sync with the table we need to refresh it using the CREATE OR REPLACE
-VIEW statement.
+Using the statement CREATE OR REPLACE VIEW we can put the view in sync with the table's structure.
 
 \begin{lstlisting}[style=pgsql]
  CREATE OR REPLACE VIEW v_data 
@@ -481,33 +481,35 @@ db_test=# SELECT * FROM v_data LIMIT 1;
 
 \end{lstlisting}
 
-PostgreSQL implements the views using the the objects identifiers. They never invalidate when
-the objects are renamed. \newline
+Using the wildcards in the queries is a bad practice for many reasons. The potential outdated
+match between the physical and the logical relations is one of those.\newline
 
-The CREATE OR REPLACE statement can update the view definition only if the column 
-list adds new attributes in the end. When one or more view are pointing a relation this cannot be
-dropped unless the clause CASCADE is used. Because the dependencies can be very complicated, this
-approach is quite dangerous. The best is querying on the pg\_depend table and find out the full
-list of dependencies.\newline
+The way PostgreSQL implements the views guarantee they never invalidate when the referred objects are
+renamed. \newline
 
-Because a view is a logical short cut to a stored SQL, PostgreSQL will run the query in the same
-way as it was sent from the client. This excludes the network overhead.
+If new attributes needs to be added to the view the CREATE OR REPLACE statement can be used but only if
+the fields are appended. If a table is referred by a view the drop is not possible. It's still possible
+to drop a table with all the associated views using the clause CASCADE. This is a dangerous
+practice though. The dependencies can be very complicated and a not careful drop can result in a
+regression. The best approach is to check for the dependencies using the table pg\_depend.\newline
 
-A view can refer other views becoming a potential cause of performance regression. Because any view
-have a specific execution plan, mixing different plans can confuse the planner causing
-poor performance.
+Storing a complex SQL inside the database avoid the overhead caused by the round trip between the client
+and the server. A view can be joined with other tables or views. This practice is generally bad because
+the planner can be confused by mixing different queries and can generate not efficient execution
+plans.\newline
 
-To avoid this it's a a good practice using the naming  v\_ to distinguish the views from the
-tables. In \ref{cha:COUPLETHINGS} there is an example for the self explanatory database schema.
+A good system to spot a view when writing a query is to use a naming convention. For example adding a v\_
+in the view names and the t\_ in the table names will help the database developer to avoid
+mixing logical an physical objects when writing SQL. Look to \ref{cha:COUPLETHINGS} for more information.
 
 \index{view, updatable}
 PostgreSQL from the version 9.3 supports the updatable views. This feature is limited just to the
-simple views. A view is simple  if have the following features.
+simple views. A view is defined simple when the following is true.
 
 \begin{itemize}
 
 
- \item   Have exactly one entry in its FROM list, which must be a table or another updatable view.
+ \item  Does have exactly one entry in its FROM list, which must be a table or another updatable view.
 
  \item Does not contain WITH, DISTINCT, GROUP BY, HAVING,LIMIT, or OFFSET clauses at the top level.
 
@@ -523,11 +525,11 @@ referenced, either.
 
 \end{itemize}
 
-A complex view can be updatable using the triggers or rules.\newline
+A complex view can still become updatable using the triggers or the rules.\newline
 
 \index{view, materialised}
-Another feature introduced by the 9.3 is the materialised views. This is a physical snapshot of the
-saved SQL and can be refreshed with the statement REFRESH MATERIALIZED VIEW.  
+Another feature introduced by the 9.3 is the materialised views. This acts like a physical snapshot of
+the saved SQL. The view's data can be refreshed with the statement REFRESH MATERIALIZED VIEW.  
 
 
 \section{Tablespaces}\index{tablespaces,logical}
