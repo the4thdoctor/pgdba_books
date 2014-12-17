@@ -613,34 +613,32 @@ physical point of view.
 \section{Transactions}
 \label{sec:TRANSACTION}
 \index{transactions}
-The atomicity the consistency and the isolation is implemented in PostgreSQL via the
-MVCC\index{MVCC}. This is the acronym for Multi Version Concurrency Control\index{Multi Version
-Concurrency Control}. This solution offers high efficiency in the concurrent user access for read
-and write queries.\newline 
+PostgreSQL implements the atomicity, the consistency and the isolation with the MVCC\index{MVCC}.
+The Multi Version Concurrency Control\index{Multi Version Concurrency Control}offers high efficiency in
+the concurrent user accesss.\newline 
 
-When a transaction starts a write operation receives an identifier, the XID \index{XID}. This is
-a 32 bit quantity and is used to determine the transaction's visibility. All the transactions with
-XID lesser than the current XID and committed are considered in the past and then visible. All the
-transactions with XID greater than the current XID are in the future and not
-visible. The not committed transactions are considered invisible as well.\newline
+The MVCC logic is somewhat simple. When a transaction starts a write operation gets a transaction id,
+called XID,\index{XID} a 32 bit quantity. The XID value is used to determine the transaction's
+visibility, its relative position in an arbitrary timeline. All the transactions with XID smaller than
+the current XID in committed status are considered in the past and then visible. All the transactions
+with XID bigger than the current XID are in the future and therefore invisible.\newline
 
-This comparison happens at tuple level using two system fields xmin and xmax. When a transaction
-creates a new tuple the xmin is set with the transaction's xid. This field is also referred as the
-insert's transaction id. When a tuple is deleted then the xmax value is updated to the transaction's
-xid. The tuple when deleted is left in place, ensuring the read consistency for any transaction
-which should see the previous version. The last tuple's version is a live tuple. The tuples which
-versions are outdated are called dead tuples.\newline
+The check is made at tuple level using two system fields xmin and xmax. When a new tuple is created the
+xmin is set with the transaction's xid. This field is also referred as the insert's transaction id. When
+a tuple is deleted then the xmax value is updated to the delete's xid. The xmax field is also know as
+the delete's  transaction id. The tuple is not physically removed in order to ensure the read consistency
+for any transaction in the tuple's past. The tuples having the xmax not set are live tuples. Therefore
+the tuples which xmax is set are dead tuples. In this model there is no field dedicated to the
+update which is an insert insert combined with a delete. The update's transaction id is used either for
+the new tuple's xmin and the old tuple's xmax.\newline
 
-There is no field for the update. In PostgreSQL the update is a a complete new insert. The update's
-transaction id is used either for the new tuple's xmin and the old tuple's xmax. The dead tuples are
-removed by VACUUM if no longer needed by existing transactions. In \ref{sec:TUPLES}
-there is the tuple structure's description.\newline
+The dead tuples are removed by VACUUM when no longer required by existing transactions.
+For the tuple detailed description check \ref{sec:TUPLES}.\newline
 
-Alongside with xmin and xmax there are two other system fields, the cmin and cmax. Their data
-type is the command id, CID. Those fields are similar to xmin and xmax. They are used to track the
-internal transaction's commands in order to avoid the command to be executed on the same
-tuple multiple times. This solve the database's Halloween Problem described there
-\href{http://en.wikipedia.org/wiki/Halloween_Problem}{
+Alongside with xmin and xmax there are cmin and cmax which data type is the command id, CID. Those fields
+store the internal transaction's commands in order to avoid the command to be executed on the same tuple
+multiple times. One practical effect of those fiels is to solve the database's Halloween Problem
+described there \href{http://en.wikipedia.org/wiki/Halloween_Problem}{
 http://en.wikipedia.org/wiki/Halloween\_Problem}.\newline
 
 The SQL standard defines four level of transaction's isolation levels where 
