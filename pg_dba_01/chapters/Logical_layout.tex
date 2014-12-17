@@ -641,27 +641,27 @@ multiple times. One practical effect of those fiels is to solve the database's H
 described there \href{http://en.wikipedia.org/wiki/Halloween_Problem}{
 http://en.wikipedia.org/wiki/Halloween\_Problem}.\newline
 
-The SQL standard defines four level of transaction's isolation levels where 
-some phenomena are permitted or forbidden.
+The SQL standard defines four level of the transaction's isolation. Each level allows or deny the
+following transaction's anomalies.
 \index{transactions, isolation levels}
 
 \begin{itemize}
- \item \textbf{dirty read}, when a transaction reads the data written by a concurrent 
-uncommitted transaction
+ \item \textbf{dirty read}\index{dirty read}, when a transaction can access the data written by a
+concurrent not committed transaction.
 
-\item \textbf{nonrepeatable read} when a transaction re reads the same data and finds it changed by
-another transaction which has committed since the initial read
+\item \textbf{non repeatable read}\index{non repeatable read}, when a transaction repeats a previous read
+and finds the data changed by another transaction which has committed since the initial read.
 
-\item \textbf{phantom read} when a transaction re executes a query returning a set 
-of rows for a search condition and finds that results are changed by a recently committed 
-transaction
+\item \textbf{phantom read}\index{phantom read}, when a transaction executes a previous query and
+finds a different set of rows with the same search condition because the results was changed by another
+committed transaction
 
 \end{itemize}
 
-The table \ref{tab:TRNISOLATION} shows the transaction's isolation levels with the phenomena
-possible. In PostgreSQL it's possible to set all the four isolation levels but only the three
-strictest levels are supported. Setting the  isolation level to read uncommited is
-equivalent to set it to the read committed.
+The table \ref{tab:TRNISOLATION} shows the transaction's isolation levels and which anomalies are
+possible or not within. PostgreSQL supports the minimum isolation level to read committed. Setting the 
+isolation level to read uncommited does not cause an error. However, the system adjusts silently the
+level to read committed.
 
 \begin{table}[H]
   \begin{tabular}{cccc}
@@ -676,15 +676,14 @@ Read\\
   \caption{\label{tab:TRNISOLATION}SQL Transaction isolation levels}
 \end{table}
 
-The default the global isolation level is read committed. However is possible to change the
-isolation level per session with the command:
+The isolation level can be set per session with the command SET TRANSACTION ISOLATION LEVEL.
 \begin{lstlisting}[style=pgsql]
 SET TRANSACTION ISOLATION LEVEL { SERIALIZABLE | REPEATABLE READ | READ 
 COMMITTED | READ UNCOMMITTED }; 
 \end{lstlisting}
 
-Changing the default transaction isolation for the entire cluster is made using the GUC parameter
-transaction\_isolation.
+It's also possible to change the isolation level cluster wide changing the GUC
+parameter transaction\_isolation.
 
 
 \subsection{Snapshot exports}

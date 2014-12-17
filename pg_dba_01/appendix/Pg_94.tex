@@ -1,15 +1,14 @@
 \chapter{PostgreSQL 9.4}
 
 The new PostgreSQL major version, the 9.4 was released the 18th of December 2014. Alongside the
-new developer wise features this release introduces several features making the DBA life easier.
+new developer wise features this release introduces several enhancements making the DBA life easier.
 
 \section{ALTER SYSTEM}
-This long waited feature gives the DBA the possibility to alter the configuration parameters
-using a PostgreSQL client. The parameters are validated when the command is issued. Invalid values
-are spotted immediately reducing greatly the risk of having a not startable instance because syntax
-errors.
+This long waited feature gives the DBA the power to alter the configuration parameters
+from the SQL client. The parameters are validated when the command is issued. Invalid values
+are spotted immediately reducing the risk of having an hosed cluster because of syntax errors.
 
-For example, the following command set wal\_level to hot\_standby. 
+For example, the following command sets the parameter wal\_level to hot\_standby. 
 \begin{lstlisting}[style=pgsql]
  ALTER SYSTEM SET wal_level = hot_standby;
 
