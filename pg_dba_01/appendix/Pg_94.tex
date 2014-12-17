@@ -1,1 +1,41 @@
 \chapter{PostgreSQL 9.4}
+
+The new PostgreSQL major version, the 9.4 was released the 18th of December 2014. Alongside the
+new developer wise features this release introduces several features making the DBA life easier.
+
+\section{ALTER SYSTEM}
+This long waited feature gives the DBA the possibility to alter the configuration parameters
+using a PostgreSQL client. The parameters are validated when the command is issued. Invalid values
+are spotted immediately reducing greatly the risk of having a not startable instance because syntax
+errors.
+
+For example, the following command set wal\_level to hot\_standby. 
+\begin{lstlisting}[style=pgsql]
+ ALTER SYSTEM SET wal_level = hot_standby;
+
+\end{lstlisting}
+
+\section{autovacuum\_work\_mem}
+This setting sets the maintenance work memory only for the autovacuum workers. As seen in
+\ref{sec:VACUUM} the vacuum performance is affected by the maintenance\_work\_mem. This new
+parameter allows a better flexibility in the automatic vacuum tuning.
+
+
+\section{huge\_pages}
+This parameter enables or disables the use of huge memory pages on Linux. Turning on this parameter can
+result in a reduced CPU usage for managing large amount of memory on Linux.
+
+\section{Replication Slots}
+With the replication slots the master becomes aware of the slave's replication status. The master
+with replication slots allocated does not remove the WAL segments until they have been received by all
+the standbys. Also the master does not remove the rows which could cause a recovery conflict even when
+the standby is disconnected. 
+
+\section{Planning time}
+Now EXPLAIN ANALYZE shows the time spent by the planner to build the execution plan, giving to the
+performance tuners a better understanding of the query efficiency.
+
+\section{pg\_prewarm}
+This additional module loads the relation's data into the shared buffer after a shutdown. This allows
+the cluster reaching the efficiency quickly.
+
