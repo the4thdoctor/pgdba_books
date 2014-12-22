@@ -163,23 +163,24 @@ ALTER TABLE t_addresses
 
 \end{lstlisting}
 
-The key works in two ways. When a row with an invalid i\_id\_city hits the table t\_addresses 
-the key is violated and the insert aborts. Deleting or updating a row from the table t\_cities referenced
-in the table t\_addresses, violates the key.\newline
+The foreign key works in two ways. When a row with an invalid i\_id\_city hits the table t\_addresses 
+the key is violated and the insert aborts. Deleting or updating a row from the table t\_cities still
+referenced in the table t\_addresses, violates the key as well.\newline
 
-The enforcement is performed with the triggers. When performing a data only dump or restore, the option
---disable-trigger is compulsory to complete successfully the data restore.More information about the
-backup and restore are in \ref{cha:BACKUP}, \ref{cha:RESTORE}.\newline
+The enforcement is performed using the triggers. When performing a data only dump/restore, the
+foreign keys will not allow the restore for some tables. The option --disable-trigger allows the restore
+on the existing schema to succeed. For more information on this topic check \ref{cha:BACKUP}
+and \ref{cha:RESTORE}.\newline
 
-The FOREIGN KEYS have many options giving a great configuration's flexibility. 
-The referenced table can drive actions on the referencing using the two options ON DELETE and ON 
-UPDATE. By default the behaviour is to take NO ACTION if there are referencing rows until the 
-end of the transaction. This is useful if the key check should be deferred to the end of the 
-transaction. The other two actions are the RESTRICT which does not allow the deferring and 
-the CASCADE which cascade the action to the referred rows. 
+The many options available with the FOREIGN KEYS give us great flexibility. The referenced table can
+drive different actions on the referencing data using the two event options ON DELETE\index{foreign
+key, ON DELETE} and ON UPDATE\index{foreign key, ON UPDATE}. The event requires an action to perform when
+fired. By default this is NO ACTION which checks the constraint only at the end of the transaction. This
+is useful with the deferred keys. The other two actions are the RESTRICT which does not allow the
+deferring and  the CASCADE which cascades the action to the referred rows. 
 
-If we want our foreign key restrict the delete with no deferring and cascade any update, here's the 
-DDL.
+For example, let's create a foreign key restricting the delete without deferring and cascading the
+updates.
 
 \begin{lstlisting}[style=pgsql]
 ALTER TABLE t_addresses 
@@ -191,11 +192,12 @@ ALTER TABLE t_addresses
 
 \end{lstlisting}
 
-Another very useful clause available with the foreign and check constraints is the NOT VALID. When 
-the constraint is created with NOT VALID, the initial check is skipped making the constraint 
-creation instantaneous. This is acceptable if the actual data is consistent. The constraint is then 
-enforced for all the new data. The invalid constraint can be validated later with the command 
-VALIDATE CONSTRAINT.
+Another useful clause available only with the foreign keys and check is the NOT VALID\index{foreign
+key, NOT VALID}. Creating a constraint with NOT VALID tells PostgreSQL the data is already
+validated by the database developer. The initial check is then skipped and the constraint creation is
+instantaneous. The constraint is then 
+enforced only for the new data. The invalid constraint can be validated later with the command VALIDATE
+CONSTRAINT.
 
 \begin{lstlisting}[style=pgsql]
 postgres=#ALTER TABLE t_addresses
@@ -216,15 +218,14 @@ ALTER TABLE
 \section{Check constraints}
 \label{sec:CHECKCNS}
 
-A check constraint is a user defined check to enforce specific condtions on the rows. 
-The definition can be a condition or a used defined function. In this case the function must return 
-a boolean value.  As for the foreign keys, the check accepts the NOT VALID clause to speed up the 
-creation.\newline
+A check constraint is a custom check enforcing a specific condition on the table's data.  The definition
+can be a boolean expression or a used defined function returning a boolean value. Like the foreign
+keys, the check accepts the NOT VALID\index{check, NOT VALID} clause.\newline
 
-The check is satisfied if the condition returns true or NULL. This behaviour can 
-produce unpredictable results if not fully understood. An example will help to clarify. 
-Let's create a CHECK constraint on the v\_address table for enforcing a the presence of a value.
-Even with the check in place the insert without the address completes successfully.
+The check is satisfied if the condition returns true or NULL. This behaviour can produce unpredictable
+results if not fully understood. An example will help to clarify the behaviour. Let's add
+a CHECKconstraint on the v\_address table in order to have no zero length addresses. The insert with
+just the city succeed without key violation though.
 
 \begin{lstlisting}[style=pgsql]
 postgres=# ALTER TABLE t_addresses
@@ -241,9 +242,9 @@ INSERT 0 1
 \end{lstlisting}
 
 
-This is possible because the v\_address does not have a default value and accepts the NULL 
-values. The check constraint is violated if, for example we'll try to update the v\_address with 
-the empty string.
+This is possible because the field v\_address does not have a default value which defaults to NULL when
+not listed in the insert. The check constraint is correctly violated if, for example we'll try to update
+the v\_address with the empty string.
 
 \begin{lstlisting}[style=pgsql]
 postgres=# UPDATE t_addresses SET v_address ='' ;
@@ -251,8 +252,8 @@ ERROR:  new row for relation "t_addresses" violates check constraint "chk_t_addr
 DETAIL:  Failing row contains (3, , 2)
 \end{lstlisting}
 
-Our check constraint will work as expected if we set for the v\_address field a fallback default 
-value.
+Changing the default value for the v\_address field to the empty string, will make the check constraint
+working as expected.
 
 \begin{lstlisting}[style=pgsql]
 postgres=# ALTER TABLE t_addresses ALTER COLUMN v_address SET DEFAULT '';
@@ -263,10 +264,6 @@ DETAIL:  Failing row contains (4, , 2).
 
 \end{lstlisting}
 Please note the existing rows are not affected by the default value change.
-
-The message for the update and the insert is exactly the same because PostgreSQL attempts to create 
-a new row in both cases. When the constraint fails the transaction is rolled back leaving the dead 
-row in place. We'll take a better look to the MVCC in \ref{sec:MVCC}.
 
 
 \section{Not null}
