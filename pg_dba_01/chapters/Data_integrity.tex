@@ -224,7 +224,7 @@ keys, the check accepts the NOT VALID\index{check, NOT VALID} clause.\newline
 
 The check is satisfied if the condition returns true or NULL. This behaviour can produce unpredictable
 results if not fully understood. An example will help to clarify the behaviour. Let's add
-a CHECKconstraint on the v\_address table in order to have no zero length addresses. The insert with
+a CHECK constraint on the v\_address table in order to have no zero length addresses. The insert with
 just the city succeed without key violation though.
 
 \begin{lstlisting}[style=pgsql]
@@ -267,18 +267,20 @@ Please note the existing rows are not affected by the default value change.
 
 
 \section{Not null}
-For people approaching the database universe the NULL value can be quite confusing. A NULL value is 
-an empty object without any type or meaning. Actually when a field is NULL it doesn't consumes 
-physical space. By default when defining a field this is NULLable. Those fields are quite useful to 
-omit some columns, for example, at insert time.\newline
-The NULLable fields can be enforced with an unique constraint as the NULL are not considered as 
-duplicates. When dealing with the NULL it's important to remind the NULL acts like the mathematical 
-zero. When evaluating an expression with a NULL, the entire expression becomes NULL.\newline
+The NULL value is strange. When a NULL value is stored the resulting field entry is an empty object
+without any type or even meaning which doesn't consumes physical space. Without specifications when a
+new field this is defined accepts the NULL values.\newline
 
-The NOT NULL is a column constraint which forbids the presence of NULL in the affected field. 
-Combining a NOT NULL with a unique constraint is exactly like having enforced a PRIMARY KEY. When 
-altering a field the table is scanned for validation and the constraint's creation is aborted if 
-any NULL value is present on the affected field.\newline
+When dealing with the NULL it's important to remind that the NULL acts like the mathematical 
+zero. When evaluating an expression where an element is NULL then the entire expression becomes
+NULL.\newline
+
+As seen before the fields with NULL values are usable for the unique constraints. Otherwise the primary
+key does not allow the NULL values. The NOT NULL is a column constraint which does not allow the presence
+of NULL values.\newline
+
+Actually a field with the NOT NULL the unique constraint defined is exactly what the PRIMARY KEY
+enforces.\newline
 
 For example, if we want to add the NOT NULL constraint to the field v\_address in the t\_addresses 
 table the command is just.
@@ -290,10 +292,9 @@ ERROR:  column "v_address" contains null values
 \end{lstlisting}
 
 In this case the alter fails because the column v\_address contains NULL values from the example 
-seen in \ref{sec:CHECKCNS}. The fix can be performed in a single query using the coalesce function.
-This function returns the first not null value from the left. This way is possible to change the 
-v\_address on the fly to a fixed placeholder \footnote{we've set the check constraint to avoid empty 
-addresses}.
+seen in \ref{sec:CHECKCNS}. The fix is quick and easy using using the coalesce function.\newline
+
+This function returns the first parameter not null the left. 
 
 \begin{lstlisting}[style=pgsql]
 postgres=# UPDATE t_addresses
@@ -305,11 +306,11 @@ ALTER TABLE
 
 \end{lstlisting}
 
-Adding new columns with NULL is quick. PostgreSQL simply adds the new attribute in the system 
-catalogue and manages the new tuple structure considering the new field as empty space. Adding 
-a field with NOT NULL requires the presence of the DEFAULT value as well. This is an operation to 
-consider carefully when dealing with big amount of data. This way the table will be locked in 
-exclusive mode and a complete relation's rewrite will happen. A far better way is to add a NOT NULL 
-field is to add at first as NULLable field. A second alter will add the default value to have the 
-new rows correctly set. An update will then fix the NULL values without locking the 
-table. Finally the NOT NULL could be enforced without hassle.
+When adding new NULLable columns is instantaneous. PostgreSQL simply adds the new attribute in the
+system catalogue and manages the new tuple structure considering the new field as empty space.
+When the NOT NULL constraint is enforced, adding a new field requires the DEFAULT value set as well. This
+is an operation to consider carefully when dealing with large data sets because the table will be
+completely rewritten. This requires an exclusive lock on the affected relation. A better way to proceed
+adding a NULLable field. Afterwards the new field will be set with the expected default value. Finally a
+table's update will fix the NULL values without exclusive locks. When everything is fine, finally, the
+NOT NULL could be enforced on the new field.
