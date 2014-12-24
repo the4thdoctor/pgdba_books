@@ -292,9 +292,7 @@ ERROR:  column "v_address" contains null values
 \end{lstlisting}
 
 In this case the alter fails because the column v\_address contains NULL values from the example 
-seen in \ref{sec:CHECKCNS}. The fix is quick and easy using using the coalesce function.\newline
-
-This function returns the first parameter not null the left. 
+seen in \ref{sec:CHECKCNS}. The fix is quick and easy. 
 
 \begin{lstlisting}[style=pgsql]
 postgres=# UPDATE t_addresses
