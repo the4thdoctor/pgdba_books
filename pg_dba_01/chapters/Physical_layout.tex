@@ -68,14 +68,14 @@ Read\\
 \end{table}
 
 \section{Pages}\index{Data pages}
-The datafiles are organized as array of fixed length elements called pages. The 
-default size is 8k. Pages of a table's datafile are called heap 
-pages\index{Heap pages} to distinguish from the index pages\index{Index pages} 
-which differs from the former only for the special space present in the page's 
-end. The figure \ref{fig:INDEX01} shows an index page structure. The special 
-space is small area in the page's end used to track down the index structure. 
-For example a B-tree index stores in the special space the pointers to the leaf 
-pages.
+Each datafile is a collection of elements called pages. The default size is for a data 
+page is 8 kb. The page size can be changed only recompiling the sources with the 
+different configuration and re initialising the data area. Table's pages are also 
+known as heap pages\index{Heap pages}. The index pages\index{Index pages} have almost the 
+same heap structure except for the special space allocated in the page's bottom. The 
+figure \ref{fig:INDEX01} shows an index page structure. The special  space is used 
+to store information needed by the relation's structure. For example a B-tree index 
+puts in the special space the pointers to the pages below in the B-tree structure.
 
 \begin{figure}[H]
 \begin{center}
@@ -88,17 +88,12 @@ pages.
 
 \end{figure}
 
-The page starts with a header \index{Data pages,header}24 bytes long followed 
-by 
-the item pointers, usually 4 bytes long. In the page's bottom are stored the 
-actual items, the tuples.\newline
+A data page starts with a header of \index{Data pages,header}24 bytes. After the 
+header there are the item pointers, which size is usually 4 bytes. Each item 
+pointer\index{Item pointers} is an array of pairs composed by the offset and the length 
+of the item which ponints the physical tuples in the page's bottom.\newline 
 
-The item pointers\index{Item pointers} is an array of pairs, offset and 
-length, pointing the actual tuples in the page's bottom. The tuples are put in 
-the page's bottom and going backwards to fill up all the available free 
-space.\newline 
-
-The header contains the page's generic space management informations as shown 
+The page header holds the information for the page's generic space management as shown 
 in figure \ref{fig:HEADERPAG01}. 
 
 
