@@ -1,9 +1,10 @@
 \chapter{The physical layout}
 \label{cha:PHYLAY}\index{Physical layout}
-This chapter explores the physical storage. We'll start from the data files 
-moving deep into the data blocks and finally to the tuples.  After looking to 
-the tablespaces we'll complete the outline started in \ref{sec:TRANSACTION} 
-with the MVCC\index{MVCC}.
+After looking to the logical structure we'll now dig into PostgreSQL's physical structure. 
+We'll start with the top layer, looking to the data files, then we'll move to the data 
+pages and finally we'll reach the fundamental storage unit, the tuples.  There is a 
+dedicated section for the tablespaces and finally the physical aspect of the 
+MVCC\index{MVCC}.
 
 \section{Data files}\index{Data files}
 Wherever the database stores the files, the \$PGDATA/base or a different 
