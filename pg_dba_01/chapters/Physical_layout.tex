@@ -1,65 +1,53 @@
 \chapter{The physical layout}
 \label{cha:PHYLAY}\index{Physical layout}
 After looking to the logical structure we'll now dig into PostgreSQL's physical structure. 
-We'll start with the top layer, looking to the data files, then we'll move to the data 
-pages and finally we'll reach the fundamental storage unit, the tuples.  There is a 
-dedicated section for the tablespaces and finally the physical aspect of the 
+We'll start with the top layer, looking into the data area. We'll take a look first to the 
+data files and how they are organised. Then we'll move inside them, where the data pages 
+and the fundamental storage unit, the tuples, are stored. A section is dedicated to the 
+TOAST tables. The chapter will end with the physical aspect of the tablespaces and the 
 MVCC\index{MVCC}.
 
 \section{Data files}\index{Data files}
-Wherever the database stores the files, the \$PGDATA/base or a different 
-tablespace, those files are named, initially, after the relation's object 
-identifier, a 4 byte unsigned integer. The word \textit{initially} means 
-there's no guarantee the file will stay the same in the future.
-Some file altering operations like the REINDEX or the VACUUM FULL change the 
-file name leaving the relation's object identifier unchanged.
+As seen in \ref{sec:PGDATA} the data files are stored into the \$PGDATA/base directory, 
+organised per database object identifier. This is true also for the relations created 
+on a different tablespace. Inside the database directories there are many files which 
+name is numeric as well. When a new relation is created, the name is set initially to the 
+relation's object identifier. The relation's file name can change if any actiont like 
+REINDEX or VACUUM FULL is performed on the relation.\newline
 
-The maximum size allowed for a datafile is 1 GB, then a new segment with 
-the same name and a sequential suffix is created. 
-For example if the relation 34554001 reaches the upper limit a new file named 
-34554001.1 is added, when this one reaches 1 GB then a 34554001.2 is added and 
-so on. 
-
-Alongside the main data files there're some additional forks needed for the 
-database activity.
+The data files are organised in multiple segments, each one of 1 GB and numbered with a 
+suffix. However the first segment created is without suffix. Alongside the main data 
+files there are some additional forks needed used by PostgreSQL for tracking the data 
+visibility and free space.
 
 \subsection{Free space map}\index{Free space map}
-The free space map segment is present for the index\index{Index, files} and 
-table's data files . It's named after the relation's filenode with the suffix 
-\_fsm and is used to track the free space in the relation. 
+The free space map is a segment present alongside the index\index{Index, files} and 
+table's data files . It have the same the relation's name with the suffix \_fsm. 
+PostgreSQL stores the information of the free space available. 
 
 \subsection{Visibility map}\index{Visibility map}
-The table's file are also called heap files\index{Heap, files}. Alongside those 
-files there is a second fork called visibility map. Like before this file 
-is named after the relation's filenode with the suffix \_vm.
-Its usage is  for tracking the data pages  having all the tuples visible to all 
-the active transactions. This fork is used also for the index only 
-scans\index{index only scans} where the data is retrieved from the index page 
-only.
+The table's data file have a visibility map file which suffix is \_vm. PostgreSQL 
+tracks the data pages with all the tuples visible to the active transactions. This fork 
+is also used for running the index only scans\index{index only scans}.
 
 \subsection{Initialisation fork}\index{Initialisation fork}
-The initialisation fork is an empty table or index page, stored alongside the 
-unlogged relation's data file. As seen in \ref{sub:UNLOGGEDTABLES} when the 
-database performs a crash recovery the unlogged relations are zeroed. The 
-initialisation fork is used to reset them and all the relation's accessory 
-forks are deleted.
+The initialisation fork is an empty file used to re initialise the unlogged relations 
+when the cluster performs a crash recovery.
 
 \subsection{pg\_class}
-All the current database's relations are listed in the 
-pg\_class\index{pg\_class} system table. The 
-field relfilenode shows the relation's filename. \newline
+When connecting to a database, all the relations inside it are listed in the 
+pg\_class\index{pg\_class} system table. The field relfilenode stores the relation's 
+filename. The system field oid, which is hidden when selecting with the wildcard *, is 
+just the relation's object identifier and should not be used for the physical 
+mapping.\newline
 
-The oid field, hidden if wildcard is used in the select list, is the internal 
-object identifier. 
-PostgreSQL is shipped with plenty of useful functions to get informations from 
-the relation's OID. For example the function 
-pg\_total\_relation\_size(regclass) returns the space used by the 
-table plus the indices, the additional forks and the eventual TOAST table.
-The function returns the size bytes. Another function, the 
-pg\_size\_pretty(bigint), returns a human readable format for better 
-reading.\newline
+However, PostgreSQL have many useful functions which retrieve the information 
+using the relation's OID. For example the function pg\_total\_relation\_size(regclass) 
+returns the disk space used by the table, including the additional forks and the eventual 
+TOAST table, andthe indices. The function returns the size in bytes. Another function, 
+the pg\_size\_pretty(bigint), returns a human readable format for better reading.\newline
 
-The field relkind is used to track the relation's kind
+The pg\_class's field relkind is used to store the relation's kind.
 
 \begin{table}[h]
   \begin{tabular}{cc}
@@ -76,7 +64,7 @@ Read\\
     f  &  foreign table \\
     
   \end{tabular}
-  \caption{\label{tab:RELKIND}Relkind possible values}
+  \caption{\label{tab:RELKIND}Relkind values}
 \end{table}
 
 \section{Pages}\index{Data pages}
