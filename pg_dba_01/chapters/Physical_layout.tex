@@ -109,24 +109,24 @@ in figure \ref{fig:HEADERPAG01}.
 \end{figure}
 \begin{itemize}
  \item \textbf{pd\_lsn} identifies the xlog record for last page's change.  The 
-buffer manager uses the  LSN for WAL enforcement. A dirty buffer is not dumped 
-to the disk until the xlog has been flushed at least as far as the page's LSN.
-\item \textbf{pd\_checksum} stores the page's checksum if enabled, otherwise 
-this field remain unused
-\item \textbf{pd\_flags} used to store the page's flags 
-\item \textbf{pg\_lower} offset to the start of the free space
-\item \textbf{pg\_upper} offset to the end of the free space
-\item \textbf{pg\_special} offset to the start of special space
-\item \textbf{pd\_pagesize\_version} page size and page version packed 
+buffer manager uses the  LSN for enforcing the WAL mechanism. A dirty buffer is not 
+dumped to the disk until the xlog has been flushed at least as far as the page's LSN.
+\item \textbf{pd\_checksum} stores the page's checksum if is enabled.
+\item \textbf{pd\_flags} is used to store the page's various flags 
+\item \textbf{pg\_lower} is the offset to the start of the free space
+\item \textbf{pg\_upper} is the offset to the end of the free space
+\item \textbf{pg\_special} is the offset to the start of the special space
+\item \textbf{pd\_pagesize\_version} is the page size and the page version packed 
 together in a single field. 
-\item \textbf{pg\_prune\_xid} is a hint field to helpt to determine if pruning 
-is useful.  It's used only on the heap pages.
+\item \textbf{pg\_prune\_xid} is a hint field to determine if the tuple's pruning is 
+useful. Is set only on the heap pages.
 
 \end{itemize}
 
-The pd\_checksum \index{Page checksum}field substitute the pd\_tli field 
-present in the page header up to PostgreSQL 9.2 and used to track the 
-xlog record across the timeline id. 
+The pd\_checksum \index{Page checksum}field replaces the pd\_tli field present in the page 
+header until the PostgreSQL 9.2, used to track the xlog records across the timeline id. 
+\newline 
+
 The page's checksum can be enabled only when the data area is initialised with 
 initdb and cannot be disabled later.\newline
 
@@ -146,8 +146,6 @@ new row versions stamping the old as dead. \newline
 
 Each tuple comes with a fixed header of system columns usually 23 bytes as 
 shown in the figure \ref{fig:TUPLES01}.\newline
-
-
 
 
 
