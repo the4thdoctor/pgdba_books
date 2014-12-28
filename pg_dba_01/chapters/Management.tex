@@ -93,54 +93,6 @@ LOG:  autovacuum launcher started
 
 Pressing CTRL+C stops the cluster with a fast shutdown.\newline
 
-Another reason for running postgres directly is when it needs to be started in single user mode. 
-The --single option is a lifesaver if the cluster refuses to start because one or more 
-databases are near the XID wraparound failure. 
-\begin{verbatim}
-
-postgres@tardis:~/tempdata$ /usr/lib/postgresql/9.3/bin/postgres --single -D /home/postgres/tempdata
-
-PostgreSQL stand-alone backend 9.3.5
-backend> 
-
-\end{verbatim}
-
-The database interface in single user mode and does not have all the sophisticated features 
-like the client psql. Anywat with a little knowledge of SQL it's possible to find the database(s) 
-causing the shutdown and fix it.
-\index{postgres, single user mode}\index{XID wraparound failure, fix}
-
-\begin{verbatim}
-backend> SELECT datname,age(datfrozenxid) FROM pg_database ORDER BY 2 DESC;
-         1: datname     (typeid = 19, len = 64, typmod = -1, byval = f)
-         2: age (typeid = 23, len = 4, typmod = -1, byval = t)
-        ----
-         1: datname = "template1"       (typeid = 19, len = 64, typmod = -1, byval = f)
-         2: age = "2146435072"  (typeid = 23, len = 4, typmod = -1, byval = t)
-        ----
-         1: datname = "template0"       (typeid = 19, len = 64, typmod = -1, byval = f)
-         2: age = "10"  (typeid = 23, len = 4, typmod = -1, byval = t)
-        ----
-         1: datname = "postgres"        (typeid = 19, len = 64, typmod = -1, byval = f)
-         2: age = "10"  (typeid = 23, len = 4, typmod = -1, byval = t)
-        ----
-
-\end{verbatim}
-
-The age function shows how old is the last XID not yet frozen. In our example the template1
-database have an age of 2146435072, one million transactions to the wraparound. We can then exit 
-the backend with CTRL+D and restart it again in the in single user mode specifying the database 
-name. A VACUUM will get rid of the problematic xid.
-
-\begin{verbatim}
-postgres@tardis:~/tempdata$ /usr/lib/postgresql/9.3/bin/postgres --single \
--D /home/postgres/tempdata template1
-
-backend> VACUUM;
-\end{verbatim}
-
-This procedure must be repeated for any database with very old XID.\newline
-
 Starting the cluster with pg\_ctl usage is very simple. This program also accepts the data area as 
 parameter or using the environment variable PGDATA. It's also required to provide the command to 
 execute. The start command for example is used to start the cluster in multi user mode.

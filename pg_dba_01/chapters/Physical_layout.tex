@@ -268,26 +268,84 @@ table can be found using a self join on the field reltoastrelid.\newline
 
 \section{Tablespaces}\index{tablespaces,physical}
 \label{sub:TBS-PHYSICAL}
-PostgreSQL implements the tablespaces creating the symbolic links, pointing the tablespace's 
-location, into the pg\_tblspc. The links are named like the tablespace's OID. The tablespaces are 
-available only on systems supporting the symbolic links.\newline
+PostgreSQL implements the tablespaces with the symbolic links. Inside the directory \$PGDATA/pg\_tblspc 
+there are the links to the physical location. Each link is named after the tablespace's OID. Therefore the 
+tablespaces are available only on the systems with the symbolic link support.\newline
 
-Since PostgreSQL 9.1 the tablespace location was stored into the field spclocation of the 
-pg\_tablespace\index{pg\_tablespace} system table. The information was used only to dump the 
-tablespace's definition during a pg\_dump and was removed in the version 9.2 and it was was 
-introduced the function pg\_tablespace\_location(tablespace\_oid) to get the tablespace's absolute 
-path from the tablespace oid.\newline
+Before the version 8.4 the tablespace symbolic link pointed directly to the referenced directory. This was 
+a race condition when upgrading in place because the the location could clash with the upgraded cluster. 
+From the version 9.0, the tablespace creates a sub directory directory in the tablespace location which 
+is after the major version and the system catalogue version number. 
+\newline
 
-Querying the system catalogue to acquire any sort of informations is quite  simple. In this example 
-the query returns the tablespace's location seen in \ref{sub:TBS-LOGICAL} 
+\begin{verbatim}
+
+postgres@tardis:~$ ls -l /var/lib/postgresql/pg_tbs/ts_test
+total 0
+drwx------ 2 postgres postgres 6 Jun  9 13:01 PG_9.3_201306121
+
+\end{verbatim}
+
+The sub directory's name is a combination of the capital letters PG followed by the major version, 
+truncated to the first two numbers, and the catalogue version number stored in the control file.\newline
+
+
+
+\begin{verbatim}
+postgres@tardis:~$ export PGDATA=/var/lib/postgresql/9.3/main
+postgres@tardis:~$ /usr/lib/postgresql/9.3/bin/pg_controldata 
+pg_control version number:            937
+Catalog version number:               201306121
+Database system identifier:           5992975355079285751
+Database cluster state:               in production
+pg_control last modified:             Mon 09 Jun 2014 13:05:14 UTC
+.
+.
+.
+WAL block size:                       8192
+Bytes per WAL segment:                16777216
+Maximum length of identifiers:        64
+Maximum columns in an index:          32
+Maximum size of a TOAST chunk:        1996
+Date/time type storage:               64-bit integers
+Float4 argument passing:              by value
+Float8 argument passing:              by value
+Data page checksum version:           0
+
+
+
+PG_{MAJOR_VERSION\}_{CATALOGUE_VERSION_NUMBER}
+
+\end{verbatim}
+
+
+
+Inside the container directory the data files are organised in the same way as in base directory.
+\ref{sec:PGDATA}.\newline
+
+Moving a tablespace to another physical location it's not complicated but the cluster needs to be shut down.
+With the cluster stopped the container directory can be safely copied to the new location. The receiving 
+directory must have the same permissions  like the origin's. The symbolic link must be recreated to point 
+to the new physical location. At the cluster's start the change will be automatically resolved from 
+the symbolic link.\newline
+
+Until PostgreSQL 9.1 the tablespace location was stored into the field spclocation in the system table 
+pg\_tablespace\index{pg\_tablespace}. From the version 9.2 the spclocation field is removed and the 
+tablespace's location is resolved on the fly using the function 
+pg\_tablespace\_location(tablespace\_oid).\newline
+
+This function can be used to query the system catalogue about the tablespaces. In this simple example the 
+query returns the tablespace's location resolved from the OID. 
 
 \begin{lstlisting}[style=pgsql]
- postgres=# 
- SELECT 
-        pg_tablespace_location(oid),
-        spcname 
-FROM 
-        pg_tablespace;
+postgres=# 
+                SELECT 
+                        pg_tablespace_location(oid),
+                        spcname 
+                FROM 
+                        pg_tablespace
+                ;
+        
        pg_tablespace_location       |  spcname   
 ------------------------------------+------------
                                     | pg_default
@@ -297,9 +355,9 @@ FROM
 
 \end{lstlisting}
 
-The function returns the empty string for the system tablespaces, pg\_default and pg\_global, 
-because those locations have an immutable location, relative to the data directory. We can get the 
-data area's absolute path using the function current\_settings. 
+Because the function pg\_tablespace\_location returns the empty string for the system tablespaces, a better 
+approach is combining the CASE construct with the function current\_settings and build the absolute path 
+for the system tablespaces.
 
 \begin{lstlisting}[style=pgsql]
  postgres=# SELECT current_setting('data_directory');
@@ -308,13 +366,7 @@ data area's absolute path using the function current\_settings.
  /var/lib/postgresql/9.3/main
 (1 row)
 
-\end{lstlisting}
-
-Using the CASE construct is then possible to build up an more complete query to lookout at the 
-tablespaces locations.\newpage
-
-\begin{lstlisting}[style=pgsql]
- postgres=# 
+postgres=# 
 SELECT 
         CASE
                 WHEN 
@@ -344,63 +396,11 @@ FROM
 
 \end{lstlisting}
 
-Before the version 8.4 the tablespace location pointed directly to the referenced directory, 
-causing 
-a potential location's clash. The newer versions introduced the usage of a container directory into 
-the tablespace location named after the major version and the system catalogue version number. 
-\newline
+Another useful function the pg\_tablespace\_databases(tablespace\_oid) can help us to find the databases 
+with the relations on a certain tablespace.\newline
 
-\begin{verbatim}
-
-postgres@tardis:~$ ls -l /var/lib/postgresql/pg_tbs/ts_test
-total 0
-drwx------ 2 postgres postgres 6 Jun  9 13:01 PG_9.3_201306121
-
-\end{verbatim}
-
-The tablespace's directory container is structured this way\newline
-PG\_\{MAJOR\_VERSION\}\_\{CATALOGUE\_VERSION\_NUMBER\}\newline
-
-The major version is the PostgreSQL version truncated to the second cypher and the catalogue's 
-version number is the same shown in the pg\_controldata output, a formatted date.
-
-\begin{verbatim}
-postgres@tardis:~$ export PGDATA=/var/lib/postgresql/9.3/main
-postgres@tardis:~$ /usr/lib/postgresql/9.3/bin/pg_controldata 
-pg_control version number:            937
-Catalog version number:               201306121
-Database system identifier:           5992975355079285751
-Database cluster state:               in production
-pg_control last modified:             Mon 09 Jun 2014 13:05:14 UTC
-.
-.
-.
-WAL block size:                       8192
-Bytes per WAL segment:                16777216
-Maximum length of identifiers:        64
-Maximum columns in an index:          32
-Maximum size of a TOAST chunk:        1996
-Date/time type storage:               64-bit integers
-Float4 argument passing:              by value
-Float8 argument passing:              by value
-Data page checksum version:           0
-
-\end{verbatim}
-
-Inside the container directory the structure is same as the directory base seen in 
-\ref{sec:PGDATA}, 
-with one difference. There're only the subdirectories for the databases having relations on the 
-tablespace.\newline
-
-To get all the databases with objects on the current tablespace it's present the function 
-pg\_tablespace\_databases(tablespace\_oid) which returns the set of the database OID with objects 
-on 
-the specified tablespace. In order to have a better picture we can join the query with the 
-pg\_database system table.\newline
-
-Here's an example query using the CASE construct with the pg\_tablespace\_databases function, to 
-get 
-all the databases with objects on the ts\_test tablespace.\newpage
+The following example uses this function again with a CASE construct for building the database having 
+objects on a specific tablespace, in our example the ts\_test created in \ref{sub:TBS-LOGICAL}.\newpage
 \begin{lstlisting}[style=pgsql]
  db_test=# 
  SELECT
@@ -441,49 +441,38 @@ WHERE
 
 \end{lstlisting}
 
-Moving a tablespace to another physical location it's not complicated; the cluster of course has to 
-be shut down; see \ref{sec:SHUTDOWN_SEQ} for more informations about the shutdown sequence.\newline
 
-When the cluster is stopped the container directory can be copied to the new location; the 
-directory's access permissions must be the same as the origin; read write for the os user running 
-the postgresql process only, otherwise the cluster will refuse to start.\newline
-
-When the copy is complete and the symbolic link in \$PGDATA/pg\_tblspc is fixed to point the new 
-location the cluster can be started as shown in \ref{sec:STARTUP}.
 
 \section{MVCC} \label{sec:MVCC}\index{MVCC} 
-The multiversion concurrency control is the access method used by PostgreSQL to provide the 
-transactional model as seen in \ref{sec:TRANSACTION}.\newline
+The multiversion concurrency control is used in PostgreSQL to implement the  transactional model seen in 
+\ref{sec:TRANSACTION}.\newline
 
 At logical level this is completely transparent to the user and the new row versions become visible 
 after the commit, accordingly with the transaction isolation level. \newline
 
-At physical level we have for each new row version, the insert's XID stamped into the t\_xmin 
-field. The PostgreSQL's internal semantic makes visible only the committed rows stamped with the 
-XID lesser than the current transaction's XID because considered \textit{in the past}. The rows 
-with 
-a XID greater than the current transaction's XID are considered \textit{in the future} and then 
-invisible.\newline
+At physical level we have for each new row version, the insert's XID stored into the t\_xmin field which is 
+used by the internal semantic to determine the row visibility. 
 
 Because the XID is a 32 bit quantity, it wraps at 4 billions. When this happens theoretically all 
-the tuples should suddenly disappear because they switch from in the XID's past to its future. This 
-is the XID wraparound failure,\index{XID wraparound failure} a serious problem for the older 
-PostgreSQL versions, which only fix was to re init a new data area each 4 billion transactions and 
-dump reload the databases.\newline 
+the tuples should suddenly disappear because they switch from in the current XID's past to its future in 
+the well known XID wraparound failure,\index{XID wraparound failure}. In the old PostgreSQL versions this 
+was a serious problem which forced the administrators to dump/reload the entire cluster into a freshly 
+initialised new data area every 4 billion of transactions.\newline 
 
-PostgreSQL 7.2 introduced the \begin{math}modulo-2^{32}\end{math} arithmetic for evaulating the XID 
-age where a special XID, the FrozenXID\footnote{The FrozenXID's value is 2. The docs of PostgreSQL 
-7.2 also mention the BootstrapXID with value 1} was assumed as always in the past and having, for 
-any given XID 2 billion transactions in the future and 2 billion transactions in the past.\newline
+In PostgreSQL 7.2 was introduced a new comparison method for the XID, the 
+\begin{math}modulo-2^{32}\end{math} arithmetic. It was also introduced a special XID, the 
+FrozenXID\footnote{The FrozenXID's value is 2. The docs of PostgreSQL 
+7.2 also mention the BootstrapXID which value is 1} assumed as always in the past. With the new 
+comparison method, for any arbitrary XID exists 2 billion of transactions in the future and 2 billion 
+transactions in the past.\newline
 
-When the age of the stamped t\_xmin becomes old then the VACUUM\index{VACUUM} can freeze 
-the tuple stamping the FrozenXID and preserving it from the disappearance. The pg\_class and the 
-pg\_database table have a dedicated field to track the oldest tuple inside the relation and the 
-database, respectively the relfrozenxid  and the datfrozenxid where the oldest not frozen XID's 
-value is stored. The builtin function age() shows how many transactions are between 
-the current XID and the value stored in the system catalogue. \newline
+When the age of the tuple's t\_xmin becomes old the periodic VACUUM\index{VACUUM} freezes the ageing tuple 
+changing its t\_xmin to the FrozenXID always in the past. In the pg\_class and the pg\_database tables 
+there are  two dedicated fields to track the age of the oldest XID. The value stored in those tables 
+have little meaning if not processed through the function age() which shows the number of transactions 
+between the current XID and the value stored in the system catalogue. \newline
 
-For example this is a query to get all the databases with the datfrozenxid and the age.\newpage
+This following query returns all the databases, the corresponding datfrozenxid and the XID's age.\newpage
 
 \begin{lstlisting}[style=pgsql]
  postgres=# 
@@ -502,42 +491,87 @@ For example this is a query to get all the databases with the datfrozenxid and t
 
 \end{lstlisting}
 
-The datfroxenxid value is meaningful only through the age function which shows the
-``distance'' between the current XID and the datfroxenxid. PostgreSQL assigns the new 
-XID only for the write transactions and only if the tuples are updated in the so called ``lazy XID 
-assignment''.\newline 
+When a tuple's age is more than 2 billions the tuple simply disappears  from the cluster. Before the 
+version 8.0 there was no alert or protection against the XID wraparound failure. Since then it was 
+introduced a passive mechanism which emits messages in the activity log when the age of datfrozenxid 
+is less than ten million transactions from the wraparound point.
 
-
-When a tuple's XID becomes older than 2 billion transactions, the tuple simply disappears  jumping 
-from the the current XID's past to its future. Before the version 8.0 there was no prevention
-for this problem, except the periodic cluster wide VACUUM. The latest versions introduced a 
-passive protection mechanism emitting messages in the activity log when the age of datfrozenxid is  
-ten million transactions from the wraparound point.
-
+A message like this is quite serious and should not be ignored.
 \begin{smallverbatim}
 WARNING:  database "test_db" must be vacuumed within 152405486 transactions
 HINT:  To avoid a database shutdown, execute a database-wide VACUUM in 
 "test_db".
 \end{smallverbatim}
 
-Another active protection is the autovacuum daemon which take care of the affected tables and 
-starts a VACUUM to freeze the tuples even  if autovacuum is turned off. However if something goes 
-wrong and the datfrozenxid reaches one million transactions from the wraparound point, the 
-cluster shutdown and keeps shutting down for each transaction. When this happens the cluster 
-can be only  started in single-user backend to execute the VACUUM.\newline
+The autovacuum daemon in this case acts like a watchdog and starts vacuuming the tables with ageing 
+tuples even  if autovacuum is turned off in the cluster. There is another protection, quite radical, 
+if for some reasons one of the database's datfrozenxid is at one million transactions from the 
+wraparound point. In this case the cluster shuts down and refuse to start again. The only option in 
+this case is to run the postgres process in single-user backend and execute the VACUUM on the 
+affected relations.\newline
 
-To limit the effect of data bloat, unavoidable with this implementation,  PostgreSQL have the 
-feature called HOT\index{HOT strategy} which stands for Heap Only Tuples. The RDBMS tries to keep 
-the updated tuples inside the same page avoiding also any index reference update, if present. This 
-is possible only if there's available free space. By default PostgreSQL when inserting the 
-tuples, fills up the pages completely; however is possible to reserve a page portion for the 
-updates with the fillfactor storage parameter\index{fillfactor storage parameter}. This is the 
-percentage of the page to reserve for the inserts. The default value for the heap pages is 100, 
-complete packing. For the indices is 70 for the not leaf pages and 90 for the leaf pages leaving 
-some space available for the unavoidable updates. A smaller fill factor will result, at insert time, 
-with a bigger table but with lesser grow rate when updated. \newline
+The debian package's configuration is quite odd, putting the configuration files in the /etc/postgresql 
+instead of the data area. The following example is the standalone backend's call for the debian's packaged 
+default cluster main.
 
-Finally if the MVCC is not carefully considered at design time, this can result in data bloat and 
-generally poor performances.
-In the \ref{cha:MAINTENANCE} we'll see how and how to keep the cluster in efficient conditions or 
-at least how to try.
+\begin{verbatim}
+
+postgres@tardis:~/tempdata$ /usr/lib/postgresql/9.3/bin/postgres \
+                                --single -D /var/lib/postgresql/9.3/main/base/ \
+                                --config-file=/etc/postgresql/9.3/main/postgresql.conf
+
+PostgreSQL stand-alone backend 9.3.5
+backend> 
+
+\end{verbatim}
+
+The database interface in single user mode and does not have all the sophisticated features 
+like the client psql. Anyway with a little knowledge of SQL it's possible to find the database(s) 
+causing the shutdown and fix it.
+\index{postgres, single user mode}\index{XID wraparound failure, fix}
+
+\begin{verbatim}
+backend> SELECT datname,age(datfrozenxid) FROM pg_database ORDER BY 2 DESC;
+         1: datname     (typeid = 19, len = 64, typmod = -1, byval = f)
+         2: age (typeid = 23, len = 4, typmod = -1, byval = t)
+        ----
+         1: datname = "template1"       (typeid = 19, len = 64, typmod = -1, byval = f)
+         2: age = "2146435072"  (typeid = 23, len = 4, typmod = -1, byval = t)
+        ----
+         1: datname = "template0"       (typeid = 19, len = 64, typmod = -1, byval = f)
+         2: age = "10"  (typeid = 23, len = 4, typmod = -1, byval = t)
+        ----
+         1: datname = "postgres"        (typeid = 19, len = 64, typmod = -1, byval = f)
+         2: age = "10"  (typeid = 23, len = 4, typmod = -1, byval = t)
+        ----
+
+\end{verbatim}
+
+The age function shows how old is the last XID not yet frozen. In our example the template1
+database have an age of 2146435072, one million transactions to the wraparound. We can then exit 
+the backend with CTRL+D and restart it again in the in single user mode specifying the database 
+name. A VACUUM will get rid of the problematic xid.
+
+\begin{verbatim}
+postgres@tardis:~/tempdata$ /usr/lib/postgresql/9.3/bin/postgres \
+                                --single -D /var/lib/postgresql/9.3/main/base/ \
+                                --config-file=/etc/postgresql/9.3/main/postgresql.conf \
+                                template1
+                                
+backend> SELECT current_database();
+         1: current_database    (typeid = 19, len = 64, typmod = -1, byval = f)
+        ----
+         1: current_database = "template1"      (typeid = 19, len = 64, typmod = -1, byval = f)
+        ----
+
+backend> VACUUM FREEZE;
+\end{verbatim}
+
+This procedure must be repeated for any database with very old XID.\newline
+
+Because the new rows generation at update time, this can lead to an unnecessary table and index bloat.
+PostgreSQL with the Heap Only Tuples (HOT)\index{HOT strategy} strategy can limit the unavoidable bloat 
+caused by the updates. HOT's main goal is to keep the new row versions into the same page. 
+
+The MVCC is something to consider at design time. Ignoring the way PostgreSQL manages the physical tuples 
+can result in data bloat and lead in general to poor performances.
