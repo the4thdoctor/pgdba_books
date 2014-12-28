@@ -517,8 +517,8 @@ default cluster main.
 \begin{verbatim}
 
 postgres@tardis:~/tempdata$ /usr/lib/postgresql/9.3/bin/postgres \
-                                --single -D /var/lib/postgresql/9.3/main/base/ \
-                                --config-file=/etc/postgresql/9.3/main/postgresql.conf
+--single -D /var/lib/postgresql/9.3/main/base/ \
+--config-file=/etc/postgresql/9.3/main/postgresql.conf
 
 PostgreSQL stand-alone backend 9.3.5
 backend> 
@@ -532,18 +532,19 @@ causing the shutdown and fix it.
 
 \begin{verbatim}
 backend> SELECT datname,age(datfrozenxid) FROM pg_database ORDER BY 2 DESC;
-         1: datname     (typeid = 19, len = 64, typmod = -1, byval = f)
-         2: age (typeid = 23, len = 4, typmod = -1, byval = t)
-        ----
-         1: datname = "template1"       (typeid = 19, len = 64, typmod = -1, byval = f)
-         2: age = "2146435072"  (typeid = 23, len = 4, typmod = -1, byval = t)
-        ----
-         1: datname = "template0"       (typeid = 19, len = 64, typmod = -1, byval = f)
-         2: age = "10"  (typeid = 23, len = 4, typmod = -1, byval = t)
-        ----
-         1: datname = "postgres"        (typeid = 19, len = 64, typmod = -1, byval = f)
-         2: age = "10"  (typeid = 23, len = 4, typmod = -1, byval = t)
-        ----
+
+1: datname     (typeid = 19, len = 64, typmod = -1, byval = f)
+2: age (typeid = 23, len = 4, typmod = -1, byval = t)
+----
+1: datname = "template1" (typeid = 19, len = 64, typmod = -1, byval = f)
+2: age = "2146435072"  (typeid = 23, len = 4, typmod = -1, byval = t)
+----
+1: datname = "template0" (typeid = 19, len = 64, typmod = -1, byval = f)
+2: age = "10"  (typeid = 23, len = 4, typmod = -1, byval = t)
+----
+1: datname = "postgres"  (typeid = 19, len = 64, typmod = -1, byval = f)
+2: age = "10"  (typeid = 23, len = 4, typmod = -1, byval = t)
+----
 
 \end{verbatim}
 
@@ -554,15 +555,15 @@ name. A VACUUM will get rid of the problematic xid.
 
 \begin{verbatim}
 postgres@tardis:~/tempdata$ /usr/lib/postgresql/9.3/bin/postgres \
-                                --single -D /var/lib/postgresql/9.3/main/base/ \
-                                --config-file=/etc/postgresql/9.3/main/postgresql.conf \
-                                template1
+--single -D /var/lib/postgresql/9.3/main/base/ \
+--config-file=/etc/postgresql/9.3/main/postgresql.conf \
+template1
                                 
 backend> SELECT current_database();
-         1: current_database    (typeid = 19, len = 64, typmod = -1, byval = f)
-        ----
-         1: current_database = "template1"      (typeid = 19, len = 64, typmod = -1, byval = f)
-        ----
+1: current_database (typeid = 19, len = 64, typmod = -1, byval = f)
+----
+1: current_database = "template1" (typeid = 19, len = 64, typmod = -1, byval = f)
+----
 
 backend> VACUUM FREEZE;
 \end{verbatim}
