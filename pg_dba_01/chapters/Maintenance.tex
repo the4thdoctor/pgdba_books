@@ -29,21 +29,22 @@ failure}
 
 The optional ANALYZE clause gather the runtime statistics on processed table.\newline
 
-A standard VACUUM's run, frees the space used by the dead rows inside the data files but doesn't 
-returns the space to the operating system. VACUUM doesn't affects the common database activity 
-but prevents any schema change on the processed table. Because the pages are rewritten, a VACUUM 
-run increases substantially the I/O activity. \newline
+When run VACUUM clear the space used by the dead rows making space for the inserts and updates inside the 
+data files. The data files are not shrunk except if there is a contiguous free space in the table's 
+end. VACUUM in this case runs a truncate scan which can fail if there is a conflicting lock with the 
+database activity. The VACUUM's truncate scan works only on the table's data files. The general approach 
+for VACUUM is to have the minimum the impact on the cluster's activity. However, because the pages are 
+rewritten, VACUUM can increase the I/O activity.\newline
 
-The presence of one or more empty pages in the table's end can be removed by VACUUM if an 
-exclusive lock on the relation can be obtained immediately. When this happens the table is scanned 
-backward to find all the empty pages and then it's truncated to the first not empty page. The index 
-pages are scanned as well and the dead tuples are also cleared. The VACUUM's truncate scan works 
-only on the heap data files. VACUUM'S performances are influenced by the maintenance\_work\_mem 
-only if the table have indices, otherwise the VACUUM will run the cleanup sequentially without 
-storing the tuple's references for the index cleanup.\newline
+The index pages are scanned as well and the dead tuples are also cleared. The VACUUM performances on the 
+indices are influenced by the maintenance\_work\_mem setting. If the table does not have indices VACUUM 
+will run the cleanup reading the pages sequentially. If there is any index VACUUM will store in the 
+maintenance work memory  the tuple's references for the subsequent index cleanup. If the memory is 
+not sufficient to fit all the tuples then VACUUM will stop the sequential read to execute the 
+partial cleanup on the indices and free the maintenance worm mem.\newline
 
-To show the effect of the maintenance\_work\_mem  let's build build a simple table with 10 
-million rows. 
+The the maintenance\_work\_mem  can impact sensibly on the VACUUM's performance on large tables. For example 
+let's build build a simple table with 10 million rows. 
 
 
 \begin{lstlisting}[style=pgsql]
@@ -55,6 +56,7 @@ postgres=# CREATE TABLE t_vacuum
                 CONSTRAINT pk_t_vacuum PRIMARY KEY  (i_id)
         )
 ;
+
 CREATE TABLE
 
 postgres=# INSERT INTO t_vacuum
@@ -71,11 +73,9 @@ INSERT 0 10000000
 
 
 \end{lstlisting}
-To have a statical environment we'll disable the table's autovacuum and the analy. More infos on 
-autovacuum here 
-\ref{sec:AUTOVACUUM}.
-We'll also increase the session's verbosity to look out what's happening during the VACUUM's 
- run.\newline
+In order to have a static environment we'll disable the table's autovacuum. We'll also increase the 
+session's verbosity display what's happening during the VACUUM's run.\newline
+
 \begin{lstlisting}[style=pgsql]
 postgres=# ALTER TABLE t_vacuum 
         SET 
@@ -103,8 +103,8 @@ UPDATE 10000000
 
 \end{lstlisting}
 
-Before running the VACUUM we'll change the maintenance\_work\_mem to a small value enabling the the 
-timing to check the query duration.\newline
+Before running the VACUUM we'll change the maintenance\_work\_mem to a small value. We'll also enable the 
+query timing.\newline
 
 \begin{lstlisting}[style=pgsql]
 postgres=# SET maintenance_work_mem ='20MB';
@@ -153,13 +153,13 @@ postgres=#
 
 \end{lstlisting}
 
-During the VACUUM the the maintenance\_work\_mem is used to store an array of TCID referencing 
-the dead tuples for the index cleanup. If the maintenance\_work\_mem is small and the dead rows are 
-many, the memory fills up often. When this happens the table scan pauses and the index is 
-scanned searching for the tuples stored into the array. When the index scan is complete the array of 
-TCID is emptied and the table's scan resumes. Increasing the maintenance\_work\_mem to 2 
-GB\footnote{In order to have the table in the same conditions, a VACUUM FULL and a new update has 
-been runt before the conventional VACUUM.} the index scan is executed in one single run 
+The maintenance\_work\_mem is used by VACUUM to store an array of TCID pointers to the dead tuples and 
+used for the index cleanup. With a small maintenance\_work\_mem the memory runs out of space. When this 
+happens the table scan pauses and the index is scanned searching for the tuples stored into the array. When 
+the index scan is complete the array cleared and the table's scan resumes. Increasing the 
+maintenance\_work\_mem to 2 
+GB\footnote{In order to have the table in the same conditions the table was cleared with a VACUUM FULL 
+and bloated with a new update.} the index scan is executed in one single run 
 resulting in a VACUUM 32 seconds faster.\newline
 
 \begin{lstlisting}[style=pgsql]
@@ -198,9 +198,8 @@ Time: 122021.251 ms
 
 \end{lstlisting}
 
-A table without indices does not use the maintenance\_work\_mem. For example if we run 
-the VACUUM after dropping the table's primary key the execution is faster even with the low 
-maintenance\_work\_mem setting.\newline
+Removing the indices, in our case the primary key, improves the VACUUM performance 
+because the maintenance\_work\_mem is not used.\newline
 
 \begin{lstlisting}[style=pgsql]
 
