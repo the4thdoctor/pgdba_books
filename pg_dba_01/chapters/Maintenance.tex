@@ -423,38 +423,38 @@ The default statistic target can be changed for the current session only using t
 wide value is changed using the parameter in the postgresql.conf file.
 
 \section{REINDEX}\label{sec:REINDEX}
-A B-tree index entry carries the indexed value with the pointer to the corresponding heap page
-where the full tuple is stored. The pages are organised in the form of a balanced tree 
-referring each other using the special space seen in \ref{fig:INDEX01}. Until the heap tuple 
-does not change page, the index entry doesn't need update. The HOT strategy\index{HOT strategy} 
-tries to achieve this goal keeping the heap tuples in the same page. When the heap tuple's page 
-change then the index entry needs to be updates as well. Having the index pages fillfactor of 70 for 
-the not leaf pages and a fillfactor of 90 for the leaf pages\footnote{Changing the index's 
-fillfactor affects only 
-the leaf pages, the value for the not leaf cannot change} the index tuple's page 
-change is somewhat limited.\newline
+The general purpose B-tree index stores the indexed value alongside with the pointer to the 
+tuple's heap page. The index pages are organised in the form of a balanced tree linking each other 
+using page's special space seen in \ref{fig:INDEX01}. As long as the heap tuple remains in the same page
+the index entry doesn't need update. The HOT strategy\index{HOT strategy} tries to achieve this goal keeping 
+the heap tuples in the same page. When a new tuple version is stored in the heap page then also the index 
+entry needs to reflect the change. By default the index pages have a percentage of space reserved for 
+the updates. This is an hardcoded 30\% for the not leaf pages and a 10\% for the leaf 
+pages. The latter can be changed adjusting the index's fillfactor.\newline
 
-The VACUUM is not so effective with the indices, even clearing down the dead tuple's space this is 
-reusable only if compatible with the B-tree position. Only the completely empty pages can be 
-recycled and this requires at least two VACUUM runs, because when an index page is empty 
-then is marked as deleted, it's stamped with the next XID and becomes invisible. The empty page 
-then is not immediately recycled because there might be running scans which need to access the page 
-which is still visible in their snapshot. The next VACUUM run will ensure the page is no longer 
-required by the running transactions and the it marks as reusable.\newline
+VACUUM efficiency is worse with the indices because their ordered nature. Even converting the dead 
+tuples to free space, this is reusable only if the new entry is compatible with the B-tree position. 
+The empty pages can be recycled but this requires at least two VACUUM runs. When an index page is empty 
+then is marked as deleted by VACUUM but not immediately recycled. The page is first stamped with the next 
+XID and therefore becomes invisible. Only a second VACUUM will clear the deleted pages returning the 
+free space to the relation. This behaviour is made on purpose, because there might be running 
+scans which still need to access the page. The second VACUUM is the safest way to recycle the page only 
+if no longer required.\newline
 
-For those reasons the indices are affected by the data bloat more than the tables. Alongside 
-with a bigger disk space allocation, the bloat results in a generally bad index's performances. 
-The reindex is then the only solution to restore an index good shape.\newline
+Therefore the indices are affected by the data bloat more than the tables. Alongside with a bigger disk 
+space allocation, the bloat results generally in bad index's performances. The periodical reindex 
+is the best way to keep the indices in good shape.\newline
 
-Unlike the VACUUM, REINDEX have a substantial impact on the database activity. To ensure 
-the data is consistently read the REINDEX sets a table lock which prevents the table's writes. The 
-reads are also blocked for the SELECT queries using the rebuilding index.\newline
+Unlike the VACUUM, the REINDEX have a noticeable impact on the cluster's activity. To ensure the data is 
+consistently read the REINDEX sets a lock on the table preventing the table's writes. The reads are also 
+blocked for the queries which are using the index.\newline
 
-A B-tree index build requires a data sort to build the balanced tree. PostgreSQL comes with a handy 
-GUC parameter to track the sort, the trace\_sort\index{trace\_sort}. 
-The message verbosity level by the trace is DEBUG, then also the client\_min\_messages needs 
-adjustment for getting the informations from the trace. Let's then reindex the table's primary key 
-seen in \ref{sec:VACUUM}.
+A B-tree index build requires a the data to be sorted. PostgreSQL comes with a handy GUC parameter to track 
+the sort, the trace\_sort\index{trace\_sort} which requires a verbosity set to DEBUG.
+
+The following example is the output of the primary key's reindex of the test table created in 
+\ref{sec:VACUUM}. 
+
 
 \begin{lstlisting}[style=pgsql]
 postgres=# SET trace_sort =on;
