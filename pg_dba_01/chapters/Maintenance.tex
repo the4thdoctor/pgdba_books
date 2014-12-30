@@ -657,61 +657,72 @@ In this case the safest way to proceed is to run a conventional REINDEX.
 
 \section{VACUUM FULL and CLUSTER}\index{VACUUM FULL}\index{CLUSTER}
 \label{sec:VACFULL}
-The CLUSTER command rebuilds a completely new table with the tuples in the same order of the 
-clustered index. The clustered index can be set using the command \textit{ALTER TABLE table\_name 
-CLUSTER ON index\_name} and is used as sort key in the next CLUSTER. 
-In order to get a clearer picture, let's cluster the table created in \ref{sec:VACUUM} its
-primary key. 
+PostgreSQL ships with two commands used to shrink the data files.\newline
+
+The command CLUSTER can be quite confusing. It's purpose is to rebuild a completely new table with 
+the tuples with same order of the clustered index which is set using  the  command 
+\textit{ALTER TABLE table\_name CLUSTER ON index\_name}.\newline
+
+For example, this is the verbose output of the cluster command for the table created in \ref{sec:VACUUM}.
+The table has been clustered on the timestamp field's index.
 
 \begin{lstlisting}[style=pgsql]
 postgres=# SET trace_sort='on';
 SET
-postgres=# set client_min_messages ='debug';
+postgres=# SET client_min_messages ='debug';
 SET
-postgres=# ALTER TABLE t_vacuum CLUSTER ON pk_t_vacuum;
+postgres=# ALTER TABLE t_vacuum CLUSTER ON idx_ts_value ;
 ALTER TABLE
-postgres=# CLUSTER t_vacuum;
-DEBUG:  building index "pg_toast_28608_index" on table "pg_toast_28608"
+postgres=#  CLUSTER t_vacuum;
+DEBUG:  building index "pg_toast_51949_index" on table "pg_toast_51949"
 LOG:  begin index sort: unique = t, workMem = 16384, randomAccess = f
 LOG:  begin index sort: unique = f, workMem = 1024, randomAccess = f
 LOG:  internal sort ended, 25 KB used: CPU 0.00s/0.00u sec elapsed 0.00 sec
 LOG:  performsort starting: CPU 0.00s/0.00u sec elapsed 0.00 sec
 LOG:  performsort done: CPU 0.00s/0.00u sec elapsed 0.00 sec
 LOG:  internal sort ended, 25 KB used: CPU 0.00s/0.00u sec elapsed 0.06 sec
-DEBUG:  clustering "public.t_vacuum" using index scan on "pk_t_vacuum"
-DEBUG:  "t_vacuum": found 0 removable, 10000000 nonremovable row versions in 103093 pages
+LOG:  begin tuple sort: nkeys = 1, workMem = 16384, randomAccess = f
+DEBUG:  clustering "public.t_vacuum" using sequential scan and sort
+LOG:  switching to external sort with 59 tapes: CPU 0.02s/0.02u sec elapsed 0.05 sec
+LOG:  performsort starting: CPU 0.10s/0.71u sec elapsed 0.81 sec
+LOG:  finished writing run 1 to tape 0: CPU 0.11s/0.75u sec elapsed 0.86 sec
+LOG:  finished writing final run 2 to tape 1: CPU 0.11s/0.75u sec elapsed 0.86 sec
+LOG:  performsort done (except 2-way final merge): CPU 0.11s/0.76u sec elapsed 0.87 sec
+LOG:  external sort ended, 10141 disk blocks used: CPU 0.22s/1.01u sec elapsed 1.23 sec
+DEBUG:  "t_vacuum": found 0 removable, 1000000 nonremovable row versions in 20619 pages
 DETAIL:  0 dead row versions cannot be removed yet.
-CPU 1.16s/3.43u sec elapsed 7.41 sec.
-DEBUG:  building index "idx_ts_value" on table "t_vacuum"
-LOG:  begin index sort: unique = f, workMem = 16384, randomAccess = f
-LOG:  switching to external sort with 59 tapes: CPU 0.01s/0.07u sec elapsed 0.09 sec
-LOG:  performsort starting: CPU 0.45s/9.13u sec elapsed 9.57 sec
-LOG:  finished writing final run 1 to tape 0: CPU 0.45s/9.27u sec elapsed 9.71 sec
-LOG:  performsort done: CPU 0.45s/9.27u sec elapsed 9.71 sec
-LOG:  external sort ended, 24439 disk blocks used: CPU 0.76s/10.02u sec elapsed 12.57 sec
+CPU 0.24s/1.02u sec elapsed 1.84 sec.
 DEBUG:  building index "pk_t_vacuum" on table "t_vacuum"
 LOG:  begin index sort: unique = f, workMem = 16384, randomAccess = f
-LOG:  switching to external sort with 59 tapes: CPU 0.02s/0.05u sec elapsed 0.08 sec
-LOG:  performsort starting: CPU 0.44s/8.35u sec elapsed 8.79 sec
-LOG:  finished writing final run 1 to tape 0: CPU 0.45s/8.49u sec elapsed 8.93 sec
-LOG:  performsort done: CPU 0.45s/8.49u sec elapsed 8.93 sec
-LOG:  external sort ended, 24439 disk blocks used: CPU 0.80s/9.20u sec elapsed 11.64 sec
-DEBUG:  drop auto-cascades to type pg_temp_28553
-DEBUG:  drop auto-cascades to type pg_temp_28553[]
-DEBUG:  drop auto-cascades to toast table pg_toast.pg_toast_28608
-DEBUG:  drop auto-cascades to index pg_toast.pg_toast_28608_index
-DEBUG:  drop auto-cascades to type pg_toast.pg_toast_28608
+LOG:  switching to external sort with 59 tapes: CPU 0.01s/0.07u sec elapsed 0.09 sec
+LOG:  performsort starting: CPU 0.04s/0.74u sec elapsed 0.78 sec
+LOG:  finished writing final run 1 to tape 0: CPU 0.04s/0.88u sec elapsed 0.92 sec
+LOG:  performsort done: CPU 0.04s/0.88u sec elapsed 0.92 sec
+LOG:  external sort ended, 2445 disk blocks used: CPU 0.07s/0.96u sec elapsed 1.23 sec
+DEBUG:  building index "idx_ts_value" on table "t_vacuum"
+LOG:  begin index sort: unique = f, workMem = 16384, randomAccess = f
+LOG:  switching to external sort with 59 tapes: CPU 0.00s/0.07u sec elapsed 0.08 sec
+LOG:  performsort starting: CPU 0.02s/0.74u sec elapsed 0.76 sec
+LOG:  finished writing final run 1 to tape 0: CPU 0.02s/0.88u sec elapsed 0.91 sec
+LOG:  performsort done: CPU 0.02s/0.88u sec elapsed 0.91 sec
+LOG:  external sort ended, 2445 disk blocks used: CPU 0.04s/0.98u sec elapsed 1.21 sec
+DEBUG:  drop auto-cascades to type pg_temp_51919
+DEBUG:  drop auto-cascades to type pg_temp_51919[]
+DEBUG:  drop auto-cascades to toast table pg_toast.pg_toast_51949
+DEBUG:  drop auto-cascades to index pg_toast.pg_toast_51949_index
+DEBUG:  drop auto-cascades to type pg_toast.pg_toast_51949
 CLUSTER
+postgres=# 
 
 \end{lstlisting}
 
-This CLUSTER's run performs a full index scan on the clustered index avoiding the table sort. The 
-tuples are then stored into a new file node. When the build is complete then the relation's file 
-node is swapped in the system catalogue and indices are reindexed. When the command completes the 
-old file node is then removed. The entire process requires an exclusive lock on the table preventing 
-the reads and the writes. Also the storage is a critical point because the disk space 
-requirements are for the old relation plus the new one with the indices and the eventual sort on 
-disk.\newline
+CLUSTER have different strategies to order the data. In this example the chosen strategy is the sequential 
+scan and sort strategy. The tuples are stored into a new file node which is assigned to the 
+relation's relfilenode. Before completing the operation the indices are reindexed. When the CLUSTER is done 
+the old file node is removed from the disk. The process is quite invasive though. Because the 
+relation is literally rebuilt from scratch it requires an exclusive access lock which blocks the reads and 
+the writes. The storage is another critical point. There should be enough to keep old relation's data 
+files, with the new files plus the indices and the eventual sort on disk.\newline
 
 Looking at source code in \textbf{src/backend/commands/cluster.c}, is clearly stated in the 
 file's header that \textit{CLUSTER a table on an index.  This is now also used for VACUUM FULL}. 
