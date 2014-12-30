@@ -596,11 +596,10 @@ index will enforce the uniqueness regardless of its status.
 \item Concurrent index builds cannot run within a transaction block.
 \end{itemize}
 
-With the primary keys and unique constraints is also possible to use the index swap strategy with 
-an extra little trick. PostgreSQL since the version 9.1 supports the \textit{ALTER TABLE table\_name 
-ADD table\_constraint using\_index} statement. Combining this statement in a single command with a 
-DROP CONSTRAINT it's possible to swap the constraint's index without losing the uniqueness 
-enforcement.
+The primary keys and unique constraints can be swapped like the indices using a different 
+approach. PostgreSQL since the version 9.1 supports the \textit{ALTER TABLE table\_name 
+ADD table\_constraint using\_index} statement. Combining a DROP CONSTRAINT with this command is possible 
+to swap the constraint's index without losing the uniqueness enforcement.
 
 \begin{lstlisting}[style=pgsql]
 postgres=# CREATE UNIQUE INDEX pk_t_vacuum_new 
@@ -621,8 +620,7 @@ ALTER INDEX
 The example uses a regular index build and then blocks the writes. It's also possible to 
 build the new index concurrently.
 
-As this method works well for the unreferenced primary or unique keys, any foreign key 
-referencing the unique field will cause the drop constraint's failure.
+This method cannot be used though if any foreign key references the local key.
 
 \begin{lstlisting}[style=pgsql]
  postgres=# CREATE TABLE t_vac_foreign
@@ -654,12 +652,7 @@ HINT:  Use DROP ... CASCADE to drop the dependent objects too.
 
 \end{lstlisting}
 
-In this case the safest way to proceed is the conventional REINDEX. 
-
-\begin{comment}
-
-
-\end{comment}
+In this case the safest way to proceed is to run a conventional REINDEX. 
 
 
 \section{VACUUM FULL and CLUSTER}\index{VACUUM FULL}\index{CLUSTER}
