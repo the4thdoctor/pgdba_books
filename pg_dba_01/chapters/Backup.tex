@@ -1,19 +1,18 @@
 \chapter{Backup}
 \label{cha:BACKUP}
 The hardware is subject to faults. In particular if the storage is lost the entire data 
-infrastructure becomes inaccessible, sometime for good. Also human errors, like not filtered 
-delete or table drop can happen. Having a solid backup strategy is then the best protection, 
-ensuring the data is still recoverable. In this chapter we'll take a look only to the logical 
-backup with pg\_dump. 
+infrastructure becomes inaccessible, sometime for good. Also human errors, like wrong delete or table drop 
+can happen. A solid backup strategy is the best protection against these problems and much more. The 
+chapter covers the logical backup with pg\_dump. 
 
 \section{pg\_dump at glance}
 \label{sec:PGDUMP}
 As seen in \ref{sub:PGDUMP}, pg\_dump\index{pg\_dump} is the PostgreSQL's utility for saving 
-consistent backups. 
-Its usage is quite simple and if launched without options it tries to connect to the local cluster 
-with the current user sending the dump to the standard output.\newline
+consistent snapshots of the databases. The usage is quite simple and if launched without options it tries 
+to connect to the local cluster with the current user redirecting the dump's output to the standard 
+output.\newline
 
-The pg\_dump help gives useful informations about the usage.
+The help gives many useful information.
 
 \begin{verbatim}
 postgres@tardis:~/dump pg_dump --help
@@ -79,33 +78,26 @@ Connection options:
 
 \subsection{Connection options}
 \index{pg\_dump, connection options}
-The connection options specify the way the program connects to the cluster. All the options are 
-straightforward except for the password. Is possible to avoid the password prompt or to disable it 
-but the password cannot be specified on the command line. In an automated dump script this can be 
-worked around exporting the variable PGPASSWORD\index{PGPASSWORD} or using the password 
-file.\newline
+The connection options are used to specify the way the program connects to the cluster. All the options are 
+straightforward except for the password. Usually the PostgreSQL clients don't accept the plain password as 
+parameter. However is still possible to connect without specifying the password using the 
+environmental variable PGPASSWORD\index{PGPASSWORD} or using the password file.\newline
 
-The PGPASSWORD variable is considered not secure and shouldn't be used if untrusted users are 
-accessing the server. The password file is a text file named .pgpass and stored in the home 
-directory of the os user which connects to the cluster.\newline
-Each file's line specify a connection using the following format.
+Using the variable PGPASSWORD is considered not secure and shouldn't be used if  not trusted users are 
+accessing the server. The password file is a text file named saved in the users's home directory as 
+.pgpass . The file must be readable only by the user, otherwise the client will refuse to read it.\newline
+Each line specifies a connection in a fixed format.
 \index{password file}
 \begin{verbatim}
 hostname:port:database:username:password
 \end{verbatim}
 
-If, for example, we want to connect to the database \textit{db\_test} with the username 
-\textit{usr\_test} on the host \textit{tardis} with port \textit{5432} and the password is 
-\textit{testpwd}\footnote{Please, don't use this simple password on production systems but generate 
-a decent password with pwgen}, the password file will contain this row
+The following example specifies the password for the connection to the host tardis, port 5432, database 
+db_test and user usr_test.
 
 \begin{verbatim}
 tardis:5432:db_test:usr_test:testpwd
 \end{verbatim}
-
-For security reasons the file will not work if readable from the group or others. In 
-order to make it work you should issue the command chmod go-rw .pgpass . The password file is used 
-also by other PostgreSQL programs like the client psql.\newline
 
 \subsection{General options}
 \index{pg\_dump, general options}
