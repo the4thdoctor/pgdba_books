@@ -51,13 +51,16 @@ let's build build a simple table with 10 million rows.
 postgres=# CREATE TABLE t_vacuum 
         (
                 i_id serial,
-                t_ts_value timestamp with time zone DEFAULT clock_timestamp(),
+                ts_value timestamp with time zone DEFAULT clock_timestamp(),
                 t_value text,
                 CONSTRAINT pk_t_vacuum PRIMARY KEY  (i_id)
         )
 ;
 
+
+
 CREATE TABLE
+
 
 postgres=# INSERT INTO t_vacuum
         (t_value)
@@ -66,11 +69,15 @@ SELECT
 FROM
 (
         SELECT
-                generate_series(1,10000000) as i_cnt
+                generate_series(1,1000000) as i_cnt
 ) t_cnt
 ;
-INSERT 0 10000000
+INSERT 0 1000000
 
+CREATE INDEX idx_ts_value 
+        ON t_vacuum USING btree (ts_value);
+
+CREATE INDEX
 
 \end{lstlisting}
 In order to have a static environment we'll disable the table's autovacuum. We'll also increase the 
@@ -87,7 +94,7 @@ postgres=# ALTER TABLE t_vacuum
 ALTER TABLE
 
 
-SET client_min_messages='debug';
+
 
 \end{lstlisting}
 
@@ -99,7 +106,7 @@ postgres=# UPDATE t_vacuum
         SET 
                 t_value = md5(clock_timestamp()::text)
 ;
-UPDATE 10000000
+UPDATE 1000000
 
 \end{lstlisting}
 
@@ -107,48 +114,59 @@ Before running the VACUUM we'll change the maintenance\_work\_mem to a small val
 query timing.\newline
 
 \begin{lstlisting}[style=pgsql]
-postgres=# SET maintenance_work_mem ='20MB';
+postgres=# SET maintenance_work_mem ='2MB';
 SET
+SET client_min_messages='debug';
 postgres=# \timing
 Timing is on.
 
 postgres=# VACUUM t_vacuum;
 DEBUG:  vacuuming "public.t_vacuum"
-DEBUG:  scanned index "pk_t_vacuum" to remove 3495007 row versions
-DETAIL:  CPU 0.80s/4.56u sec elapsed 21.36 sec.
-DEBUG:  "t_vacuum": removed 3495007 row versions in 36031 pages
-DETAIL:  CPU 0.63s/0.56u sec elapsed 19.31 sec.
-DEBUG:  scanned index "pk_t_vacuum" to remove 3495007 row versions
-DETAIL:  CPU 0.67s/4.18u sec elapsed 15.28 sec.
-DEBUG:  "t_vacuum": removed 3495007 row versions in 36031 pages
-DETAIL:  CPU 0.67s/0.53u sec elapsed 18.07 sec.
-DEBUG:  scanned index "pk_t_vacuum" to remove 3009986 row versions
-DETAIL:  CPU 0.53s/2.86u sec elapsed 12.29 sec.
-DEBUG:  "t_vacuum": removed 3009986 row versions in 31031 pages
-DETAIL:  CPU 0.47s/0.52u sec elapsed 20.06 sec.
-DEBUG:  index "pk_t_vacuum" now contains 10000000 row versions in 82352 pages
-DETAIL:  10000000 index row versions were removed.
+DEBUG:  scanned index "pk_t_vacuum" to remove 349243 row versions
+DETAIL:  CPU 0.04s/0.39u sec elapsed 2.02 sec.
+DEBUG:  scanned index "idx_ts_value" to remove 349243 row versions
+DETAIL:  CPU 0.05s/0.40u sec elapsed 1.05 sec.
+DEBUG:  "t_vacuum": removed 349243 row versions in 3601 pages
+DETAIL:  CPU 0.05s/0.05u sec elapsed 0.94 sec.
+DEBUG:  scanned index "pk_t_vacuum" to remove 349297 row versions
+DETAIL:  CPU 0.02s/0.25u sec elapsed 0.46 sec.
+DEBUG:  scanned index "idx_ts_value" to remove 349297 row versions
+DETAIL:  CPU 0.02s/0.25u sec elapsed 0.51 sec.
+DEBUG:  "t_vacuum": removed 349297 row versions in 3601 pages
+DETAIL:  CPU 0.07s/0.04u sec elapsed 1.92 sec.
+DEBUG:  scanned index "pk_t_vacuum" to remove 301390 row versions
+DETAIL:  CPU 0.01s/0.15u sec elapsed 0.19 sec.
+DEBUG:  scanned index "idx_ts_value" to remove 301390 row versions
+DETAIL:  CPU 0.01s/0.13u sec elapsed 0.15 sec.
+DEBUG:  "t_vacuum": removed 301390 row versions in 3108 pages
+DETAIL:  CPU 0.03s/0.03u sec elapsed 2.15 sec.
+DEBUG:  index "pk_t_vacuum" now contains 1000000 row versions in 8237 pages
+DETAIL:  999930 index row versions were removed.
 0 index pages have been deleted, 0 are currently reusable.
 CPU 0.00s/0.00u sec elapsed 0.00 sec.
-DEBUG:  "t_vacuum": found 10000000 removable, 10000000 nonremovable row versions in 206186 out of 
-206186 pages
+DEBUG:  index "idx_ts_value" now contains 1000000 row versions in 8237 pages
+DETAIL:  999930 index row versions were removed.
+0 index pages have been deleted, 0 are currently reusable.
+CPU 0.00s/0.00u sec elapsed 0.00 sec.
+DEBUG:  "t_vacuum": found 1000000 removable, 1000000 nonremovable row versions in 20619 out of 20619 pages
 DETAIL:  0 dead row versions cannot be removed yet.
-There were 0 unused item pointers.
+There were 43 unused item pointers.
 0 pages are entirely empty.
-CPU 5.92s/17.08u sec elapsed 154.10 sec.
-DEBUG:  vacuuming "pg_toast.pg_toast_28499"
-DEBUG:  index "pg_toast_28499_index" now contains 0 row versions in 1 pages
+CPU 0.53s/2.05u sec elapsed 12.34 sec.
+DEBUG:  vacuuming "pg_toast.pg_toast_51919"
+DEBUG:  index "pg_toast_51919_index" now contains 0 row versions in 1 pages
 DETAIL:  0 index row versions were removed.
 0 index pages have been deleted, 0 are currently reusable.
 CPU 0.00s/0.00u sec elapsed 0.00 sec.
-DEBUG:  "pg_toast_28499": found 0 removable, 0 nonremovable row versions in 0 out of 0 pages
+DEBUG:  "pg_toast_51919": found 0 removable, 0 nonremovable row versions in 0 out of 0 pages
 DETAIL:  0 dead row versions cannot be removed yet.
 There were 0 unused item pointers.
 0 pages are entirely empty.
 CPU 0.00s/0.00u sec elapsed 0.00 sec.
 VACUUM
-Time: 154143.383 ms
+Time: 12377.436 ms
 postgres=# 
+
 
 
 \end{lstlisting}
@@ -161,37 +179,43 @@ table was cleared with a VACUUM FULL and bloated with a new update.} the index s
 which improves the VACUUM's speed.\newline
 
 \begin{lstlisting}[style=pgsql]
-postgres=# SET maintenance_work_mem ='2GB';
+postgres=# SET maintenance_work_mem ='20MB';
 SET
 
 postgres=# VACUUM t_vacuum;
 DEBUG:  vacuuming "public.t_vacuum"
-DEBUG:  scanned index "pk_t_vacuum" to remove 10000000 row versions
-DETAIL:  CPU 1.58s/8.45u sec elapsed 52.41 sec.
-DEBUG:  "t_vacuum": removed 10000000 row versions in 103093 pages
-DETAIL:  CPU 1.78s/1.41u sec elapsed 33.90 sec.
-DEBUG:  index "pk_t_vacuum" now contains 10000000 row versions in 82352 pages
-DETAIL:  10000000 index row versions were removed.
+DEBUG:  scanned index "pk_t_vacuum" to remove 999857 row versions
+DETAIL:  CPU 0.07s/0.50u sec elapsed 1.38 sec.
+DEBUG:  scanned index "idx_ts_value" to remove 999857 row versions
+DETAIL:  CPU 0.10s/0.48u sec elapsed 3.41 sec.
+DEBUG:  "t_vacuum": removed 999857 row versions in 10309 pages
+DETAIL:  CPU 0.16s/0.12u sec elapsed 2.47 sec.
+DEBUG:  index "pk_t_vacuum" now contains 1000000 row versions in 8237 pages
+DETAIL:  999857 index row versions were removed.
 0 index pages have been deleted, 0 are currently reusable.
 CPU 0.00s/0.00u sec elapsed 0.00 sec.
-DEBUG:  "t_vacuum": found 10000000 removable, 10000000 nonremovable row versions in 206186 out of 
-206186 pages
+DEBUG:  index "idx_ts_value" now contains 1000000 row versions in 8237 pages
+DETAIL:  999857 index row versions were removed.
+0 index pages have been deleted, 0 are currently reusable.
+CPU 0.00s/0.00u sec elapsed 0.00 sec.
+DEBUG:  "t_vacuum": found 1000000 removable, 1000000 nonremovable row versions in 20619 out of 20619 pages
 DETAIL:  0 dead row versions cannot be removed yet.
-There were 0 unused item pointers.
+There were 100 unused item pointers.
 0 pages are entirely empty.
-CPU 5.62s/13.64u sec elapsed 121.99 sec.
-DEBUG:  vacuuming "pg_toast.pg_toast_28499"
-DEBUG:  index "pg_toast_28499_index" now contains 0 row versions in 1 pages
+CPU 0.56s/1.39u sec elapsed 9.61 sec.
+DEBUG:  vacuuming "pg_toast.pg_toast_51919"
+DEBUG:  index "pg_toast_51919_index" now contains 0 row versions in 1 pages
 DETAIL:  0 index row versions were removed.
 0 index pages have been deleted, 0 are currently reusable.
 CPU 0.00s/0.00u sec elapsed 0.00 sec.
-DEBUG:  "pg_toast_28499": found 0 removable, 0 nonremovable row versions in 0 out of 0 pages
+DEBUG:  "pg_toast_51919": found 0 removable, 0 nonremovable row versions in 0 out of 0 pages
 DETAIL:  0 dead row versions cannot be removed yet.
 There were 0 unused item pointers.
 0 pages are entirely empty.
 CPU 0.00s/0.00u sec elapsed 0.00 sec.
 VACUUM
-Time: 122021.251 ms
+Time: 9646.112 ms
+
 
 
 \end{lstlisting}
@@ -205,6 +229,11 @@ SET
 postgres=# \timing
 Timing is on.
 
+postgres=# DROP INDEX idx_ts_value ;
+DROP INDEX
+Time: 59.490 ms
+
+
 postgres=# ALTER TABLE t_vacuum DROP CONSTRAINT pk_t_vacuum;
 DEBUG:  drop auto-cascades to index pk_t_vacuum
 ALTER TABLE
@@ -212,30 +241,49 @@ Time: 182.737 ms
 
 postgres=# VACUUM t_vacuum;
 DEBUG:  vacuuming "public.t_vacuum"
-DEBUG:  "t_vacuum": removed 10000000 row versions in 103093 pages
-DEBUG:  "t_vacuum": found 10000000 removable, 10000000 nonremovable row versions in 206186 out of 
-206186 pages
+DEBUG:  "t_vacuum": removed 1000000 row versions in 10310 pages
+DEBUG:  "t_vacuum": found 1000000 removable, 1000000 nonremovable row versions in 20619 out of 20619 pages
 DETAIL:  0 dead row versions cannot be removed yet.
-There were 0 unused item pointers.
+There were 143 unused item pointers.
 0 pages are entirely empty.
-CPU 2.16s/4.53u sec elapsed 47.30 sec.
-DEBUG:  vacuuming "pg_toast.pg_toast_28499"
-DEBUG:  index "pg_toast_28499_index" now contains 0 row versions in 1 pages
+CPU 0.06s/0.30u sec elapsed 1.55 sec.
+DEBUG:  vacuuming "pg_toast.pg_toast_51919"
+DEBUG:  index "pg_toast_51919_index" now contains 0 row versions in 1 pages
 DETAIL:  0 index row versions were removed.
 0 index pages have been deleted, 0 are currently reusable.
 CPU 0.00s/0.00u sec elapsed 0.00 sec.
-DEBUG:  "pg_toast_28499": found 0 removable, 0 nonremovable row versions in 0 out of 0 pages
+DEBUG:  "pg_toast_51919": found 0 removable, 0 nonremovable row versions in 0 out of 0 pages
 DETAIL:  0 dead row versions cannot be removed yet.
 There were 0 unused item pointers.
 0 pages are entirely empty.
 CPU 0.00s/0.00u sec elapsed 0.00 sec.
 VACUUM
-Time: 48823.132 ms
+Time: 1581.384 ms
+
 
 
 
 
 \end{lstlisting}
+
+Before proceeding let's put back the primary key and the index on the relation. We'll need it later.
+
+\begin{lstlisting}[style=pgsql]
+
+postgres=# ALTER TABLE t_vacuum ADD CONSTRAINT pk_t_vacuum PRIMARY KEY (i_id);
+DEBUG:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "pk_t_vacuum" for table "t_vacuum"
+DEBUG:  building index "pk_t_vacuum" on table "t_vacuum"
+ALTER TABLE
+Time: 1357.689 ms
+
+postgres=# CREATE INDEX idx_ts_value 
+postgres-#         ON t_vacuum USING btree (ts_value);
+DEBUG:  building index "idx_ts_value" on table "t_vacuum"
+CREATE INDEX
+Time: 1305.911 ms
+
+\end{lstlisting}
+
 
 The table seen in the example begins with a size of 806 MB . After the update the table's size is doubled. 
 After the VACUUM run the table does not shrink. This is caused because there is no contiguous free space in 
@@ -480,14 +528,13 @@ Time: 11876.807 ms
 
 \end{lstlisting}
 
-The reindex performs a data sort which does not fit in the maintenance\_work\_mem. PostgreSQL then 
-starts a slower disk sort to build up the index. The first LOG entry with \textit{begin index 
-sort:} shows the available maintenance\_work\_mem for the index sort. If after the table scan the 
-available memory is exhausted then an external sort on disk will happen. Otherwise a faster sort in 
-memory will build the index. Increasing then the maintenance\_work\_mem  can improve the reindex. 
-Unfortunately the determining the value when the sort in memory happens is not simple and can just 
-be guessed from the index size. The previous reindex with 1 GB maintenance\_work\_mem runs 40\% 
-faster.
+The reindex performs a data sort but maintenance\_work\_mem does not fit the table's data. PostgreSQL 
+then starts a disk sort in order to build up the index. The way PostgreSQL determines whether sort 
+on disk or in memory should use follow this simple rule. If after the table scan the maintenance work 
+memory is exhausted then will be used a sort on disk. That's the reason why increasing the 
+maintenance\_work\_mem  can improve the reindex. Determining the correct value for this parameter is 
+quite tricky.\newline
+This is the reindex using 1 GB for the maintenance\_work\_mem.
 
 \begin{lstlisting}[style=pgsql]
 postgres=# \timing
@@ -509,29 +556,42 @@ Time: 6964.196 ms
 
 \end{lstlisting}
 
-The reindex create a completely new file node for the index and when the build is complete, the 
-pg\_class entry is then updated with the new relfilenode value and old file node is deleted. The 
-entire sequence can be emulated creating a new index with a different name with the CREATE 
-INDEX\index{CREATE INDEX} statement. After the index is ready, dropping the old one, renaming 
-the new index to the old name, will result in a brand new index without blocking the 
-reads.\newline
+After the sort the reindex creates a new index file from the sorted data which is changed in the system 
+catalogue's pg\_class.relfilenode. When the reindex's transaction commits the old file node is deleted. The 
+sequence can be emulated creating a new index with a different name. The old index can be dropped safely 
+and the new one renamed to the old's name. This approach have the advantage of not blocking the 
+table's reads using the old index.\newline
 
-Since the version 8.2 PostgreSQL supports the CREATE INDEX CONCURRENTLY\index{CREATE INDEX 
-CONCURRENTLY} which doesn't block reads nor writes. Using this method, the index creation 
-starts adding a new invalid index in the system catalogue starting a first table scan to builds 
-the entries without caring for the changing data. When the first build is complete a second table 
-scan fixes the not consistent tuple's references and finally the index's status is set to valid 
-becoming available. This approach, combined with the swap strategy can limit greatly the 
-impact of the index maintenance. \newline
+\begin{lstlisting}[style=pgsql]
+
+postgres=# CREATE INDEX idx_ts_value_new 
+                ON t_vacuum USING btree (ts_value);
+CREATE INDEX
+
+postgres=# DROP INDEX idx_ts_value;
+DROP INDEX
+postgres=# ALTER INDEX idx_ts_value_new 
+                RENAME TO idx_ts_value;
+ALTER INDEX
+
+\end{lstlisting}
+
+
+
+From the version 8.2 PostgreSQL supports the CREATE INDEX CONCURRENTLY statement\index{CREATE INDEX 
+CONCURRENTLY} which doesn't block the cluster's activity. With this method  the index creation 
+adds a new invalid index in the system catalogue then starts a table scan to build the dirty index. A 
+second table scan is then executed to fix the invalid index entries and, after a final validation 
+the index becomes valid. \newline
 
 The concurrent index build have indeed some caveats and limitations.
 \begin{itemize}
- \item Any problem with the table scan will fail the command and leave behind an invalid index 
-which is ignored for the reads but adds overhead for the inserts and updates.
+ \item Any problem with the table scan will fail the command and leaving an invalid index in place.
+This relation is not used for the reads but adds an extra overhead to the inserts and updates.
 \item When building an unique index concurrently this start enforcing the uniqueness when the 
 second table scan starts. Some transactions could then start reporting the uniqueness violation 
-before the index becomes available and if the build fails during the second scan then 
-the \textit{invalid} index continues to enforce the uniqueness.
+before the index becoming available. In the case the build fails on the second table scan the invalid
+index will enforce the uniqueness regardless of its status.
 \item Regular index builds can run in parallel on the same table. Concurrent index builds cannot.
 \item Concurrent index builds cannot run within a transaction block.
 \end{itemize}
