@@ -724,104 +724,92 @@ relation is literally rebuilt from scratch it requires an exclusive access lock 
 the writes. The storage is another critical point. There should be enough to keep old relation's data 
 files, with the new files plus the indices and the eventual sort on disk.\newline
 
-Looking at source code in \textbf{src/backend/commands/cluster.c}, is clearly stated in the 
-file's header that \textit{CLUSTER a table on an index.  This is now also used for VACUUM FULL}. 
-The only difference between VACUUM FULL and CLUSTER, is the clustered index's OID validity. If 
-it's valid then the data output is sorted on the clustered index. How the data is sorted is 
-determined by the planner, which choice is the cheapest between an index scan and the sequential 
-scan with a data sort. Otherwise, if the index's OID is invalid then the tuples are read using a 
-plain sequential scan.\newline
+Taking a look to source code in \textbf{src/backend/commands/cluster.c}, show us how CLUSTER and VACUUM 
+FULL do the same job with a slight difference. VACUUM FULL does not sort the new relation's data..\newline
 
-VACUUM FULL and CLUSTER have beneficial effects on the storage as the space is returned to the 
-operating system. Also, regenerating completely the relation's files with the reindex, it makes the 
-page access more efficient and CLUSTER rebuilds the table on the clustered index order. This 
-minimise the random disk seeks when accessing the data via clustered index.\newline
+VACUUM FULL and CLUSTER have some beneficial effects on the disk storage as the space is returned to the 
+operating system and improve the indices performance because the implicit reindex.\newline
 
-The disadvantages for using those commands are the complete stop of the affected table's activity. 
-Also, CLUSTER and VACUUM FULL do not fix the XID wraparound risk which the conventional VACUUM 
-does.\newline
+The blocking nature of those commands have an unavoidable impact on the cluster's activity. Unlike the 
+conventional VACUUM, CLUSTER and VACUUM FULL should run when the cluster is not in use or in a maintenance 
+window. CLUSTER and VACUUM FULL do not fix the XID wraparound failure.\newline
 
-As rule of thumb, in order to minimise the database's downtime, CLUSTER and the VACUUM FULL should 
-be used only for extraordinary maintenance and only if the disk space is critical. For the day to 
-day maintenance it's best to rely on VACUUM and occasionally the reindex as seen in \ref{sec:VACUUM} 
-and \ref{sec:REINDEX}.
+As rule of thumb, in order to minimise the database's downtime, CLUSTER and VACUUM FULL should be used only 
+for the extraordinary maintenance and only if the disk space is critical.
  
 
 
 \section{The autovacuum}\index{AUTOVACUUM}
 \label{sec:AUTOVACUUM}
-The autovacuum daemon appeared with the revolutionary PostgreSQL version 8.0. With the version 8.3 
-was also enabled by default because reliable and efficient. Having the autovacuum turned on is a 
-good idea because all the maintenance is done automatically by the system. The number of workers to 
-start is not simple to determine. Each process consumes a connection slot and changing the 
-number of workers requires the cluster's restart. Turning off autovacuum does't disable it, the 
-worker starts automatically to vacuum tables near to the transacion ID and multixact ID wraparound 
-failure. In order to have autovacuum working the statistic collector must be enabled with 
-track\_counts= 'on'.\newline
+The autovacuum daemon was introduced in the revolutionary PostgreSQL 8.0. From the version 8.3 was enabled 
+by default because reliable and efficient. With autovacuum turned on the maintenance and the statistic 
+gathering is done automatically by the cluster. Turning off autovacuum it doesn't disable completely the 
+daemon. Actually the workers are started automatically to prevent the XID and multixact ID wraparound 
+failure, regardless of the setting. In order to have autovacuum working the statistic collector must be 
+enabled with track\_counts= 'on'.\newline
 
-
-The autovacuum behaviour is controlled using few GUC parameters.
+The following parameters control the autovacuum behaviour.
 
 \subsection{autovacuum} 
 This parameter is used to enable or disable the autovacuum daemon. Changing the setting requires 
-the cluster's restart. Turning autovacuum off never disables the daemon completely. The autovacuum 
-process will start in any case for tables with XID older than autovacuum\_freeze\_max\_age
+the cluster's restart. 
 
 \subsection{autovacuum\_max\_workers} 
 The parameter sets the maximum number of autovacuum subprocesses. Changing the setting requires the 
-cluster's restart and each subprocess consumes one PostgreSQL connection.
+cluster's restart. Each subprocess consumes one PostgreSQL connection.
 
 \subsection{autovacuum\_naptime} 
 The parameter sets the delay between two autovacuum runs on a specified database.The delay is 
 measured in seconds and the default value is 1 minute.
 
-
 \subsection{autovacuum\_vacuum\_scale\_factor}
-This parameter and the next one controls when the autovacuum is triggered. This one specifies the 
-fraction of table to add to autovacuum\_vacuum\_threshold in order to determine whether start the 
-vacuum. The default is 0.2,  20\% of the table. This setting can be overridden for individual 
-tables by changing storage parameters.
+The parameter one specifies the fraction of the relation's live tuples to add to 
+autovacuum\_vacuum\_threshold in order to determine whether start the automatic VACUUM. The default is 0.2, 
+which is the table's 20\%. This setting can be overridden for individual tables by changing the storage 
+parameters.
 
 \subsection{autovacuum\_vacuum\_threshold}
-This parameter sets the minimum number of a table's updated or deleted tuples needed to trigger 
-a VACUUM. The default is 50 tuples. This setting can be overridden for individual 
-tables by changing storage parameters. For example, if we have a 10 million rows table with both 
-parameters set to default, the autovacuum will start after 2,000,050 update or delete.
+This parameter sets the extra threshold of updated or deleted tuples to add to the value determined 
+from autovacuum\_vacuum\_scale\_factor. The value is used to trigger an automatic VACUUM. The default is 50 
+tuples. This setting can be overridden for individual tables by changing the storage parameters. For 
+example a table with 10 million rows and autovacuum\_vacuum\_threshold, autovacuum\_vacuum\_scale\_factor 
+set both to their default values, the autovacuum will start after when 2,000,050 tuples are updated or 
+deleted.
 
 \subsection{autovacuum\_analyze\_scale\_factor}
-This parameter and the next one controls when the auto analyse is triggered. This one specifies the 
-fraction of table to add to autovacuum\_analyze\_threshold in order to determine whether start the 
-vacuum. The default is 0.1,  10\% of the table. This setting can be overridden for individual 
-tables by changing storage parameters.
+The parameter specifies the fraction of table to add to autovacuum\_analyze\_threshold in order to determine 
+whether start the automatic ANALYZE. The default is 0.1, which is the table's 10\%. This setting can be 
+overridden for individual tables by changing storage parameters.
 
 \subsection{autovacuum\_analyze\_threshold}
-This parameter sets the minimum number of a table's updated or deleted tuples needed to trigger an 
-ANALYZE. The default is 50 tuples. This setting can be overridden for individual 
-tables by changing storage parameters. For example, if we have a 10 million rows table with both 
-parameters set to default, the autovacuum will start after 1,000,050 update or delete.
+This parameter sets the extra threshold of updated or deleted tuples to add to the value determined from 
+autovacuum\_analyze\_scale\_factor. The value is used to  trigger an automatic ANALYZE. The default is 50 
+tuples. This setting can be overridden for individual tables by changing the storage parameters. For 
+example a 
+table with 10 million rows and autovacuum\_analyze\_scale\_factor,autovacuum\_analyze\_threshold set both 
+to their default values will start an automatic ANALYZE when 1,000,050 tuples are updated or deleted.
 
 \subsection{autovacuum\_freeze\_max\_age}
-The parameter sets the maximum age of the table's pg\_class.relfrozenxid, in transactions, after 
-the VACUUM is forced to avoid the transaction ID wraparound. The process will start also if the 
-autovacuum is disabled. The parameter can be set only at server's start but is possible to reduce 
-the value per table by changing the storage parameter.
+The parameter sets the maximum age for the pg\_class's relfrozenxid. When the value is exceeded then an 
+automatic VACUUM is forced on the relation to prevent the XID wraparound. The process will start 
+even if the autovacuum is turned off. The parameter can be set only at server's start but is possible to 
+set the value per table by changing the storage parameters.
 
 \subsection{autovacuum\_multixact\_freeze\_max\_age}
-The parameter sets the maximum age of the table's pg\_class.relminmxid, in transactions, after 
-the VACUUM is forced to avoid the multixact ID wraparound. The process will start also if the 
-autovacuum is 
-disabled. The parameter can be set only at server's start but is possible to reduce the value per 
-table by changing the storage parameter.
+The parameter sets the maximum age of the table's pg\_class's relminmxid. When the value is exceeded then 
+an automatic VACUUM is forced on the relation to prevent the  multixact ID wraparound. The process will 
+start even if the autovacuum is turned off. The parameter can be set only at server's start but is possible 
+to set the value per table by changing the storage parameters.
 
 \subsection{autovacuum\_vacuum\_cost\_delay}
-The parameter sets the cost delay to use in automatic VACUUM operations. If set to -1, the regular 
+The parameter sets the cost delay to use in the automatic VACUUM operations. If set to -1, the regular 
 vacuum\_cost\_delay value will be used. The default value is 20 milliseconds. 
 
 \subsection{autovacuum\_vacuum\_cost\_limit}
-The parameter sets  cost limit value to be used in automatic VACUUM operations. 
-If set to -1 then the regular vacuum\_cost\_limit value will be used. The default value is -1.
-The value is distributed among the running autovacuum workers. The sum of the limits of each worker 
-never exceeds this variable. More informations on cost based vacuum here \ref{sub:VACUUMCOST}.
+The parameter sets  cost limit value to be used in the automatic VACUUM operations. If set to -1 then the 
+regular vacuum\_cost\_limit value will be used. The default value is -1. The value is distributed among the 
+running autovacuum workers. The sum of the limits of each worker never exceeds this variable. More 
+information on cost based vacuum here \ref{sub:VACUUMCOST}.
 
 
 
