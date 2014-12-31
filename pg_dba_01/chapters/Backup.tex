@@ -315,20 +315,15 @@ from the version 9.3 can do a paralell restore with the directory format as well
 
 \section{pg\_dumpall}
 \index{pg\_dumpall}
-The pg\_dumpall program is more very basic version of pg\_dump. It's usage is mainly for 
-dumping all the databases in the cluster. Having lesser options than pg\_dump is also less 
-flexible. However one option is absolutely useful and should be included in any backup plan to 
-ensure a rapid disaster recovery.\newline
+pg\_dumpall does not have all the pg\_dump's options. The program basically dumps all the 
+cluster's databases in plain format.\newline
 
-The\index{pg\_dumpall, global objects} --globals-only option saves on the standard output all the 
-cluster wide options like the tablespaces, the roles and the privileges. The passwords are dumped as 
-well, encrypted in md5 format if stored this way. The utility output is just plain text. 
-The best way to save the globals is to specify the -f option followed by the file name. This file 
-can be loaded into an empty cluster to recreate the global objects. The tablespaces, if any present, 
-must have the filesystem already in place before running the sql as PostgreSQL doesn't create the 
-filesystem structure.\newline
+However, pg\_dumpall \index{pg\_dumpall, global objects} is very useful because the switch --globals-only . 
+With this option pg\_dumpall saves the the global object definitions in plain text.\newline
 
-This example shows the program call and the contents of the output file.
+This includes the tablespace definitions, the users which are saved with their passwords. 
+
+The following example shows the program's execution and the contents of the output file.
 \begin{lstlisting}[style=pgsql]
 postgres@tardis:~/dmp$ pg_dumpall --globals-only -f main_globals.sql
 postgres@tardis:~/dmp$ cat main_globals.sql 
@@ -359,27 +354,21 @@ postgres@tardis:~/dmp
 
 \section{Backup validation}
 \index{backup validation}
-There's little advantage in having a backup if this is not restorable. The corruption danger is at 
-various levels and unfortunately the problem appears only when the restore is needed.\newline 
+There's little advantage in having a backup if this is not valid. The corruption can happen at 
+various levels and unfortunately when the problem is detected is too late.\newline 
 
-The corruption have many causes. If the dump is saved locally a damaged filesystem can hide the 
-problem meanwhile the corrupted block is not read. Also the disk subsystem with undetected problems 
-will result in a silent corruption. In order to limit this kind of problems the filesystem of 
-choice should be a solid one with strong journaling support.\newline
+A corrupted filesystem an hardware problem or a network issue can result in an invalid dump archive. 
 
-The disk subsystem should guarantee the data reliability rather the speed. Slow disks when backing 
-up the data, in particular if in the compressed format don't limit the speed, being the cpu power 
-the real bottleneck.\newline
-If the dump file is transferred over the network is a good idea to generate a md5 checksum to 
-check the file integrity after the transfer.\newline
+The filesystem of choice should be solid and with a reliable journal. The disk subsystem should 
+guarantee the data reliability rather the speed. The network interface and the connections should be 
+efficient and capable of handling the transfer without problems. Using the md5 checksum over the archive 
+file is a good technique to check the file's integrity after the transfer.\newline
 
-All those measures don't give the security the backup is restorable. The only test capable to 
-ensure the backup is good is a test restore on separate server. This can be a single test or a more 
-structured check. Which strategy to adopt is determined by the amount of data, the time required 
-for the restore and the backup schedule.\newline
+Obviously  this don't give us the certain the backup can be restore. It's important then running a 
+periodical check for the restore. The strategy to use is determined by the amount 
+of data, the time required for the restore and the backup schedule.\newline
 
 The general purpose databases, which size is measurable in hundreds of gigabytes, the restore can 
 complete in few hours and the continuous test is feasible. For the VLDB, which size is measured in 
 terabytes, the restore can take more than one day, in particular if there are big indices requiring 
-expensive sort on disk for the build. In this scenario a weekly restore gives a good perception if 
-there are potential problems with the saved data. 
+expensive sort on disk for the build. In this case a test on a weekly basis is more feasible.
