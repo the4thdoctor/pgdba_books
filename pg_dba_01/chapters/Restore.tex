@@ -514,79 +514,73 @@ pg_restore: setting owner and privileges for FK CONSTRAINT fk_t_city_i_id_city
 
 \section{Restore performances}
 
-When restoring a database, in particular in a disaster recovery scenario, the main goal is 
-to have the data back on line as fast as possible. Usually the data section's restore 
-is fast. If the dump has been taken using the copy statements, which are enabled by default, 
-the reload requires a fraction of the entire restore's time. Taking the advantage of the parallel 
-jobs, available for the custom and directory format, it's still possible to improve the data 
-section's reload.\newline
+When the disaster happens the main goal is to get the database up and running as fast as possible. 
+Usually the data section's restore, if saved with the COPY is usually fast.\newline 
 
-The other face of the coin is the post-data section. Because the objects in this section are mostly 
-random access operations, the completion can require more time than the data section itself; even 
-if the size of the resulting objects is smaller than the table's data. This happens because the 
-unavoidable sort operations are CPU and memory bound. The parallel restore gives some advantage, 
-but as seen in \ref{sec:PGDUMPBINFMT} each loop's process is single threaded. \newline
+The bottleneck is the post-data section which requires CPU intensive operations with random disk access 
+operations. In large databases this section can require more time than the entire data section even 
+if the objects built by the post-data section are smaller. The parallel can improve the speed but 
+sometimes is not enough. \newline
 
-Setting up an emergency postgresql.conf file can speed up the restore, reducing the time up to 40\% 
-than the production's configuration. What it follows assumes the production's database is lost and 
-the data is restored from a custom format's backup. 
+The postgresql.conf file can be tweaked in order to improve dramatically restore's speed up to the 40\% 
+compared to production's configuration. This is possible because the restore configuration disables some 
+settings used by PostgreSQL to guarantee the durability. The emergency configuration must be swapped with 
+the production settings as soon as the restore is complete to avoid a further data loss. What follows 
+assumes the production's database is lost and restore is reading from a custom format's backup. 
 
 \subsection{shared\_buffers}
-When reloading the data from the dump, the database performs a so called bulk load operation. The 
-PostgreSQL's memory manager have a subroutine which protects the shared segment from the block 
-eviction caused by IO intensive operations. It's then very likely the ring buffer strategy will be 
-triggered by the restore, sticking the IO in a small 4 MB buffer protecting the rest of the memory. 
-A big shared buffer it can cache the data pages when in production but becomes useless when 
-restoring. A smaller shared buffer, enough to hold the IO from  the restore processes will result 
-in more memory available for the backends when processing the post-data section. There's no fixed 
-rule for the sizing. A gross approximation could be 10 MB for each parallel job with a minimum cap 
-of 512 MB.   
+When Bulk load operations like reloading a big amount of data into the database generates an high eviction 
+rate from the shared buffer without caching. Reducing the size of the shared buffer will not affect the 
+load. Therefore more memory will be available for the backends when processing the post-data section. 
+There's no fixed rule for the sizing. A gross approximation could at least 10 MB for each parallel job 
+with a minimum shared buffer's size of 512 MB.   
 
 \subsection{wal\_level}
-The wal\_level parameter sets the level of redo informations stored in the WAL segments. By default 
-is set to minimal, enabling the xlog skip. Having the database in with a standby, or simply using 
-the point in time recovery as alternate backup strategy requires the parameter to be set to archive 
-or hot\_standby. If this is the case and you have a PITR or standby to failover, stop reading 
-this book and act immediately. Restoring from a physical backup is several time faster than a 
-logical restore. If you have lost the standby or PITR snapshot then before starting the reload the 
-wal\_level must be set to minimal.
+The parameter wal\_level sets the amount of redo records to store in the WAL segments. 
+By default is the value is to minimal which is used for the standalone clusters. If the cluster feeds a 
+standby server or there is a the point in time recovery setup, the wal\_level must be at least archive 
+or hot\_standby. If there is a PITR or a standby server available for the recover stop reading this book 
+and act immediately. Restoring from a physical backup is several time faster rather a logical restore. 
+Otherwise, the standby or PITR snapshot is lost as well, before starting the reload the wal\_level must be 
+set to minimal to reduce the WAL generation rate.
 
 \subsection{fsync}
-Turning off fsync can improve massively the restore's speed. Having this parameter turned off
-is not safe, unless the cache is have the backup battery to prevent data loss in case of power
-failure. However, even without the battery at restore time having the fsync off is not critical.
-After all the database is lost, what else can happen?
+Turning off fsync can improve the restore's speed. Unless there is a backup battery on the disk 
+cache, turning off this parameter in production is not safe and can lead to data loss in case of power
+failure. 
 
 \subsection{checkpoint\_segments, checkpoint\_timeout}
-The checkpoint is a vital event in the database activity. When occurs all the pages not yet written
-to the data files are synced to disk. This in the restore context is a disturbance. Increasing the
-checkpoint segments and the timeout to the maximum allowed values will avoid any extra IO. In any
-case the dirtied blocks will be written on disk when the buffer manager will need to free some
-space.
+The checkpoint is a periodic event in the database activity. When occurs all the dirty pages in the 
+shared buffer are synced to disk. This can interfere with the restore's bulk operations. Increasing the
+checkpoint segments and the checkpoint timeout to the maximum allowed will limit the unnecessary IO caused 
+by the frequent checkpoints.
 
 
 \subsection{autovacuum}
-There's no point in having vacuumed the tables after a complete reload. Unfortunately autovacuum
-does not know if a table is being restored. When the limit for the updated tuples is recognised the
-daemon starts a new process wasting precious CPU cycles. Turning off temporarily the setting will
-let the backends to stay focused on the main goal. The data restore.
+Turning off the autovacuum will avoid to have the tables meanwhile are restored reducing the unnecessary 
+IO. 
 
 
 \subsection{max\_connections}
-Limiting the max connections to number of restore jobs is a good idea. It's ok also giving a slight
-headroom for one or two connections, just in case there's need to log in and check the database
-status. This way the available memory can be shared efficiently between the backends.
+Reducing the max connections to the number of restore jobs plus an extra headroom of five connections will 
+limit the memory consumption caused by the unused memory slots. 
+
+\subsection{port and listen\_addresses}
+When the database is restoring nobody except pg\_restore and the DBA should connect it. Changing the port 
+to a different value and disabling the listen addresses except the localhost is a quick and easy 
+solution to avoid the users messing up with the restore process.
 
 \subsection{maintenance\_work\_memory}
-This parameter affects the index builds which are stored in the restore's post-data section. Low 
-values will results in the backends sorting on disk and slowing down the entire process. Higher
-values will keep the index build in memory with great speed gain. The value should be carefully
-sized keeping in mind the memory available on the system. This value should be reduced by a 20\% if
-the total ram is up to 10 GB and by 10\% if bigger. This reduction is needed to consider the memory
-consumed by the operating system and the other processes. From the remaining ram must be subtracted
-the shared\_buffer's memory. The remaining value must be divided by the expected backends to
-perform the restore. For example if we have a system with 26GB a shared\_buffer of 2 GB and 10
-parallel jobs to execute the restore, the maintenance\_work\_mem is  2.14 GB.
+This parameter affects post-data section's speed. With low values the backends will sorting the data on 
+disk slowing down the restore. Higher values will build the new indices in memory improving the speed. 
+However the value's size should be set keeping in mind how much ram is available on the system. This value 
+should be reduced by a 20\% if the total ram lesser than to 10 GB. For bigger amount of memory the 
+reduction should be the 10\%. This will leave out from the estimate the memory consumed by the operating 
+system and the other processes. From the remaining memory ram scould be removed the the shared\_buffer's 
+memory. Finally the remaining value must be divided by the max connections.\newline
+
+Let's consider a a system with 26GB ram. If we set the shared\_buffer to 2 GB and 10 max connections, the 
+maintenance\_work\_mem will be 2.14 GB.
 \newpage
 \begin{verbatim}
 26 - 10% =  23.4
@@ -594,4 +588,3 @@ parallel jobs to execute the restore, the maintenance\_work\_mem is  2.14 GB.
 21.4 / 10 = 2.14
 \end{verbatim}
 
-Ignoring this recommendation can trigger the swap usage resulting in a slower restore process.
