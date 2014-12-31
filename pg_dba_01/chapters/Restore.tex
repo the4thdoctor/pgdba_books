@@ -571,7 +571,7 @@ to a different value and disabling the listen addresses except the localhost is 
 solution to avoid the users messing up with the restore process.
 
 \subsection{maintenance\_work\_memory}
-This parameter affects post-data section's speed. With low values the backends will sorting the data on 
+This parameter affects the post-data section's speed. With low values the backends will sort the data on 
 disk slowing down the restore. Higher values will build the new indices in memory improving the speed. 
 However the value's size should be set keeping in mind how much ram is available on the system. This value 
 should be reduced by a 20\% if the total ram lesser than to 10 GB. For bigger amount of memory the 
