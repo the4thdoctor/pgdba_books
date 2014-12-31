@@ -279,19 +279,17 @@ locks resolve the problem but this requires a cluster restart.
 \section{pg\_dump under the bonnet}
 \label{sec:PGDUMPINT}
 \index{pg\_dump, internals}
-The pg\_dump source code gives a very good picture of what exactly the backup 
-software does. The process runs into with fixed transaction's isolation level accordingly with the 
-server's version. 
-The distinction is required because, becoming PostgreSQL more sophisticated at each major release, 
-the isolation levels became more and more strict with their meanings.\newline
-More informations about the transactions are in \ref{sec:TRANSACTION}.\newline
-From PostgreSQL 9.1 the transaction serializable became a real serialisation. The 
-transaction's behaviour offered by the serializable in the version up to 9.0 were assigned to the 
-REPETABLE READ transaction's isolation, its real kind. The SERIALIZABLE transaction's isolation 
-level is still used with DEFERRABLE option when pg\_dump is executed with 
-the option --serializable-deferrable as seen in \ref{sub:PGDUMPOUTPUT}. The switch have effect only 
-on the remote server with version 9.1 and later. The transaction is also set to READ ONLY, when 
-supported by the server, in order to limit the XID generation. \newline
+The pg\_dump source code gives a very good picture of what pg\_dump does. 
+
+The first thing the process does is setting the correct transaction's isolation level. Each server's 
+version requires a different isolation level.\newline
+
+PostgreSQL up to the version 9.0 implements a soft SERIALIZABLE isolation which worked more like the 
+REPETABLE READ. From the version 9.1 the SERIALIZABLE isolation level becomes strict. The 
+strictiest level SERIALIZABLE is used with DEFERRABLE option only when pg\_dump is executed with 
+the option --serializable-deferrable The switch have effect only on the remote server with version 9.1 and 
+later though. The transaction is also set to READ ONLY, when supported by the server, in order to reduce 
+the XID generation. \newline
 
 \begin{table}[H]
   \begin{tabular}{ll}
@@ -305,18 +303,15 @@ supported by the server, in order to limit the XID generation. \newline
   \caption{\label{tab:TRNPGDUMP}pg\_dump's transaction isolation levels }
 \end{table}
 
-From the version 9.3 pg\_dump supports the parallel dump using the feature seen in  
-\ref{sub:SNAPEXPORT}. As the snapshot export is supported from the version 9.2 this permit a 
-parallel dump from the older major version if using the newer backup program. However, 
-pg\_dump accepts the option --no-synchronized-snapshots in order to dump in parallel jobs 
-from the older versions. The data is not supposed to be consistent if there are  read write 
-transactions during this kind of export. To have a consistent export in this case all the 
-transactions which modify the data must be stopped meanwhile the export is in progress.\newline 
+From the version 9.3 pg\_dump supports also the parallel dump using the feature seen in  
+\ref{sub:SNAPEXPORT}. The snapshot export is also supported in the version 9.2 which offers this 
+improvement on the previous version as well. However, using the option --no-synchronized-snapshots tells 
+pg\_dump to not issue a snapshot export. This allows a parallel backup from the versions without the 
+snapshot exports. In order to have the data export consistent the database should stop the write 
+operations for the time required to all the export processes to connect.\newline 
 
-When exporting in parallel the only permitted format is the directory. The pg\_restore program 
-since the version 9.3 supports also the directory format for the paralelle data restoration.
-The combination of the parallel jobs backup and the parallel jobs restore, can improve massively 
-either the backup and the recovery speed in case of disaster.
+The parallel dump is available only with the directory format. The pg\_restore program 
+from the version 9.3 can do a paralell restore with the directory format as well.
 
 \section{pg\_dumpall}
 \index{pg\_dumpall}
