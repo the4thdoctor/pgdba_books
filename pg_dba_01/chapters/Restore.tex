@@ -213,24 +213,21 @@ db_addr_restore=# \d
 \section{The binary formats}
 \label{sec:PGDUMPBINFMT}
 The three binary formats supported by pg\_dump are the custom, the directory and the tar format. 
-The first two can be accessed randomly by the restore program and have the parallel restore 
-support, being the best choice for having a flexible and reliable restore. Before the the 9.3 the 
-only format supporting the parallel restore was the custom. With this version the directory 
-format accepts the -j switch. This feature, combined with the parallel dump seen in 
-\ref{sec:PGDUMPINT} is a massive improvement for saving big amount of data. The tar format does 
-have the limit of 12 GB in the archive's file size and doesn't offer the parallel restore nor the 
-selective restore. \newline
+The first two support the selective access when restoring and the parallel execution. Those features 
+make them the best choice for a flexible and reliable backup. Before the the 9.3 the only format supporting 
+the parallel restore was the custom format. The latest version extended the functionality to the directory 
+format which, combined with the parallel dump improves massively the recovery performances on big amount of 
+data. The tar format which its limitations is suitable for saving only small amount of data. \newline
 
-The custom format is a binary archive with a table of contents pointing the various archive 
-sections. The directory format is a directory which name is the value provided with the -f switch. 
-The directory contents are a toc.dat file, where the table of contents and the schema are stored. 
-For each table there is a gzip file which name is a number corresponding to the toc entry for the 
-saved relation. Those files store the data restore for the relation.\newline
+The custom format is a binary archive. It have a table of contents which can address the the data saved 
+inside the archive. The directory format is composed by toc.dat file where the schema is stored alongside 
+with the references to the zip files where the table's contents are saved. For each table there is a gz 
+mapped inside the toc. Each file contains  command, COPY  or inserts, for reloading the data in the 
+specific table.\newline
 
 
-The restore from the binary formats requires the pg\_restore usage. Because almost 
-all the pg\_dump's switches are supported by pg\_restore we'll not repeat the look out. Take a look 
-to  \ref{sec:PGDUMP} for the switch meanings. Anyway this is the pg\_restore's help output.
+The restore from the binary happens via the pg\_restore program which have almost the same switches 
+as pg\_dump's as seen in \ref{sec:PGDUMP}. This is the pg\_restore's help output.
 \newline 
 
 \begin{verbatim}
@@ -291,39 +288,35 @@ Report bugs to <pgsql-bugs@postgresql.org>.
 \end{verbatim}
 
 
-If the database connection is omitted pg\_restore sends the output to the standard output. The 
-switch -f sends the output to a filename though. This is very useful if we want to check the 
-original dump file is readable, executing a restore onto the /dev/null device.\newline
-The the custom and directory formats show their power when restoring on a database 
-connection in a multi core system. Using the -j switch it's possible to specify the number of 
-parallel jobs for the data and the post data section. This can improve massively the 
-recovery time, running the most time consuming actions in multiple processes.\newline
+pg\_restore requires a file to process and an optional database connection. If the latter is omitted 
+the output is sent to the standard output. However, the switch -f specifies a file where to send the 
+output instead of the standard output. This is very useful if we want just check the original dump file 
+can be read, for example, redirecting the output to /dev/null.\newline
 
-The word \textit{parallel} can be confusing in some way. PostgreSQL does not supports 
-multithreading. That means each backend process will use just only one cpu. In this context, each 
-job take care of a different area of the restore's table of contents, The TOC is split in 
-many queues with a fixed object list to process. For example one queue will contain the data 
-restoration for a table, and the relation's indices and constraints.\newline
+The speed of a restoring from custom or directory, using a database connection, can be massively improved 
+on  a multi core system with the -j switch which specifies the number of parallel jobs to run when 
+restoring the data and the post data section. \newline
 
-The switch --section offers a fine grain control on which section of the archived data will be 
-restored. In a custom and directory format there are three distinct sections. 
+As said before PostgreSQL does not supports the multithreading. Therefore each parallel job will use just 
+only one cpu over a list of obects to restore determined when pg\_resotore is started.\newline
+
+The switch --section works the same way as for pg\_dump controlling the section of the archived data to 
+restore. The custom and directory format have these sections. 
 \begin{itemize}
- \item \textbf{pre-data} This section restores only the schema definitions not affecting the speed 
-and reliability of the data restore. e.g. table's DDL, functions creation, extensions, etc.
-\item  \textbf{data} The data restore itself, by default saved as COPY statements to speed up the 
-process
-\item  \textbf{post-data} This section runs the restore for all the objects enforcing the data 
-integrity, like the primary and foreign keys, triggers and the indices which presence during the 
-restore slow down the data reload massively.
+ \item \textbf{pre-data} This section contains the schema definitions without the keys, indices  and 
+triggers.
+\item  \textbf{data} This section contains the tables's data contents.
+\item  \textbf{post-data} This section contains the objects enforcing the data integrity alongside with the 
+triggers and the indices.
 \end{itemize}
 
-The switch -C creates the target database before starting the restoration. To do this the 
-connection must happen first on another database. \newline
+The switch -C is used to create the target database before starting the restore. The connections need 
+also a generic database to connect in order to create the database listed in the archive. \newline
 
-We'll now will see how to restore the database seen in \ref{sec:PLAINFORMAT} in the same two 
-steps approach, using the custom format.\newline
+The following example shows the restore of the database created in \ref{sec:PLAINFORMAT} using the 
+custom format, using the schema and the data restore.\newline
 
-Let's start with a complete database dump using the custom format. 
+First we'll do a pg\_dump in custom format.
 
 \begin{verbatim}
 postgres@tardis:~/dump$ pg_dump -Fc -f db_addr.dmp  db_addr
@@ -377,7 +370,7 @@ pg_dump: dumping contents of table t_city
 
 \end{verbatim}
 
-We'll use a second database for the restore.
+We'll then create a new database for restoring the archive.
 
 \begin{lstlisting}[style=pgsql]
 postgres=# CREATE DATABASE db_addr_restore_bin;
@@ -385,7 +378,7 @@ CREATE DATABASE
 
 \end{lstlisting}
 
-We'll then restore just the schema using the following command.
+The schema restore is done with using the following command.
 
 \begin{verbatim}
 postgres@tardis:~/dump$ pg_restore -v -s -d db_addr_restore_bin db_addr.dmp 
@@ -425,15 +418,12 @@ pg_restore: setting owner and privileges for FK CONSTRAINT fk_t_city_i_id_city
 
 \end{verbatim}
 
-The dump file is specified as last parameter. The -d switch tells pg\_restore which database to 
-connect for the restore. By default the postgres user usually connects using the ident 
-operating system daemon or the trust authentication method, when connected as local. That's the 
-reason why in this example there's no need of specifying the username or enter the 
-password.\newline 
+The dump file is specified as last parameter. The -d switch tells pg\_restore in which database restore 
+the archive. Because we are connecting locally and with the postgres os user, there is no need to specify 
+the authentication parameters.\newline 
 
-The second restore's step is the data load. In the example seen in \ref{sec:PLAINFORMAT} we used 
-the pg\_dump with --disable-triggers switch in order to avoid failures caused by constraint 
-violation. With the custom format the switch is used at restore time.
+Then we are ready to load the data. We'll disable again the triggers in order to avoid potential data 
+load failures as seen in \ref{sec:PLAINFORMAT}.
 
 \begin{verbatim}
 postgres@tardis:~/dump$ pg_restore --disable-triggers -v -a -d db_addr_restore_bin db_addr.dmp 
@@ -453,14 +443,11 @@ pg_restore: setting owner and privileges for SEQUENCE SET t_city_i_id_city_seq
  
 \end{verbatim}
 
-However, this approach does not prevent the slowness caused by the indices when reloading the data.
-If a restore with multiple steps is required (e.g. creating the database schema and check all the 
-relations are in place before starting) the section switch is a better choice. Let's see how it 
-works with the example seen before.\newline
+The problem with this approach is the presence of the indices when loading the data which is a massive 
+bottleneck. Using the --section instead of the schema and data reload improves the restore 
+performance.\newline
 
-We'll first restore the pre-data section\footnote{Don't forget to clear the existing objects in 
-the database.}.
-
+The pre-data section will restore just the bare relations.
 \begin{verbatim}
 postgres@tardis:~/dump$ pg_restore --section=pre-data -v  -d db_addr_restore_bin db_addr.dmp 
 pg_restore: connecting to database for restore
@@ -493,9 +480,7 @@ pg_restore: setting owner and privileges for DEFAULT i_id_city
  
 \end{verbatim}
 
-
-Again the pg\_restore loads the objects with the ownership and privileges. What's missing is the 
-constraints creation. The second step is the data section's load.
+The data section will then load the data contents as fast as possible.
 
 \begin{verbatim}
 postgres@tardis:~/dump$ pg_restore --section=data -v  -d db_addr_restore_bin db_addr.dmp 
@@ -512,8 +497,7 @@ pg_restore: setting owner and privileges for SEQUENCE SET t_city_i_id_city_seq
 
 \end{verbatim}
 
-This section simply loads the table's data and sets the sequence values. Apart for the ownership no 
-further action is performed. Finally we'll run the post-data section.
+Finally, the post-data section will create the constraint and the indices over the existig data.
 
 \begin{verbatim}
 postgres@tardis:~/dump$ pg_restore --section=post-data -v  -d db_addr_restore_bin db_addr.dmp 
@@ -527,11 +511,6 @@ pg_restore: setting owner and privileges for FK CONSTRAINT fk_t_city_i_id_city
 
 \end{verbatim}
 
-With this run the constrains (and eventually all the indices) are created in the best 
-approach possible when dealing with the bulk data processing. \newline
-
-Loading the data contents without indices maximise the speed. The constraint and index build with 
-the data already in place results in a faster build and a fresh index without any bloat.
 
 \section{Restore performances}
 
