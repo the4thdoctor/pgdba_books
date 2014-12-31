@@ -234,69 +234,47 @@ whereas ALTER OWNER doesn't.
 
 \section{Performance tips}
 \index{pg\_dump, performance tips}
-Despite the fact pg\_dump doesn't affects the running queries, its strict transactional approach 
-have some effects on the affected schema. Any alter schema is blocked until the backup's end. The 
-vacuum efficiency is affected as well, because all the dead rows generated during the backup's run, 
-cannot be reclaimed being potentially required by the backup's running transaction.\newline
-
-There are some tips to improve the backup's speed.
+pg\_dump is designed to have a minimal impact on the running cluster.  However, any DDL on the saved 
+relations is blocked until the backup' end. VACUUM is less effective when the backup is in progress because 
+the dead rows generated meanwhile pg\_dump is running, cannot be freed, because still required by the 
+dump's transaction.\newline
 
 \subsection{Avoid remote backups}
-The pg\_dump can connect to remote databases same like any other PostgreSQL client.
-It seems reasonable then to use the program installed on a centralised storage and to dump locally 
-from the remote cluster.\newline 
-Unfortunately even using the compressed format, the entire database flows uncompressed and in 
-clear, from the server to the remote pg\_dump. The compression happens locally when the data is 
-received.\newline
-This approach expose also a network security issue. If the environment is not trusted then the 
-remote connection must happen on a secure channel. This add an extra overhead to the transfer and 
-any failure on this layer will fail the entire backup.\newline
-A far better approach is to save locally the database, using the local connection if possible, and 
-then copy the entire dump file using a secure transfer protocol like scp or sshfs.
+The pg\_dump can connect to remote databases like any other PostgreSQL client. It seems reasonable then to 
+use the program installed on a centralised storage and to dump locally from the remote cluster. 
+Unfortunately even using the compressed format, the entire database flows uncompressed over the network 
+from the database server to the remote pg\_dump receiver because the compression is done by the 
+receiver.\newline
+
+A far better approach is to save locally the database and then copy the entire dump file using remote copy 
+program like rsync or scp.
 
 \subsection{Skip replicated tables}
-If the database is configured as logical slave in slony or londiste for example, backing up the 
-replicated table's data is not important as the contents are re synchronised from the master when 
-the node is attached to the replication system. The switch --exclude-table-data=TABLE is then 
-useful for dumping the table's definition only without the contents.
+If the database is configured as logical slave, backing up the replicated table's data is not important as 
+the contents are re synchronised from the master when the node is re attached to the replication system. 
+The switch --exclude-table-data=TABLE is then useful for dumping just the table's definition without 
+the contents.
 
 \subsection{Check for slow cpu cores}
-PostgreSQL is a multitasking but not a multithreaded database system. Each backend is attached 
-to just one cpu. The pg\_dump opens one backend connection to the cluster in order to 
-export the database objects. The pg\_dump process receives the data flow from the backend and it 
-saves performing also the optional compression. In this scenario the cpu power is critical in order 
-to avoid a bottleneck. This could be helped using the parallel export offered by pg\_dump from the 
-version 9.3. The functionality is implemented via  the snapshot exports. As this was introduced 
-with PostgreSQL 9.2 the paralle export can happen only from this version and only if the output 
-format is directory . 
+PostgreSQL is not multi threaded. Each backend is attached to just one cpu core. When pg\_dump starts it 
+opens one backend on the cluster which is used to export the database objects. The pg\_dump process receives 
+the data output from the backend saving in the chosen format. The single cpu's speed is then critical to 
+avoid a bottleneck. The recently introduced parallel export, implemented with the snapshot exports can 
+improve sensibly the pg\_dump performance.
 
 \subsection{Check for the available locks}
-PostgreSQL at various level uses the locks to ensure the data consistency at various levels. For 
-example, when a table is read an access share lock on the relation is put in order to avoid any 
-structure change. Any backend issuing an ALTER TABLE which affect the table structure, will wait 
-for the lock to be released before acquiring itself an exclusive lock and then perform the change.
-The relation's locks are stored into the pg\_locks table. This table is quite unique because have 
-a limited number of rows. The maximum number of table's lock slot is determine with this simple 
-formula.\newline
+PostgreSQL uses the locks in order to enforce the schema and data consistency. For example, when a table is 
+accessed for reading, then an access share lock is set preventing any structure change. The locks on the 
+relations are stored into the pg\_locks table. This table is quite unique because have a limited amount of 
+rows determined with the formula.\newline
 \begin{math}
  max_locks_per_transaction * (max_connections + max_prepared_transactions)
 \end{math}\newline
 
-The default configuration permits have only 6400 table's lock slots. This value is generally OK. 
-However, if the database have a great number of relations, a full backup, pg\_dump could hit the 
-slot limit and fail with an out of memory error.\newline
-All the three GUC parameters require a restart to apply the new changes so is very important to 
-plan the change before the limit is reached. 
-
-\subsection{Try to use flexible formats}
-This is more a good practice suggestion rather a performance tip. Exporting the database in plain 
-text have some advantages. Is possible to load the dump just using psql and any file's corruption 
-can be managed in a simple way; if the damage is limited of course. The custom and directory 
-formats need the pg\_restore utility for the restoration. We'll take a look to this approach in 
-\ref{cha:RESTORE}. Anyway, the custom and directory formats have alongside with the compression, 
-the parallel restore feature and the selective restoration. The compression can be fine tuned to 
-suit the export's nature. In this era of ``big data'' is something to consider seriously.
-
+The default settings allow just 6400 lock slots. This value is generally OK. 
+However, if the database have complex schema with hundreds of relations, the backup can exhaust the 
+available slots and fail with an out of memory error. Adjusting the parameters involved in the compute of 
+locks resolve the problem but this requires a cluster restart.
 
 \section{pg\_dump under the bonnet}
 \label{sec:PGDUMPINT}
