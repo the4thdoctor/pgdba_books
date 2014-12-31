@@ -1,41 +1,36 @@
 \chapter{Restore}
 \label{cha:RESTORE}
-There's little advantage in saving the data if the recover is not possible. 
-In this chapter we'll take a look to the fastest and safest way to restore recover the saved 
-dump.\newline
+There's little advantage in saving the data if the restore is not possible. In this chapter we'll take a 
+look to the fastest and possibly the safest way to restore the saved dump.\newline
 
-The backup format determines which program will be used for the restore. 
-We'll take a look first on the restore from plain format. Later we'll see how the custom and 
-directory formats are the best choice, giving flexibility and performance at restore time. Finally 
-we'll see how to improve database performances at restore time sacrificing temporarily the 
-reliability.
+The program used for the restore is determined by the dump format. We'll first take a look to the restore 
+using a plain format then the custom and  the directory formats. Finally we'll the way to improve 
+the restore performances with a temporary sacrifice of the cluster's reliability.
 
 \section{The plain format}
 \label{sec:PLAINFORMAT}
-As seen in \ref{cha:BACKUP} the pg\_dump by default saves the entire database in plain format. This 
-is an SQL script offering nothing but a straightforward reload strategy. Feeding the saved file 
-into psql rebuilds completely the objects.\newline
+As seen in \ref{cha:BACKUP} the pg\_dump's output is plain SQL. The generated script gives no choice but 
+loading it into psql. The SQL statements are parsed and executed in sequence.\newline
 
-This format have few advantages. For example it's possible to edit the statement using a common 
-text editor. This of course if the dump is reasonably small. Even loading a file with vim when 
-its size is measured in gigabytes becomes a stressful experience.\newline
+This format have few advantages. For example it's possible to edit the statements using a common 
+text editor. This of course if the dump is reasonably small. Even loading a file with vim when its size is 
+measured in gigabytes becomes a stressful experience though.\newline
 
-The data is saved by default in the copy format. This guarantee the best performances at load time. 
-It's still possible to save the data using the inserts but this will result in a very slow restore, 
-having each statement to be parsed and planned.\newline
+The data contents are saved using the COPY command. At restore time this choice have the best performance.
 
-Saving the schema and data in two separate files requires also an extra care at dump time. 
-Restoring from a data only plain backup will very likely result in tables with foreign keys 
-having their data missing because the key violation. \newline
+It's possible to save the data contents using the inserts. The restore is indeed very slow because each 
+statement has to be parsed, planned and executed.\newline
 
-In order to avoid the problem, at backup time and  when running a data only backup, the switch 
---disable-triggers should be used. This will emit the DISABLE TRIGGER statements before the data 
-load and the ENABLE TRIGGER after the data is consistently restored. The following example will 
-show a dump reload session with the separate schema and data save.
+If the backup saves the schema and the data in two separate files this requires extra care at dump time if 
+there are triggers and foreign keys in the database schema. 
 
-Let's create the simple data structure. We'll create a new database with a table for the addresses 
-and another one for the cities. Between the cities an the addresses a foreign key will enforce the 
-relation on the id city column.
+The data only backup should include the switch --disable-triggers which writes emit the DISABLE 
+TRIGGER statements before the data load and the ENABLE TRIGGER after the data is restored.\newline
+
+The following example shows a dump/reload session using the separate schema and data dump files.
+
+Let's create a new database with a simple data structure. Two tables storing a city and the address 
+and a foreign key between them enforcing the referential integrity.
 
 \begin{lstlisting}[style=pgsql]
 postgres=# CREATE DATABASE db_addr;
@@ -69,7 +64,7 @@ ALTER TABLE
 
 \end{lstlisting}
 
-Now let's put some data into it.
+Now let's put some data into the tables.
 
 \begin{lstlisting}[style=pgsql]
 INSERT INTO t_city
@@ -111,8 +106,8 @@ db_addr=# INSERT INTO t_address
 
 \end{lstlisting}
 
-We'll now execute two dumps one for the schema and one for the data without the disable triggers 
-switch.
+We'll now execute dump the schema and the data in two separate plain files. Please note we are not using 
+the --disable-triggers switch.
 
 \begin{verbatim}
 postgres@tardis:~/dmp$ pg_dump --schema-only db_addr > db_addr.schema.sql
@@ -124,16 +119,17 @@ Looking to the schema dump it's quite obvious what it does. All the DDL are save
 order to restore the same database structure .\newline
 The data is then saved by pg\_dump in the correct order for having the referential integrity 
 guaranteed. In our very simple example the table t\_city is dumped before the table t\_address. 
-This way the data will not violate the foreign key. In a scenario where a complex structure 
-is dumped, this cannot be guaranteed. Let's run the same dump with the option --disable-trigger.
+This way the data will not violate the foreign key. In a complex scenario where multiple foreign keys are 
+referring the same table, the referential order is not guaranteed. Let's run the same 
+dump with the option --disable-trigger.
 
 \begin{verbatim}
 postgres@tardis:~/dmp$ pg_dump --disable-triggers --data-only db_addr > db_addr.data.sql
 
 \end{verbatim}
 
-The copy statements in this case are enclosed by two extra statements for disabling and re enabling 
-the triggers.
+The copy statements in this case are enclosed by two extra statements which disable and then re enable the 
+triggers.
 
 \begin{lstlisting}[style=pgsql]
 
@@ -148,13 +144,10 @@ ALTER TABLE t_address ENABLE TRIGGER ALL;
 
 \end{lstlisting}
 
-This way the FOREIGN KEY's triggers with any user defined trigger, will be disabled during the 
-restore, ensuring the data will be safely stored. After the restoration the enable will restore any 
-constraint enforcement.\newline
+The foreign keys and all the user defined trigger will not fire during the data restore, ensuring 
+the data will be safely stored and improving the speed.\newline
 
-The data saved in plain format is then restored using the command line client psql.
-
-Let's then create a new database and restore it the saved dumps, first schema and then the data.
+Let's then create a new database where we'll restore the dump starting from the saved schema.
 
 \begin{lstlisting}[style=pgsql]
 postgres=# CREATE DATABASE db_addr_restore;
