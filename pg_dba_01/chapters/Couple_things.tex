@@ -1,60 +1,59 @@
 \chapter{A couple of things to know before start coding...}
 \label{cha:COUPLETHINGS}
-This chapter is completely different from the rest of the book. It's dedicated to the developers. 
-PostgreSQL is a fantastic infrastructure for building powerful and scalable applications. In order 
-to use al its potential there are some things to consider. In particular if coming from other DBMS 
-there are subtle caveats that can make the difference between a magnificent success or a miserable 
-failure. 
+This chapter is to the developers approaching the PostgreSQL universe. PostgreSQL is a fantastic 
+infrastructure for building powerful and applications. In order to use it at its best,  some things to 
+consider. In particular some subtle caveats can make the difference between a magnificent success or a 
+miserable failure. 
 
 \section{SQL is your friend}
-Recently the rise of the NOSQL approach,has shown more than ever how SQL is a fundamental 
-requirement for managing the data efficiently. All the shortcuts, like the ORMs or the SQL 
-engines implemented over the NOSQL systems, sooner or later will show their limits. Despite the 
-bad reputation around it, the SQL language is very simple to understand. 
-Purposely built with few simple English words is a powerful tool set for accessing, managing or 
-defining the data model. Unfortunately this simplicity have a cost. The language must be parsed and 
-converted into the database structure and sometimes there is a misunderstanding between 
-what the developer wants and what the database understands.\newline 
+Recently the rise of the NOSQL engines, has shown more than ever how SQL is a fundamental requirement for 
+managing the data efficiently. Shortcuts to the solution, like the ORMs sooner or later will show their 
+limits. Despite the bad reputation the SQL language is very simple to understand, with few English keywords
+and a powerful structured syntax which interacts perfectly with the regulated database layer. 
+This simplicity have a cost. The language is parsed and converted into the database's structure causing 
+sometimes misunderstanding between developer requests and the database results.\newline 
 
 Mastering the SQL is a slow and difficult process and requires some sort of empathy with the DBMS. 
-Asking for advice to the database administrator is a good idea to get introduced in the the 
-database mind. Having a few words with the DBA is a good idea in any case though.
+Asking for advice to the database administrator when building any design is a good idea to have a better 
+understanding of what the database thinks. Having a few words with the DBA is a good idea in any case 
+though.
 
-\section{Design comes first}
+\section{The design comes first}
 One of the worst mistakes when building an application is to forget about the foundation, the 
-database. With the rise of the ORM\footnote{Yes, I hate the ORMs} this is happening 
-more frequently than it could be expected. Sometimes the database itself is considered as 
-\textit{storage}, one of the biggest mistake possible.\newline
+database. With the rise of the ORM\footnote{Yes, I hate the ORMs} this is happening more frequently than it 
+could be expected. Sometimes the database itself is considered just storage, a big mistake.\newline
 
-Forgetting about the database design is like building a skyscraper from the top. If 
-unfortunately the project is successful there are good chances to see it crumbling down instead of 
-making money.\newline
-In particular one of the PostgreSQL's features, the MVCC, is completely ignored at design time. 
-In \ref{sec:MVCC} it's explained how is implemented and what are the risks when designing a data 
-model. It doesn't matter if the database is simple or the project is small. Nobody knows how 
-successful could be a new idea. Having a robust design will make the project to scale properly.
+The database design is either a complex and important and too much delicate to make it using by a dumb 
+automatic tool. For example, using a generic abstraction layer will build access methods that will almost 
+certainly ignore the PostgreSQL peculiar update strategy, resulting in bloat and general poor 
+performance.\newline
+
+It doesn't matter if the database is simple or the project is small. Nobody knows how successful could be 
+a new idea. A robust design will make the project scale properly.
 
 \section{Clean coding}
-One of the the first things a developer learns is how to write formatted code. The purpose of 
-having clean code is double. It simplifies the code's reading to the other developers and 
-improves the code management when, for example, is changed months after the writing. In this good 
-practice the SQL seems to be an exception. Is quite common to find long queries written all 
-lowercase, on one single line with keywords used as identifier. Trying just to understand what such 
-query does is a nightmare. What follow is a list of good practice for writing decent SQL and avoid 
-a massive headache to your DBA. If you don't have a DBA see \ref{sec:GETDBA}.
+Writing decently formatted code is something any developer should do. This have a couple of immediate 
+advantages. Improves the code readability when other developers need review it. Makes the code more 
+manageable when, for example, is read months after it was written. This good practice forgets constantly 
+to include the SQL. Is quite common to find long queries written all lowercase on one line with and the 
+keywords used as identifier.\newline
+
+Trying to read such queries is a nightmare. Often it takes more time in reformatting the queries rather 
+doing the performance tuning. The following guidelines are a good reference for writing decent SQL and 
+avoid a massive headache to the DBA.
 
 \subsection{The identifier's name}
-Any DBMS have its way of managing the identifiers. PostgreSQL transforms the identifier's name in  
-lowercase. This doesn't work very well with the camel case, however it's still possible to mix
-upper and lower case letters enclosing the identifier name between double quotes. This makes the
-code difficult to read and to maintain. Using the underscores in the old fashion way it makes
-things simpler.
+Any DBMS have its way of managing the identifiers. PostgreSQL converts all lowercase. This doesn't work very 
+well with the camel case. It's still possible to mix upper and lower case letters enclosing the identifier 
+name between double quotes. But that means the quoting should be put everywhere. Using the underscores 
+instead of the camel case is simpler.
 
 \subsection{Self explaining schema}
-When a database structure becomes complex is very difficult to say what is what and how 
-it relates with the other objects. A design diagram or a data dictionary can help. But they can be 
-outdated or maybe are not generally accessible. Adopting a simple prefix to add to the relation's
-name will give an immediate outlook of the object's kind.\newline
+When a database structure becomes complex is very difficult to say what is what and how relates with the 
+other objects. A design diagram or a data dictionary can help. But they can be outdated or not available. 
+Using a simple notation to add to the relation's name will give an immediate outlook of the object's 
+kind.\newline
+
 
 \begin{table}[H]
 \begin{tabular}{ll}
@@ -105,9 +104,8 @@ Custom data type & ty\_ \\
 
 
 \subsection{Query formatting}
-Having a properly formatted query helps to understand which objects are involved in the data
-retrieval and the relations between them. Even with a very simple query a careless writing can make
-it very difficult to understand.
+Having a properly formatted query helps to understand which objects are involved in the request and their 
+relations. Even a simple query can be difficult to understand if badly written.
 
 
 \begin{lstlisting}[style=pgsql]
@@ -115,31 +113,32 @@ select * from debitnoteshead a join debitnoteslines b on debnotid
 where a.datnot=b. datnot and b.deblin>1;
 \end{lstlisting}
 
-A query like this have many issues .\newline
+Let's list the query's issues.
 
 \begin{itemize}
- \item using lowercase keywords it makes difficult to spot them
-\item the wildcard * hides which columns are effectively needed; it retrieves all the columns
-consuming more bandwidth than required; it prevents the index only scans
-\item the meaningless aliases like \textit{a} and \textit{b} it make difficult to understand which
-relations are involved.
-\item writing a statement with no indenting it makes difficult to understand the query's
-logic.
+ \item using lowercase keywords it makes difficult to distinguish them from the identifiers
+\item the wildcard * mask which fields  are really needed; returning all the fields consumes more bandwidth 
+than required; it prevents the index only scans 
+\item the meaningless aliases like \textit{a} and \textit{b} are confusing the query's logic
+\item without proper indention the query logic cannot be understood
 \end{itemize}
 
 Despite existence of tools capable to prettify such queries, their usage doesn't solve the
-root problem. It's better to write immediately decent SQL following those simple rules.
+root problem. Writing decently formatted SQL helps to create a mental map of what the query should removing 
+as well the confusion when building the SQL. \newline
+
+The following rules should be kept in mind constantly when writing SQL.
 
 \begin{itemize}
  \item All SQL keywords should be in upper case
- \item All the identifiers and kewrords should be grouped by line break and indented at the same
-level
- \item In the SELECT list specify all and only the columns required by the query
- \item Avoid the auto join in order to make clear the relation's logic
+ \item All the identifiers and keywords should be grouped at same indention level and separated with a line 
+break 
+ \item In the SELECT list avoid the wildcard *
+ \item Specify explicitly the join method in order to make it clear the query's logic
  \item Adopt meaningful aliases
 \end{itemize}
 
-And that's the fixed SQL.
+This is the prettified query.
 
 \begin{lstlisting}[style=pgsql]
 SELECT
@@ -163,23 +162,20 @@ WHERE
 \label{sec:GETDBA}
 The database administration is weird. It's very difficult to explain what a DBA does. It's a job
 where the statement ``failure is not an option" is the rule number zero. A DBA usually works in
-antisocial hours, with a very limited time window. A DBA holds a lot on the shoulders and that's
-the reason why those people can seem hostile or living in their own world.\newline
+antisocial hours, with a very tight time schedule.\newline
 
 Despite the strange reputation, a database expert is an incredible resource for building up
-efficient and scalable designs. Nowadays is very simple to set up a PostgreSQL instance. Even with
-the default configuration parameter the system is so efficient that basically doesn't show any
-problem when running at low or medium load. If this, at first sight, seems a fantastic feature
-actually is a really bad thing. Any mistake at design level is hidden and when the problem sooner or
-later appears is too late.\newline
+efficient designs. Nowadays is very simple to set up a PostgreSQL cluster. Even with the default 
+configuration the system is so efficient that under normal load doesn't show any problem. This could look 
+like a fantastic feature but actually is a really bad thing. Any mistake at design level is hidden and when 
+the problem appears is maybe too late to fix it.\newline
 
 This final advice is probably the most important of the entire chapter. If you have a DBA don't be
-shy. Ask for any suggestion, even if the solution seems obvious or if the task is small. The
-database layer is a completely different universe. A small mistake can result in a
-very big problem.\newline
+shy. Ask for any suggestion, even if the solution seems obvious or if the design seems simple. The
+database layer is a universe full of pitfalls where a small mistake can result in a very big 
+problem.\newline
 
 Of course if there's no DBA, that's bad. Never sail without a compass. Never start a database
-project without an expert. A professional to take care of the most important part, the
+project without an expert's advice. Somebody to look after of the most important part of the business, the
 foundations.\newline
 
-If this is the case, ask your employer to hire a PostgreSQL DBA as soon as possible.

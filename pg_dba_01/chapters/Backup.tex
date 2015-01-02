@@ -1,19 +1,18 @@
 \chapter{Backup}
 \label{cha:BACKUP}
 The hardware is subject to faults. In particular if the storage is lost the entire data 
-infrastructure becomes inaccessible, sometime for good. Also human errors, like not filtered 
-delete or table drop can happen. Having a solid backup strategy is then the best protection, 
-ensuring the data is still recoverable. In this chapter we'll take a look only to the logical 
-backup with pg\_dump. 
+infrastructure becomes inaccessible, sometime for good. Also human errors, like wrong delete or table drop 
+can happen. A solid backup strategy is the best protection against these problems and much more. The 
+chapter covers the logical backup with pg\_dump. 
 
 \section{pg\_dump at glance}
 \label{sec:PGDUMP}
 As seen in \ref{sub:PGDUMP}, pg\_dump\index{pg\_dump} is the PostgreSQL's utility for saving 
-consistent backups. 
-Its usage is quite simple and if launched without options it tries to connect to the local cluster 
-with the current user sending the dump to the standard output.\newline
+consistent snapshots of the databases. The usage is quite simple and if launched without options it tries 
+to connect to the local cluster with the current user redirecting the dump's output to the standard 
+output.\newline
 
-The pg\_dump help gives useful informations about the usage.
+The help gives many useful information.
 
 \begin{verbatim}
 postgres@tardis:~/dump pg_dump --help
@@ -79,79 +78,68 @@ Connection options:
 
 \subsection{Connection options}
 \index{pg\_dump, connection options}
-The connection options specify the way the program connects to the cluster. All the options are 
-straightforward except for the password. Is possible to avoid the password prompt or to disable it 
-but the password cannot be specified on the command line. In an automated dump script this can be 
-worked around exporting the variable PGPASSWORD\index{PGPASSWORD} or using the password 
-file.\newline
+The connection options are used to specify the way the program connects to the cluster. All the options are 
+straightforward except for the password. Usually the PostgreSQL clients don't accept the plain password as 
+parameter. However is still possible to connect without specifying the password using the 
+environmental variable PGPASSWORD\index{PGPASSWORD} or using the password file.\newline
 
-The PGPASSWORD variable is considered not secure and shouldn't be used if untrusted users are 
-accessing the server. The password file is a text file named .pgpass and stored in the home 
-directory of the os user which connects to the cluster.\newline
-Each file's line specify a connection using the following format.
+Using the variable PGPASSWORD is considered not secure and shouldn't be used if  not trusted users are 
+accessing the server. The password file is a text file named saved in the users's home directory as 
+.pgpass . The file must be readable only by the user, otherwise the client will refuse to read it.\newline
+Each line specifies a connection in a fixed format.
 \index{password file}
 \begin{verbatim}
 hostname:port:database:username:password
 \end{verbatim}
 
-If, for example, we want to connect to the database \textit{db\_test} with the username 
-\textit{usr\_test} on the host \textit{tardis} with port \textit{5432} and the password is 
-\textit{testpwd}\footnote{Please, don't use this simple password on production systems but generate 
-a decent password with pwgen}, the password file will contain this row
+The following example specifies the password for the connection to the host tardis, port 5432, database 
+db\_test and user usr\_test.
 
 \begin{verbatim}
 tardis:5432:db_test:usr_test:testpwd
 \end{verbatim}
 
-For security reasons the file will not work if readable from the group or others. In 
-order to make it work you should issue the command chmod go-rw .pgpass . The password file is used 
-also by other PostgreSQL programs like the client psql.\newline
-
 \subsection{General options}
 \index{pg\_dump, general options}
-The general options are a set of switches used to control the backup's output and format. 
+The general options are used to control the backup's output and format. 
 
-The -f followed by the FILENAME outputs the backup on file.\newline
+The switch -f sends the backup on the specified FILENAME.\newline
 
-The \index{pg\_dump, output formats} -F specifies the backup format and requires a second 
-option to tell pg\_dump which format to 
-use. The option can be one of those, \textit{c d t p} which corresponds to 
+The switch \index{pg\_dump, output formats} -F specifies the backup format and requires a second 
+option to tell pg\_dump which format to use. The allowed formats are \textit{c d t p} respectively 
 \textit{custom directory tar plain}.\newline
 
-If the parameter is omitted then pg\_dump uses the p format. This outputs a SQL script which 
-recreates the objects when loaded into an empty database. The format is not compressed and is 
-suitable for direct load using the client psql. 
+If the parameter is omitted pg\_dump uses the plain text format. not compressed and suitable for the direct 
+load using psql. \newline
 
-The the custom together with the directory format is most versatile format. It offers compression 
-and flexibility at restore time. The file offers the parallel restore functionality and the 
-selective restore of single objects.\newline
+The the custom and the directory format are the most versatile backup formats. They give compression and 
+flexibility at restore time. Both have the parallel and selective restore option.\newline
 
-The directory format stores the schema dump, the dump's table of contents alongside with the 
-compressed data dump in the directory specified with the -f switch. Each table is saved in a 
-different file and is compressed by default. From the version 9.3 this format offers the parallel 
-dump functionality. \index{pg\_dump, parallel export}\newline
+The directory format stores the schema dump in a toc file. Each table's content is then saved in a 
+compressed file inside the target directory specified with the -f switch. From the version 9.3 this format 
+allows the parallel dump functionality\index{pg\_dump, parallel export}. \newline
 
-The tar format stores the dump in the conservative tape archive format. This format is compatible 
-with directory format, does not supports compression and have the 8 GB limit on the size of 
-individual tables.\newline
+The tar format stores the dump in the well known tape archive format. This format is compatible 
+with the directory format, does not compress the data and there is the limit of 8 GB for the individual
+table.\newline
 
-The -j option specifies the number of jobs to run in parallel for dumping the data. This feature 
-appeared in the version 9.3 and uses the transaction's snapshot export to give a consistent data 
-snapshot to the export jobs. The switch is usable only with the directory format and only 
-with PostgreSQL 9.2 and later.\newline 
+The -j option specifies the number of jobs to run in parallel when dumping the data. This feature is 
+available from the version 9.3 and uses the transaction's snapshot export to have a consistent dump over 
+the multiple export jobs. The switch is usable only with the directory format and only with PostgreSQL 9.2 
+and later.\newline 
 
 The option -Z specifies the compression level for the compressed formats. The default is 5 
 resulting in a dumped archive from 5 to 8 times smaller than the original database. 
 
 The option --lock-wait-timeout is the number of milliseconds for the table's lock acquisition. 
 When expired the dump will fail. Is useful to avoid the program to wait forever for a table lock 
-but can result in failed backups if set too much low.
+but can result in failed backups if value is too much low.
 
 \subsection{Output options}
 \index{pg\_dump, output options}
 \label{sub:PGDUMPOUTPUT}
-The output options control the way the program outputs the backup. Some of those options are 
-meaningful only under specified conditions, other are quite obvious.\newline
+The output options control backup output. Some of those options are meaningful only under certain 
+conditions, some others are quite obvious.\newline
 
 The -a option sets the data only export. Separating schema and data have some effects at restore 
 time, in particular with the performance. We'll see in the detail in \ref{cha:RESTORE} how to 
@@ -164,175 +152,144 @@ The options -c and -C are meaningful only for the plain output format. They resp
 DROP and CREATE command before the object's DDL. For the archive formats the same option exists for 
 pg\_restore.\newline
 
-The -E specifies the character encoding for the archive. If not set the origin database encoding 
-will be used.\newline 
+The -E specifies the character encoding for the archive. If not set the database's encoding is 
+used.\newline 
 
 The -n switch is used to dump the named schema only. It's possible to specify multiple -n switches 
-to select many schemas or using the wildcards. However despite the efforts of pg\_dump to get all 
+to select many schema or using the wildcards. However despite the efforts of pg\_dump to get all 
 the dependencies resolved, something could be missing. There's no guarantee the resulting archive 
 can be successfully restored.\newline
 
-The -N switch does the opposite of the -n switch. Skips the named schema. Accepts wildcards and 
-it's possible to specify multiple schemas with multiple -N switches. When both -n and -N are given, 
-the behavior is to dump just the schemas that match at least one -n switch but no -N switches. If -N 
-appears without -n, then schemas matching -N are excluded from what is otherwise a normal 
-dump.\newline
+The -N switch does the opposite of the -n switch. Excludes the named database schema from the backup. The 
+switch accepts wildcards and it's possible to specify multiple schema with multiple -N switches. When both 
+-n and -N are given, the behaviour is to dump just the schema that match at least one -n switch but no -N 
+switches. \newline
 
-The -o option dumps the object id as part of the table for every table. This options should be 
-used only if the OIDs are part of the design. Otherwise this option shouldn't be used.\newline
+The -o switch option dumps the object id as part of the table for every table. This options should be 
+used only if the OIDs are part of the design. \newline
 
-The -O have effects only on plain text exports and skips the object ownership set.\newline
+The -O switch have effects only on plain text exports and does not dump statements setting object 
+ownership.\newline
 
-The -s option dumps only the database schema.\newline
+The -s switch option dumps only the database schema.\newline
 
-
-The -S option is meaningful only for plain text exports. This is the super user which disables the 
-triggers if the export is performed with the option --disable-triggers. Anyway, as suggested on the 
-manual, it's better to run the restoring script as superuser.\newline
+The -S switch is meaningful only for plain text exports. The switch specifies the super user for disabling 
+and enabling the triggers if the export is performed with the option --disable-triggers. \newline
 
 The -t switch is used to dump the named table only. It's possible to specify multiple tables using 
-the wildcards or specifying the -t more.\newline
+the wildcards or specifying the -t many times.\newline
 
-The -T does the opposite, skips the named table in the dump.\newline
+The -T skips the named table in the dump. It's possible to exclude multiple tables using 
+the wildcards or specifying the -T many times.\newline
 
-The switch -x skips dumping the privileges settings usually dumped as grant/revoke commands.\newline
+The switch -x does not save the grant/revoke commands for setting the privileges.\newline
 
-The option --binary-upgrade is used only for the in place upgrade program pg\_upgrade. Is not 
-for general usage. 
+The switch --binary-upgrade is used only for the in place upgrade program pg\_upgrade. Is not intended for 
+general usage. 
 
-The option --column-inserts result in the data exported as INSERT commands with all the column 
-names specified. Because by default the data is saved as COPY statement, using this switch will 
-results in a bigger dump file and a very slow restore. It's sole advantage is any error in the 
-restore will skip just the affected row and not the entire table's load.\newline
+The switch --insert option dumps the data as INSERT command instead of the COPY. The restore with this 
+option is very slow because each statement is parsed and executed individually.\newline
 
-The --disable-dollar-quoting disables the newer dollar quoting for the function's body and uses the 
+The switch --column-inserts results in the data exported as INSERT commands with all the column 
+names specified.\newline
+
+The switch --disable-dollar-quoting disables the dollar quoting for the function's body and uses the 
 standard SQL quoting.\newline
 
-The --disable-triggers emits the triggers disable 
-and re enable for the data only export. Disabling the triggers ensure the foreign keys won't fail 
-for the missing referenced data. This switch is meaningful only for the plain text export.\newline
+The switch --disable-triggers save the statements for disabling  the triggers before the data load and the 
+enabling them back after the data load. Disabling the triggers will ensure the foreign keys will not cause 
+errors during the data load. This switch have effect only for the plain text export.\newline
 
-The --exclude-table-data=TABLE skips the data for the named table but dumps the table's definition. 
-It follow the same rules of the -t and -T for specifying multiple tables.\newline
+The switch --exclude-table-data=TABLE skips the data dump for the named table. The same rules of the -t and 
+-T apply to this switch.\newline
 
-The --insert dumps the data as INSERT command. Same as the --column-inserts the restore is very 
-slow and should be used only for reloading data into non-PostgreSQL databases.\newline
 
-The --no-security-labels doesn't include the security labels into the dump file.\newline
+The switch --no-security-labels doesn't include the security labels into the dump file.\newline
 
-The --no-synchronized-snapshots  allows the parallel export with the pre 9.2 databases. Because
-the snapshot export feature is missing this means the database shall not change until all the export
-job are connected. When all the dump jobs are connected the write operations on the
-exported database can resume safely.\newline
+The switch --no-synchronized-snapshots  is used to run a parallel export with the pre 9.2 
+databases. Because the snapshot export feature is missing this means the database shall not change 
+state until all the exporting jobs are connected.\newline
 
-The --no-tablespaces skips the tablespace assignments.\newline
+The switch --no-tablespaces skips the tablespace assignments.\newline
 
-The --no-unlogged-table-data does not export data for the unlogged relations.\newline
+The switch  --no-unlogged-table-data does not export data for the unlogged relations.\newline
 
-The --quote-all-identifiers  cause all the identifiers to be enclosed in double quotes. By default 
-only the identifiers with keyword's name are quoted.\newline
+The switch  --quote-all-identifiers  cause all the identifiers to be enclosed in double quotes. \newline
 
-The --section option specifies one of the three export's sections. The pre-data, with the 
-table, the view and the function definitions. The data section where the actual table data is 
-dumped as COPY or INSERTS, accordingly with the command line options. The post-data section 
-where the constraint, the index and the eventual GRANT REVOKE commands are finally executed. This 
-switch is meaningful only for text exports. \newline
+The switch --section option specifies one of the three export's sections. The first section is the 
+pre-data, which saves the definitions for the tables, the views and the functions. The second section is the 
+data which saves the table's contents. The third section is the post-data which saves the constraints, the 
+indices and the eventual GRANT REVOKE commands . This switch applies only to the plain format. \newline
 
-The --serializable-deferrable uses a serializable transaction for the dump, to ensure the database 
+The switch --serializable-deferrable uses a serializable transaction for the dump, to ensure the database 
 state is consistent. The dump execution waits for a point in the transaction stream without 
-anomalies to avoid the risk of the dump failing or causing other transactions to abort for the 
-serialization\_failure. The option is not beneficial for a dump intended only for disaster 
-recovery. It's useful for the dump used for reloading the data into a read only database which 
-needs to have a consistent state compatible with the origin's database.\newline
+anomalies to avoid the risk of serialization\_failure. The option is not useful for the backup used 
+only for disaster recovery and should be used only when the dump should reload into a read only database 
+which needs to get a consistent state compatible with the origin's database.\newline
 
-The switch --use-set-session-authorization causes the usage of SET SESSION AUTHORIZATION 
-commands instead of ALTER OWNER commands to set the objects ownership. The resulting dump is more 
-standards compatible but the SET SESSION AUTHORIZATION command requires the super user privileges 
+The switch --use-set-session-authorization sets the objects ownership using the command SET SESSION 
+AUTHORIZATION instead of the ALTER OWNER. SET SESSION AUTHORIZATION requires the super user privileges 
 whereas ALTER OWNER doesn't.
 
 
 \section{Performance tips}
 \index{pg\_dump, performance tips}
-Despite the fact pg\_dump doesn't affects the running queries, its strict transactional approach 
-have some effects on the affected schema. Any alter schema is blocked until the backup's end. The 
-vacuum efficiency is affected as well, because all the dead rows generated during the backup's run, 
-cannot be reclaimed being potentially required by the backup's running transaction.\newline
-
-There are some tips to improve the backup's speed.
+pg\_dump is designed to have a minimal impact on the running cluster.  However, any DDL on the saved 
+relations is blocked until the backup' end. VACUUM is less effective when the backup is in progress because 
+the dead rows generated meanwhile pg\_dump is running, cannot be freed, because still required by the 
+dump's transaction.\newline
 
 \subsection{Avoid remote backups}
-The pg\_dump can connect to remote databases same like any other PostgreSQL client.
-It seems reasonable then to use the program installed on a centralised storage and to dump locally 
-from the remote cluster.\newline 
-Unfortunately even using the compressed format, the entire database flows uncompressed and in 
-clear, from the server to the remote pg\_dump. The compression happens locally when the data is 
-received.\newline
-This approach expose also a network security issue. If the environment is not trusted then the 
-remote connection must happen on a secure channel. This add an extra overhead to the transfer and 
-any failure on this layer will fail the entire backup.\newline
-A far better approach is to save locally the database, using the local connection if possible, and 
-then copy the entire dump file using a secure transfer protocol like scp or sshfs.
+The pg\_dump can connect to remote databases like any other PostgreSQL client. It seems reasonable then to 
+use the program installed on a centralised storage and to dump locally from the remote cluster. 
+Unfortunately even using the compressed format, the entire database flows uncompressed over the network 
+from the database server to the remote pg\_dump receiver because the compression is done by the 
+receiver.\newline
+
+A far better approach is to save locally the database and then copy the entire dump file using remote copy 
+program like rsync or scp.
 
 \subsection{Skip replicated tables}
-If the database is configured as logical slave in slony or londiste for example, backing up the 
-replicated table's data is not important as the contents are re synchronised from the master when 
-the node is attached to the replication system. The switch --exclude-table-data=TABLE is then 
-useful for dumping the table's definition only without the contents.
+If the database is configured as logical slave, backing up the replicated table's data is not important as 
+the contents are re synchronised from the master when the node is re attached to the replication system. 
+The switch --exclude-table-data=TABLE is then useful for dumping just the table's definition without 
+the contents.
 
 \subsection{Check for slow cpu cores}
-PostgreSQL is a multitasking but not a multithreaded database system. Each backend is attached 
-to just one cpu. The pg\_dump opens one backend connection to the cluster in order to 
-export the database objects. The pg\_dump process receives the data flow from the backend and it 
-saves performing also the optional compression. In this scenario the cpu power is critical in order 
-to avoid a bottleneck. This could be helped using the parallel export offered by pg\_dump from the 
-version 9.3. The functionality is implemented via  the snapshot exports. As this was introduced 
-with PostgreSQL 9.2 the paralle export can happen only from this version and only if the output 
-format is directory . 
+PostgreSQL is not multi threaded. Each backend is attached to just one cpu core. When pg\_dump starts it 
+opens one backend on the cluster which is used to export the database objects. The pg\_dump process receives 
+the data output from the backend saving in the chosen format. The single cpu's speed is then critical to 
+avoid a bottleneck. The recently introduced parallel export, implemented with the snapshot exports can 
+improve sensibly the pg\_dump performance.
 
 \subsection{Check for the available locks}
-PostgreSQL at various level uses the locks to ensure the data consistency at various levels. For 
-example, when a table is read an access share lock on the relation is put in order to avoid any 
-structure change. Any backend issuing an ALTER TABLE which affect the table structure, will wait 
-for the lock to be released before acquiring itself an exclusive lock and then perform the change.
-The relation's locks are stored into the pg\_locks table. This table is quite unique because have 
-a limited number of rows. The maximum number of table's lock slot is determine with this simple 
-formula.\newline
+PostgreSQL uses the locks in order to enforce the schema and data consistency. For example, when a table is 
+accessed for reading, then an access share lock is set preventing any structure change. The locks on the 
+relations are stored into the pg\_locks table. This table is quite unique because have a limited amount of 
+rows determined with the formula.\newline
 \begin{math}
  max_locks_per_transaction * (max_connections + max_prepared_transactions)
 \end{math}\newline
 
-The default configuration permits have only 6400 table's lock slots. This value is generally OK. 
-However, if the database have a great number of relations, a full backup, pg\_dump could hit the 
-slot limit and fail with an out of memory error.\newline
-All the three GUC parameters require a restart to apply the new changes so is very important to 
-plan the change before the limit is reached. 
-
-\subsection{Try to use flexible formats}
-This is more a good practice suggestion rather a performance tip. Exporting the database in plain 
-text have some advantages. Is possible to load the dump just using psql and any file's corruption 
-can be managed in a simple way; if the damage is limited of course. The custom and directory 
-formats need the pg\_restore utility for the restoration. We'll take a look to this approach in 
-\ref{cha:RESTORE}. Anyway, the custom and directory formats have alongside with the compression, 
-the parallel restore feature and the selective restoration. The compression can be fine tuned to 
-suit the export's nature. In this era of ``big data'' is something to consider seriously.
-
+The default settings allow just 6400 lock slots. This value is generally OK. 
+However, if the database have complex schema with hundreds of relations, the backup can exhaust the 
+available slots and fail with an out of memory error. Adjusting the parameters involved in the compute of 
+locks resolve the problem but this requires a cluster restart.
 
 \section{pg\_dump under the bonnet}
 \label{sec:PGDUMPINT}
 \index{pg\_dump, internals}
-The pg\_dump source code gives a very good picture of what exactly the backup 
-software does. The process runs into with fixed transaction's isolation level accordingly with the 
-server's version. 
-The distinction is required because, becoming PostgreSQL more sophisticated at each major release, 
-the isolation levels became more and more strict with their meanings.\newline
-More informations about the transactions are in \ref{sec:TRANSACTION}.\newline
-From PostgreSQL 9.1 the transaction serializable became a real serialisation. The 
-transaction's behaviour offered by the serializable in the version up to 9.0 were assigned to the 
-REPETABLE READ transaction's isolation, its real kind. The SERIALIZABLE transaction's isolation 
-level is still used with DEFERRABLE option when pg\_dump is executed with 
-the option --serializable-deferrable as seen in \ref{sub:PGDUMPOUTPUT}. The switch have effect only 
-on the remote server with version 9.1 and later. The transaction is also set to READ ONLY, when 
-supported by the server, in order to limit the XID generation. \newline
+The pg\_dump source code gives a very good picture of what pg\_dump does. 
+
+The first thing the process does is setting the correct transaction's isolation level. Each server's 
+version requires a different isolation level.\newline
+
+PostgreSQL up to the version 9.0 implements a soft SERIALIZABLE isolation which worked more like the 
+REPETABLE READ. From the version 9.1 the SERIALIZABLE isolation level becomes strict. The 
+strictiest level SERIALIZABLE is used with DEFERRABLE option only when pg\_dump is executed with 
+the option --serializable-deferrable The switch have effect only on the remote server with version 9.1 and 
+later though. The transaction is also set to READ ONLY, when supported by the server, in order to reduce 
+the XID generation. \newline
 
 \begin{table}[H]
   \begin{tabular}{ll}
@@ -346,35 +303,27 @@ supported by the server, in order to limit the XID generation. \newline
   \caption{\label{tab:TRNPGDUMP}pg\_dump's transaction isolation levels }
 \end{table}
 
-From the version 9.3 pg\_dump supports the parallel dump using the feature seen in  
-\ref{sub:SNAPEXPORT}. As the snapshot export is supported from the version 9.2 this permit a 
-parallel dump from the older major version if using the newer backup program. However, 
-pg\_dump accepts the option --no-synchronized-snapshots in order to dump in parallel jobs 
-from the older versions. The data is not supposed to be consistent if there are  read write 
-transactions during this kind of export. To have a consistent export in this case all the 
-transactions which modify the data must be stopped meanwhile the export is in progress.\newline 
+From the version 9.3 pg\_dump supports also the parallel dump using the feature seen in  
+\ref{sub:SNAPEXPORT}. The snapshot export is also supported in the version 9.2 which offers this 
+improvement on the previous version as well. However, using the option --no-synchronized-snapshots tells 
+pg\_dump to not issue a snapshot export. This allows a parallel backup from the versions without the 
+snapshot exports. In order to have the data export consistent the database should stop the write 
+operations for the time required to all the export processes to connect.\newline 
 
-When exporting in parallel the only permitted format is the directory. The pg\_restore program 
-since the version 9.3 supports also the directory format for the paralelle data restoration.
-The combination of the parallel jobs backup and the parallel jobs restore, can improve massively 
-either the backup and the recovery speed in case of disaster.
+The parallel dump is available only with the directory format. The pg\_restore program 
+from the version 9.3 can do a paralell restore with the directory format as well.
 
 \section{pg\_dumpall}
 \index{pg\_dumpall}
-The pg\_dumpall program is more very basic version of pg\_dump. It's usage is mainly for 
-dumping all the databases in the cluster. Having lesser options than pg\_dump is also less 
-flexible. However one option is absolutely useful and should be included in any backup plan to 
-ensure a rapid disaster recovery.\newline
+pg\_dumpall does not have all the pg\_dump's options. The program basically dumps all the 
+cluster's databases in plain format.\newline
 
-The\index{pg\_dumpall, global objects} --globals-only option saves on the standard output all the 
-cluster wide options like the tablespaces, the roles and the privileges. The passwords are dumped as 
-well, encrypted in md5 format if stored this way. The utility output is just plain text. 
-The best way to save the globals is to specify the -f option followed by the file name. This file 
-can be loaded into an empty cluster to recreate the global objects. The tablespaces, if any present, 
-must have the filesystem already in place before running the sql as PostgreSQL doesn't create the 
-filesystem structure.\newline
+However, pg\_dumpall \index{pg\_dumpall, global objects} is very useful because the switch --globals-only . 
+With this option pg\_dumpall saves the the global object definitions in plain text.\newline
 
-This example shows the program call and the contents of the output file.
+This includes the tablespace definitions, the users which are saved with their passwords. 
+
+The following example shows the program's execution and the contents of the output file.
 \begin{lstlisting}[style=pgsql]
 postgres@tardis:~/dmp$ pg_dumpall --globals-only -f main_globals.sql
 postgres@tardis:~/dmp$ cat main_globals.sql 
@@ -405,27 +354,21 @@ postgres@tardis:~/dmp
 
 \section{Backup validation}
 \index{backup validation}
-There's little advantage in having a backup if this is not restorable. The corruption danger is at 
-various levels and unfortunately the problem appears only when the restore is needed.\newline 
+There's little advantage in having a backup if this is not valid. The corruption can happen at 
+various levels and unfortunately when the problem is detected is too late.\newline 
 
-The corruption have many causes. If the dump is saved locally a damaged filesystem can hide the 
-problem meanwhile the corrupted block is not read. Also the disk subsystem with undetected problems 
-will result in a silent corruption. In order to limit this kind of problems the filesystem of 
-choice should be a solid one with strong journaling support.\newline
+A corrupted filesystem an hardware problem or a network issue can result in an invalid dump archive. 
 
-The disk subsystem should guarantee the data reliability rather the speed. Slow disks when backing 
-up the data, in particular if in the compressed format don't limit the speed, being the cpu power 
-the real bottleneck.\newline
-If the dump file is transferred over the network is a good idea to generate a md5 checksum to 
-check the file integrity after the transfer.\newline
+The filesystem of choice should be solid and with a reliable journal. The disk subsystem should 
+guarantee the data reliability rather the speed. The network interface and the connections should be 
+efficient and capable of handling the transfer without problems. Using the md5 checksum over the archive 
+file is a good technique to check the file's integrity after the transfer.\newline
 
-All those measures don't give the security the backup is restorable. The only test capable to 
-ensure the backup is good is a test restore on separate server. This can be a single test or a more 
-structured check. Which strategy to adopt is determined by the amount of data, the time required 
-for the restore and the backup schedule.\newline
+Obviously  this don't give us the certain the backup can be restore. It's important then running a 
+periodical check for the restore. The strategy to use is determined by the amount 
+of data, the time required for the restore and the backup schedule.\newline
 
 The general purpose databases, which size is measurable in hundreds of gigabytes, the restore can 
 complete in few hours and the continuous test is feasible. For the VLDB, which size is measured in 
 terabytes, the restore can take more than one day, in particular if there are big indices requiring 
-expensive sort on disk for the build. In this scenario a weekly restore gives a good perception if 
-there are potential problems with the saved data. 
+expensive sort on disk for the build. In this case a test on a weekly basis is more feasible.

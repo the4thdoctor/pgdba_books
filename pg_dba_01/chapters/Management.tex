@@ -1,0 +1,409 @@
+\chapter{Managing the cluster}
+\label{cha:MANAGING}
+A PostgreSQL cluster is made of two components. A physical location initialised as data area 
+and the postgres process attached to a shared memory segment, the shared buffer. The debian's 
+package's installation, automatically set up a fully functional PostgreSQL cluster in the directory 
+/var/lib/postgresql. This is good because it's possible to explore the product immediately.
+However, 
+it's not uncommon to find clusters used in production with the minimal default configuration's 
+values, just because the binary installation does not make it clear what happens \textit{under the 
+bonnet}.
+
+This chapter will explain how a PostgreSQL cluster works and how critical is its 
+management. 
+
+\section{Initialising the data directory}
+\label{sec:INITPGDATA}
+The data area is initialised by initdb\index{initdb}. The program requires an empty directory to 
+write into to successful complete. Where the initdb binary is located depends from the installation 
+method. We already discussed of this in \ref{cha:INSTALLSTRUCT} and \ref{cha:DB_INSTALL}. 
+
+The accepted parameters for customising cluster's data area are various. Anyway, running 
+initdb without parameters will make the program to use the value stored into the environment 
+variable PGDATA. If the variable is unset the program will exit without any further action.\newline
+
+For example, using the initdb shipped with the debian archive requires the following commands.
+
+\begin{verbatim}
+postgres@tardis:~/$ mkdir tempdata
+postgres@tardis:~/$ cd tempdata
+postgres@tardis:~/tempdata$ export PGDATA=`pwd`
+postgres@tardis:~/tempdata$ /usr/lib/postgresql/9.3/bin/initdb 
+The files belonging to this database system will be owned by user "postgres".
+This user must also own the server process.
+
+The database cluster will be initialized with locale "en_GB.UTF-8".
+The default database encoding has accordingly been set to "UTF8".
+The default text search configuration will be set to "english".
+
+Data page checksums are disabled.
+
+fixing permissions on existing directory /var/lib/postgresql/tempdata ... ok
+creating subdirectories ... ok
+selecting default max_connections ... 100
+selecting default shared_buffers ... 128MB
+creating configuration files ... ok
+creating template1 database in /var/lib/postgresql/tempdata/base/1 ... ok
+initializing pg_authid ... ok
+initializing dependencies ... ok
+creating system views ... ok
+loading system objects' descriptions ... ok
+creating collations ... ok
+creating conversions ... ok
+creating dictionaries ... ok
+setting privileges on built-in objects ... ok
+creating information schema ... ok
+loading PL/pgSQL server-side language ... ok
+vacuuming database template1 ... ok
+copying template1 to template0 ... ok
+copying template1 to postgres ... ok
+syncing data to disk ... ok
+
+WARNING: enabling "trust" authentication for local connections
+You can change this by editing pg_hba.conf or using the option -A, or
+--auth-local and --auth-host, the next time you run initdb.
+
+Success. You can now start the database server using:
+
+    /usr/lib/postgresql/9.3/bin/postgres -D /var/lib/postgresql/tempdata
+or
+    /usr/lib/postgresql/9.3/bin/pg_ctl -D /var/lib/postgresql/tempdata -l 
+logfile start
+
+\end{verbatim}
+
+PostgreSQL 9.3 introduces\index{checksums, data page}\index{data page checksums} the data page 
+checksums used for detecting the data page corruption. This great feature can be enabled only when 
+initialising the data area with initdb and is cluster wide. The extra overhead caused by the 
+checksums is something to consider because the only way to disable the data checksums is a dump 
+and reload on a fresh data area.\newline
+
+After initialising the data directory initdb emits the message with the commands to start the 
+database cluster. The first form is useful for debugging and development purposes because it starts 
+the database directly from the command line with the output displayed on the terminal. 
+
+\begin{verbatim}
+postgres@tardis:~/tempdata$ /usr/lib/postgresql/9.3/bin/postgres -D 
+/var/lib/postgresql/tempdata
+LOG:  database system was shut down at 2014-03-23 18:52:07 UTC
+LOG:  database system is ready to accept connections
+LOG:  autovacuum launcher started
+
+\end{verbatim}
+
+Pressing CTRL+C stops the cluster with a fast shutdown.\newline
+
+Starting the cluster with pg\_ctl usage is very simple. This program also accepts the data area as 
+parameter or using the environment variable PGDATA. It's also required to provide the command to 
+execute. The start command for example is used to start the cluster in multi user mode.
+
+\begin{verbatim}
+
+postgres@tardis:~/tempdata$ /usr/lib/postgresql/9.3/bin/pg_ctl -D 
+/var/lib/postgresql/tempdata -l logfile start
+server starting
+
+postgres@tardis:~/tempdata$ tail logfile 
+LOG:  database system was shut down at 2014-03-23 19:01:19 UTC
+LOG:  database system is ready to accept connections
+LOG:  autovacuum launcher started
+
+\end{verbatim}
+Omitting the logfile with the -l will display the alerts and warnings on the terminal.
+
+The command stop will end the cluster's activity.
+
+\begin{verbatim}
+postgres@tardis:~$ /usr/lib/postgresql/9.3/bin/pg_ctl -D 
+/var/lib/postgresql/tempdata -l logfile stop
+waiting for server to shut down.... done
+server stopped
+\end{verbatim}
+
+\section{The startup sequence}
+\label{sec:STARTUP}
+
+When PostgreSQL starts the server process then the shared memory is allocated. Before the version
+9.3 this was often cause of trouble because the default kernel's limits. An error like this it
+means the requested amount of memory is not allowed by the OS settings.
+
+\begin{verbatim}
+FATAL: could not create shared memory segment: Cannot allocate memory
+
+DETAIL: Failed system call was shmget(key=X, size=XXXXXX, XXXXX).
+
+HINT: This error usually means that PostgreSQL's request for a shared memory
+segment exceeded available memory or swap space, or exceeded your kernel's
+SHMALL parameter. You can either reduce the request size or reconfigure the
+kernel with larger SHMALL. To reduce the request size (currently XXXXX bytes),
+reduce PostgreSQL's shared memory usage, perhaps by reducing shared_buffers or
+max_connections.
+\end{verbatim}
+
+\index{kernel resources}
+
+The kernel parameter governing this limit is SHMMAX, the maximum size of
+shared memory segment. The value is measured in bytes and must be bigger than the shared\_buffers
+parameter. Another parameter which needs adjustment is SHMALL. This value sets the amount of shared
+memory available and usually on linux is measured in pages. Unless the kernel is configured to
+allow the huge pages the page size is 4096 byes. The value should be the same as SHMMAX. Changing
+those parameters requires the root privileges. It's a good measure to have a small extra headroom
+for the needed memory instead of setting the exact require value. \newline
+
+For example, setting the shared buffer to 1 GB requires SHMMAX to be at least 1073741824.
+The value 1258291200 (1200 MB) is a reasonable setting. The corresponding SHMALL is 307200. The
+value SHMMNI is the minimum value of shared memory, is safe to set to 4096, one memory page.
+
+\begin{verbatim}
+kernel.shmmax = 1258291200
+kernel.shmall = 307200
+kernel.shmmni = 4096
+kernel.sem = 250 32000 100 128
+fs.file-max = 658576
+\end{verbatim}
+
+To apply the changes login as root and run \textit{sysctl -p}.\newline
+
+
+When the memory is allocated the postmaster reads the pg\_control
+file to check if the instance requires recovery. The pg\_control file is used to store the locations
+to the last checkpoint and the last known status for the instance.\newline
+
+If  the instance is in dirty state, because a crash or an unclean shutdown, the startup
+process reads the last checkpoint location and replays the blocks from the corresponding WAL
+segment in the pg\_xlog directory. Any corruption in the wal files during the recovery or the
+pg\_control file results in a not startable instance.\newline
+
+When the recovery is complete or if the cluster's state is clean the postgres process completes the
+startup and sets the cluster in production state. 
+
+
+\section{The shutdown sequence} 
+\label{sec:SHUTDOWN_SEQ}
+\index{shutdown sequence}
+
+The PostgreSQL process enters the shutdown status when a specific OS signal is received. The signal
+can be sent via the os kill or using the program pg\_ctl. \newline
+
+As seen in \ref{sub:PGCTL} pg\_ctl accepts the -m switch when the command is stop. The -m switch
+is used to specify the shutdown mode and if is omitted it defaults to smart which corresponds to
+the SIGTERM signal. With the smart shuthdown the cluster stops accepting new connections and
+waits for all backends to quit. \newline
+
+When the shutdown mode is set to fast pg\_ctl sends the SIGQUIT signal to the postgres main process.
+Same as for the smart shutdown the cluster does not accepts new connections terminates the existing
+backends. Any open transaction is rolled back as well. \newline
+
+When the smart and the fast shutdown are complete they leave the cluster in clean state. This is
+true because when the postgres process initiate the final part of the shutdown it starts a
+last checkpoint which consolidates any dirty block on the disk. Before quitting the postgres
+process saves the latest checkpoint's location to the pg\_control file and marks the
+cluster as clean.\newline
+
+The checkpoint can slow down the entire shutdown sequence. In particular if the shared\_buffer is
+big and contains many dirty blocks, the checkpoint can run for a very long time. Also if at
+the shutdown time, another checkpoint is running the postgres process will wait for this
+checkpoint to complete before starting the final checkpoint.\newline
+
+Enabling the log checkpoints in the configuration gives us some visibility on what the cluster is
+actually doing. The GUC parameter governing the setting is log\_checkpoints.\newline
+
+
+If the cluster doesn't stop, there is a shutdown mode which leaves the cluster in dirty state.
+The immiediate shutdown. The equivalent signal is the SIGQUIT and it causes the main process
+alongside with the backends to quit immediately without the checkpoint.\newline
+
+The subsequent start will require a crash recovery. The recovery is usually harmless with one
+important exception. If the cluster contains unlogged tables those relations are recreated from
+scratch when the recovery happens and all the data in those table is lost.
+
+A final word about the SIGKILL signal, the dreaded kill -9. It can happen the cluster refuse to
+stop even using the immediate mode. In this case, as last resort the SIGKILL. Because this signal
+cannot be trapped in any way, the resources like the shared memory and the inter process semaphores
+will stay in place after the kill. This will very likely affect the start of a fresh instance.
+Please refer to your sysadmin to find out the best way to cleanup the memory after the
+SIGKILL.
+
+\section{The processes}
+\label{sec:PROCESSES}
+Alongside with postgres process there are a number of accessory processes. With a running 9.3
+cluster ps shows at least six postgres processes. 
+
+\subsection{postgres: checkpointer process}
+As the name suggests this process take care of the cluster's checkpoint\index{checkpoint} activity.
+A checkpoint is an important event in the cluster's life. When it starts all the dirty pages in
+memory are written to the data files. The checkpoint frequency is regulated by the time and the
+number of cluster's WAL switches.The GUC parameters governing this metrics are respectively
+checkpoint\_timeout\index{checkpoint\_timeout} and checkpoint\_segments\index{checkpoint\_segments}.
+There is a third parameter, the checkpoint\_completion\_target\index{checkpoint\_completion\_target}
+which sets the percentage of the checkpoint\_timeout. The cluster uses this value to spread the
+checkpoint over this time in order to avoid a big disk IO spike.
+
+\subsection{postgres: writer process}
+The background writer scans the shared buffer searching for dirty pages which writes on the data
+files. The process is designed to have a minimal impact on the database activity. It's possible to
+tune the length of a run and the delay between the writer's runs using the GUC parameters
+bgwriter\_lru\_maxpages\index{bgwriter\_lru\_maxpages} and bgwriter\_delay\index{bgwriter\_delay}.
+They are respectively the number of dirty buffers written before the writer's sleep and the time
+between two runs.
+
+\subsection{postgres: wal writer process}
+This background process has been introduced with the 9.3 in order to make the WAL writes a more
+efficient. The process works in rounds and writes down the wal buffers to the  wal files. The GUC
+parameter wal\_writer\_delay\index{wal\_writer\_delay} sets the milliseconds to sleep between the
+rounds. 
+
+\subsection{postgres: autovacuum launcher process}
+This process is present if the autovacuum\index{autovacuum} is enabled. It's purpose is to launch
+the autovacuum backends when needed. 
+
+\subsection{postgres: stats collector process}
+The process gathers the database's usage statistics and stores the information to the location
+indicated by the GUC stats\_temp\_directory. This is by default pg\_stat\_temp, a relative path to
+the data area. 
+
+\subsection{postgres: postgres postgres [local] idle}
+This is a database backend. There is one backend for each established connection. The values after
+the colon show useful information. In particular between the square brackets there is the query
+the backend is executing. 
+
+\section{The memory}
+\label{sec:MEMORY}
+Externally the PostgreSQL's memory structure is very simple to understand. Alongside with a single
+shared segment there are the per user memories. Behind the scenes things are quite complex and
+beyond the scope of this book.
+
+\subsection{The shared buffer}
+\index{shared buffer}
+The shared buffer, as the name suggests is the segment of shared memory used by PostgreSQL to manage
+the data pages shared across the backends. The shared buffer's size is set using the GUC parameter
+shared\_buffers\index{shared\_buffers}. Any change requires the cluster's restart.\newline
+
+The memory segment is formatted in pages like the data files. When a new backend is forked
+from the main process is attached to the shared buffer. Because usually the shared buffer is
+a fraction of the cluster's size, a simple but very efficient mechanism keeps in memory the blocks
+using a combination of LRU and MRU. Since the version 8.3 is also present a protection mechanism
+against the page eviction from the memeory in the case of IO intensive  operations.\newline
+
+Any data operation is performed loading the data pages in the shared buffer. Alongside with the
+benefits of the memory cache there is the enforcement of the data consistency at any time.\newline
+
+In particular, if any backend crash happens PostgreSQL resets all the existing connections to
+protect the shared buffer from potential corruption. 
+
+
+
+\subsection{The work memory}\index{work memory}
+\label{sub:WORKMEM}
+The work memory is allocated for each connected session. Its size  is set using the GUC parameter
+work\_mem. The value can be set just for the current session using the SET statement or globally in
+the postgresql.conf file.In this case the change becomes effective immediately after the cluster
+reloads the configuration file.\newline
+
+A correct size for this memory can improve the performance of any memory intensive operation like
+the sorts. It's very important to set this value to a reasonable size in order to avoid any risk of 
+out of memory error or unwanted swap.\newline
+
+
+\subsection{The maintenance work memory}\index{maintenance work memory}
+The maintenance work memory is set with the parameter maintenance\_work\_mem and like the work\_mem
+is allocated for each connected session. PostgreSQL uses this memory in the maintenance operations 
+like VACUUM or REINDEX. The value can be bigger than work\_mem. In \ref{sec:VACUUM}
+there are more information about it. The maintenance\_work\_mem value can be set on the session or
+globally like the work memory.
+
+\subsection{The temporary memory}
+\label{sub:TEMPBUF}
+The temporary memory is set using the parameter temp\_buffers. The main usage is for storing the the
+temporary tables. If the table doesn't fit in the allocated memory then the relation is saved
+on on disk. It's possible to change the temp\_buffers value for the current session but only before
+creating a temporary table.
+
+
+\section{The data area}
+\label{sec:PGDATA}\index{data area}
+As seen in \ref{sec:INITPGDATA} the data area is initialised using initdb \index{initdb}. In this
+section we'll take a look to some of the PGDATA's sub directories.
+
+
+\subsection{base}\index{data area,base}
+\label{sub:BASE}
+This directory it does what the name suggests. It holds the database files. For each database in the
+cluster there is a dedicated sub directory in base named after the database's object id.
+A new installation shows only three sub directories in the base folder.\newline
+
+Two of them are the template databases,template0 and template1. The third is the postgres database.
+In \ref{cha:LOGICLAY}  there are more information about the logical structure.\newline
+
+Each database directory contains many files with the numerical names. They are the
+physical database's files, tables indices etc.\newline 
+
+The relation's file name is set initially using the relation's object id. Because there are
+operations that  can change the file name (e.g. VACUUM FULL, REINDEX) PostgreSQL tracks the file
+name in a different pg\_class's field, the relfilenode. In \ref{cha:PHYLAY} there are
+more information about the physical data file structure.
+
+\subsection{global}\index{data area,global}
+The global directory holds all the shared relations. Alongside with the data files there is a small
+file, just one data page, called pg\_control. This file is vital for the cluster's activity
+\index{control file}. If there is any corruption on the control file the cluster cannot start.
+
+\subsection{pg\_xlog}\index{data area,pg\_xlog}
+This is probably the most important and critical directory in the data area. The directory holds
+the write ahead logs, \index{wal files} also known as WAL files. Each segment is by default 16 MB
+and is used to store the records for the pages changed in the shared buffer. The write first
+on on this durable storage ensures the cluster's crash recovery. In the event of a crash
+the WAL are replayed when the startup begins from the last checkpoint location read from control
+file.Because this directory is heavily written, putting it on a dedicated device improves the
+performance. 
+
+\subsection{pg\_clog}\index{data area, pg\_clog}
+This directory contains the status of the committed transactions stored in many files, each one
+big like a data page. The directory does not store the status of the transactions executed
+with the SERIALIZABLE isolation. The directory is managed by PostgreSQL. The number of files is
+controlled by the two parameters autovacuum\_freeze\_max\_age and vacuum\_freeze\_table\_age.
+They control the ``event horizon'' of the oldest frozen transaction id and the pg\_clog must
+store the commit status accordingly. 
+
+\subsection{pg\_serial}\index{data area, pg\_serial}
+This directory is similar to the pg\_clog except the commit statuses are only for the transactions
+executed with the  SERIALIZABLE isolation level.
+
+\subsection{pg\_multixact}\index{data area, pg\_multixact}
+The directory stores the statuses of the multi transactions. They are used in general for the
+row share locks.
+
+\subsection{pg\_notify}\index{data area, pg\_notify}
+The directory is used to stores the LISTEN/NOTIFY operations.
+
+\subsection{pg\_snapshots}\index{data area, pg\_snapshots}
+This directory stores the exported transaction's snapshots. From the version 9.2 PostgreSQL
+can export a consistent snapshot to the other sessions. More details about the snapshots are in
+\ref{sub:SNAPEXPORT}.
+
+
+\subsection{pg\_stat\_tmp}\index{data area, pg\_stat\_tmp}
+This directory contains the temporary files generated by the statistic subsystem. 
+Because the directory is constantly written, changing its location to a ramdisk can improve the
+performance. The parameter stats\_temp\_directory can be changed with a simple reload.
+
+\subsection{pg\_stat}\index{data area, pg\_stat}
+This directory contains the files saved permanently by the statistic subsystem to keep them
+persistent between the restarts. 
+
+\subsection{pg\_subtrans}\index{data area, pg\_subtrans}
+In this folder there are the subtransactions statuses. 
+
+\subsection{pg\_twophase}\index{data area, pg\_twophase}
+There is where PostgreSQL saves the two phase commit's data. This feature allow a transaction to
+become independent from the backend status. If the backend disconnects, for example in a network
+outage, the transaction does not rollbacks waiting for another backend to pick it up and complete
+the commit. 
+
+\subsection{pg\_tblspc}\index{data area, pg\_tblspc}
+\label{sub:TABLESPACE}
+In this folder there are the symbolic links to the tablespace locations.
+In \ref{sub:TBS-LOGICAL} and \ref{sub:TBS-PHYSICAL} there are more informations about it. 
+
+
+

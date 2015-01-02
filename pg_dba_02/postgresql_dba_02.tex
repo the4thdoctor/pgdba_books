@@ -15,9 +15,10 @@
 \usepackage[paperwidth=21.59cm,paperheight=27.94cm]{geometry}
 \usepackage{xcolor}
 
+
 \author{Federico Campoli}
 \title{PostgreSQL Database Administration \\ Volume 2 \\ Architecture}
-
+\date{First edition, 2015, some rights reserved} 
 
 \makeindex
 
@@ -32,7 +33,7 @@
   commentstyle=\itshape\color{purple!40!black},
   identifierstyle=\color{blue},
   stringstyle=\color{orange},
-  morekeywords={VACUUM, FULL, ANALYZE, TABLESPACE,SET}
+  morekeywords={VACUUM, FULL, ANALYZE, TABLESPACE,SET,ALTER, SYSTEM}
 }
 
 
@@ -40,37 +41,92 @@
 \includepdf{covers/cover_good.pdf}
 \maketitle
 
-\newpage{}
+
+
+\chapter*{License}
+\begin{center}
+ \includegraphics{images/cc_logo.png}
+\end{center}
+
+The book is distributed under the terms of the Attribution-NonCommercial-ShareAlike 4.0 International 
+License. To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-sa/4.0/.\newline
+
+
+You are free to:
+\begin{itemize}
+ 
+\item     Share — copy and redistribute the material in any medium or format
+\item     Adapt — remix, transform, and build upon the material
+
+\end{itemize}
+
+
+Under the following terms:
+\begin{itemize}
+\item    Attribution — You must give appropriate credit, provide a link to the license, and indicate if 
+changes were made. You may do so in any reasonable manner, but not in any way that suggests the licensor 
+endorses you or your use.
+
+\item    NonCommercial — You may not use the material for commercial purposes.
+
+\item    ShareAlike — If you remix, transform, or build upon the material, you must distribute your 
+contributions under the same license as the original.
+
+\item    No additional restrictions — You may not apply legal terms or technological measures that legally 
+restrict others from doing anything the license permits.
+
+\end{itemize}
+
+\chapter*{Copyright}
+PostgreSQL Database Administration Volume 2 - Architecture\newline
+Federico Campoli \copyright \space 2015 \newline
+First edition\newline
+%ISBN ???????????\newline
 
 
 
-\tableofcontents{}
+ 
+
+
 
 \chapter*{Preface}
-Here we go, again. 
+Here we go again.
 
 
+The github repository where I'm sharing the latex sources  is 
+\href{https://github.com/the4thdoctor/pgdba\_books}{
+https://github.com/the4thdoctor/pgdba\_books}.\newline
 
 
 \section*{Intended audience}
-Database administrators, System administrators
+Database administrators, System administrators, Developers
 
 \section*{Book structure}
-In this book starts where the PostgreSQL DBA book 1 ends.\newline
+This book assumes the reader knows how to perform basic user operations such as
+connecting to the database and creating tables.\newline
+
+The book starts where the first volume ends, which reading is warmly suggested. After covering in depth the 
+PostgreSQL architecture, there is a couple of chapters on the HA and disaster recovery. A final 
+chapter is dedicated on the introduction of the performance tuning.\newline
 
 
-\section*{Version and platform}
-This book covers the database version 9.3 on Debian GNU Linux 7.0.
-References to older version or different platform are explicitly specified.
+\chapter*{Version and platform}
+This book is based on PostgreSQL version 9.3 running on Debian GNU Linux 7.
+References to older versions or different platforms are explicitly specified.
+
+\chapter*{Thanks}
+The beautiful cover has been made by \href{http://www.bonland.eu/}{Chiaretta e Bon }.\newline
+
+\tableofcontents{}
 
 \input{chapters/Architecture}
 \input{chapters/Memory}
 \input{chapters/Data_area}
 
 \chapter{The cluster in action}
-\chapter{Performance Tuning}
 \chapter{Point in time recovery}
 \chapter{High availability}
+\chapter{Performance Tuning}
 
 \appendix
 

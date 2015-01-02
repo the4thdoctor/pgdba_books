@@ -243,22 +243,26 @@ the session but only before the first temporary table is created.
 
 \subsection{Foreign tables}\index{Foreign tables}
 The foreign tables were first introduced with PostgreSQL 9.1 as read only relations, improving 
-considerably the DBMS interconnection's capability. A foreign table works exactly like a local table 
-using a foreign data
-wrapper to interact with the foreign data source.\newline
+considerably the DBMS connectivity with other data sources. A foreign table works exactly like a
+local table. A foreign data wrapper interacts with the foreign data source and handles the
+data flow.\newline
 
-There are many different foreign data wrappers available for very exotic data sources. With the 
-PostgreSQL 9.3 there is the postgres\_fdw and the the foreign tables are writable. In particular 
-the postgres\_fdw implementation is similar to old dblink module with a more efficient performance 
-management and the connection's caching.
+There are many different foreign data wrappers available for very exotic data sources. From the
+version 9.3 the postgres\_fdw becomes available and the the foreign tables are writable. The
+implementation of the postgres\_fdw implementation is similar to old dblink module with a more
+efficient performance management and the connection's caching.
 
 \section{Table inheritance}\index{Table inheritance}
-Being more precise, PostgreSQL is an Object Relational Database Management System. Its intenal logic
-implements some of the concepts of the object oriented programming. The relations are also called 
-classes and the table's columns attributes. \newline
+PostgreSQL is an Object Relational Database Management System rather a simple DBMS. Some of the
+concepts present in the object oriented programming are implemented in the PostgreSQL logic. The
+relations are also known as classes and the table's columns as attributes. \newline
 
 The table inheritance is a logical relationship between a parent table and one or more child 
-tables. The child tables inherit the parent's attribute structure but not the physical storage. 
+tables. The child table inherits the parent's attribute structure but not the physical
+storage.\newline 
+
+
+Creating a parent/child structure is straightforward.
 
 \begin{lstlisting}[style=pgsql]
 db_test=#CREATE TABLE t_parent
@@ -292,9 +296,9 @@ Inherits: t_parent
 
 \end{lstlisting}
 
-The inheritance can be defined at creation time or later. It's also possible to create a completely 
-new table and create the inheritance with another one. In this case the child structure must match 
-exactly the parent.
+The inheritance is usually defined at creation time. It's possible to enforce the inheritance
+between two existing tables with the ALTER TABLE ... INHERIT command. The two table's structure
+must be identical.
 
 \begin{lstlisting}[style=pgsql]
 
@@ -305,25 +309,21 @@ ALTER TABLE
 
 \end{lstlisting}
 
-Because the physical storage is not shared the unique constraints aren't globally enforced on the 
-inheritance tree and this prevents the foreign keys to refer efficiently the inherited tables. This 
-makes the table partitioning tricky.
+Because the physical storage is not shared then the unique constraints aren't globally enforced on
+the inheritance tree. This prevents the creation of any global foreign key. Using the table
+inheritance, combined with the constraint exclusion and the triggers/rules, is a partial workaround
+for the table partitioning.
 
 \section{Indices}
-An index is a structured relation where the indexed values are stored. The index entries are 
-associated with pointers to the corresponding table's pages. Because PostgreSQL have a cost based 
-optimiser, having an an index doesn't guarantee its usage. Reading an index page requires a random
-disk seek. The cost for random is estimated by default four times more than a sequential page read
-used by the sequential table scan. Those values can be adjusted using the two GUC parameters
-seq\_page\_cost and random\_page\_cost, respectively the arbitrary cost of a table's page and an
-index page. \newline
+An index is a structured relation. The indexed entries are used to access the tuples stored in the
+tables. The index entries are the actual data with a pointer to the corresponding table's pages.\newline
 
-Designing the indices is a complex task. An unused index adds overhead and slowness to the write
-operations with no benefit. Querying system views like the pg\_stat\_all\_indexes will give us
-vital informations about the indices usage.
+It's important to bear in mind that the indices add overhead to the write operations. Creating an index
+does not guarantee its usage.The cost based optimiser, for example, can simply consider the index access
+more expensive than a sequential access. The stats system views, like the pg\_stat\_all\_indexes,
+store the usage counters for the indices.\newline
 
-This simple finds all the indices in the public schema never used from the last statistics 
-reset.
+For example this simple query finds all the indices in the public schema with index scan counter zero.
 
 \begin{lstlisting}[style=pgsql]
 SELECT
@@ -340,30 +340,23 @@ WHERE
 
 \end{lstlisting}
 
+Having an efficient maintenance plan can improve sensibly the database performance. Take a look to 
+\ref{cha:MAINTENANCE} for more information.
 
-PostgreSQL implements many index type. Unfortunately the bitmap index, useful in the datawarehouse,
-is not present. There is a plan node which can emulate partially the bitmap indices. This is
-done with a sequential read over the index followed by a table's read for rematch. The tuples
-are found using a bitmap generated from the index's sequential read.\newline 
+PostgreSQL implements many kind of indices. The keyword USING specifies the index type at create time.
 
-
-The keyword USING specifies the index type at create time.
 \begin{lstlisting}[style=pgsql]
  CREATE INDEX idx_test ON t_test USING hash (t_contents);
 \end{lstlisting}
 
-If omitted then the index type defaults to the B-tree.
-
-The index maintenance is a delicate matter, the argument is described in depth
-in \ref{cha:MAINTENANCE}.
-
+If the clause USING is omitted the index defaults to the B-tree.
 
 \subsection{b-tree}
 The general purpose B-tree\index{index,b-tree} index implements the Lehman and Yao's
 high-concurrency B-tree management algorithm. The B-tree can handle equality and range queries 
-returning ordered data. The indexed values are stored into the index pages with pointers to the
-table's pages. The index is not TOASTable, this limit the max length for an index entry to 1/3 of
-the page size. \newline
+returning ordered data. The indexed values are stored into the index pages with the pointers to the
+table's pages. Because the index is a relation not TOASTable the max length for an indexed key is 1/3
+of the page size. More informations about TOAST are in \ref{sec:TOAST} \newline
 
 \subsection{hash}
 The hash indices\index{index,hash} can handle only equality and are not WAL logged. Their changes
@@ -372,27 +365,26 @@ are not replayed if the crash recovery occurs and do not propagate to the standb
 \subsection{GiST}
 The GiST indices\index{index,GiST} are the Generalised Search Tree. The GiST is a collection of
 indexing strategies organised under a common infrastructure. They can implement arbitrary indexing
-schemes like B-trees, R-trees  or other. The operator classes shipped with PostgreSQL are for the
-geometrical data with two elements and for the nearest-neighbour searches. The GiST indices do not
-perform an exact match. The false positives are removed with second rematch on the
-table's data.\newline
+schemes like B-trees, R-trees  or other. The default installation comes with operator classes working on 
+two elements geometrical data and for the nearest-neighbour searches. The GiST indices do not perform an
+exact match. The false positives are removed with second rematch on the table's data.\newline
 
 \subsection{GIN}
 The GIN indices \index{index,GIN} are the Generalised Inverted Indices. This kind of index
-is optimised for indexing the composite data types or vectors like the full text search elements.
-The GIN are exact indices, when scanned the returned set doesn't require recheck.
-
-
+is optimised for indexing the composite data types, arrays and vectors like the full text search
+elements. This is the only index supported by the range types. The GIN are exact indices, when scanned
+the returned set doesn't require recheck.
 
 \section{Views}
 \index{views}
 \label{sec:VIEWS}
-A view is a relation storing the logical representation of a query. At create time all the objects
-involved in the view definition are translated in the internal representation. Any wildcard is
-expanded.
+A view is a relation composed by a name and a query definition. This permits a faster access to complex
+SQL. When a view is created the query is validated and all the objects involved are translated to their
+binary representation. All the wildcards are expanded to the corresponding field's list.\newline
 
-An example will explain better this concept. Let's consider a simple table populated with the
-generate\_series() function.
+A simple example will help us to understand better this important concept. Let's create a table
+populated using the function generate\_series(). We'll then create a view with a simple SELECT * from the
+original table.
 
 \begin{lstlisting}[style=pgsql]
 
@@ -431,8 +423,8 @@ AS
 
 \end{lstlisting}
 
-Running a select from the view or the table returns the same columns and rows.
-The stored definition in pg\_views does not have any wildcard though.
+We can select from the view and from the the table with a SELECT and get the same data. The view's
+definition in pg\_views shows no wildcard though. 
 
 
 \begin{lstlisting}[style=pgsql]
@@ -449,7 +441,7 @@ definition |  SELECT t_data.i_id,
 
 \end{lstlisting}
 
-Adding a new column to the t\_data table will break the equality between the table and the view.
+If we add a new field to the table t\_data this will not applies to the view.
 
 \begin{lstlisting}[style=pgsql]
  ALTER TABLE t_data ADD COLUMN d_date date NOT NULL default now()::date;
@@ -471,8 +463,7 @@ db_test=# SELECT * FROM v_data LIMIT 1;
  
 \end{lstlisting}
 
-In order to have the view in sync with the table we need to refresh it using the CREATE OR REPLACE
-VIEW statement.
+Using the statement CREATE OR REPLACE VIEW we can put the view in sync with the table's structure.
 
 \begin{lstlisting}[style=pgsql]
  CREATE OR REPLACE VIEW v_data 
@@ -490,33 +481,35 @@ db_test=# SELECT * FROM v_data LIMIT 1;
 
 \end{lstlisting}
 
-PostgreSQL implements the views using the the objects identifiers. They never invalidate when
-the objects are renamed. \newline
+Using the wildcards in the queries is a bad practice for many reasons. The potential outdated
+match between the physical and the logical relations is one of those.\newline
 
-The CREATE OR REPLACE statement can update the view definition only if the column 
-list adds new attributes in the end. When one or more view are pointing a relation this cannot be
-dropped unless the clause CASCADE is used. Because the dependencies can be very complicated, this
-approach is quite dangerous. The best is querying on the pg\_depend table and find out the full
-list of dependencies.\newline
+The way PostgreSQL implements the views guarantee they never invalidate when the referred objects are
+renamed. \newline
 
-Because a view is a logical short cut to a stored SQL, PostgreSQL will run the query in the same
-way as it was sent from the client. This excludes the network overhead.
+If new attributes needs to be added to the view the CREATE OR REPLACE statement can be used but only if
+the fields are appended. If a table is referred by a view the drop is not possible. It's still possible
+to drop a table with all the associated views using the clause CASCADE. This is a dangerous
+practice though. The dependencies can be very complicated and a not careful drop can result in a
+regression. The best approach is to check for the dependencies using the table pg\_depend.\newline
 
-A view can refer other views becoming a potential cause of performance regression. Because any view
-have a specific execution plan, mixing different plans can confuse the planner causing
-poor performance.
+Storing a complex SQL inside the database avoid the overhead caused by the round trip between the client
+and the server. A view can be joined with other tables or views. This practice is generally bad because
+the planner can be confused by mixing different queries and can generate not efficient execution
+plans.\newline
 
-To avoid this it's a a good practice using the naming  v\_ to distinguish the views from the
-tables. In \ref{cha:COUPLETHINGS} there is an example for the self explanatory database schema.
+A good system to spot a view when writing a query is to use a naming convention. For example adding a v\_
+in the view names and the t\_ in the table names will help the database developer to avoid
+mixing logical an physical objects when writing SQL. Look to \ref{cha:COUPLETHINGS} for more information.
 
 \index{view, updatable}
 PostgreSQL from the version 9.3 supports the updatable views. This feature is limited just to the
-simple views. A view is simple  if have the following features.
+simple views. A view is defined simple when the following is true.
 
 \begin{itemize}
 
 
- \item   Have exactly one entry in its FROM list, which must be a table or another updatable view.
+ \item  Does have exactly one entry in its FROM list, which must be a table or another updatable view.
 
  \item Does not contain WITH, DISTINCT, GROUP BY, HAVING,LIMIT, or OFFSET clauses at the top level.
 
@@ -532,32 +525,31 @@ referenced, either.
 
 \end{itemize}
 
-A complex view can be updatable using the triggers or rules.\newline
+A complex view can still become updatable using the triggers or the rules.\newline
 
 \index{view, materialised}
-Another feature introduced by the 9.3 is the materialised views. This is a physical snapshot of the
-saved SQL and can be refreshed with the statement REFRESH MATERIALIZED VIEW.  
+Another feature introduced by the 9.3 is the materialised views. This acts like a physical snapshot of
+the saved SQL. The view's data can be refreshed with the statement REFRESH MATERIALIZED VIEW.  
 
 
 \section{Tablespaces}\index{tablespaces,logical}
 \label{sub:TBS-LOGICAL}
 A tablespace\index{tablespace} is a logical name pointing to a physical location. 
-This feature was introduced with the release 8.0 and its implementation did not change since
-then. From the version 9.2 was introduced the function pg\_tablespace\_location(tablespace\_oid)
-which gets the tablespace's location from the OID making the dba life easier.
+This feature was introduced with the release 8.0 and its implementation did not change too much since
+then. From the version 9.2  a new function pg\_tablespace\_location(tablespace\_oid) offers the
+dynamic resolution of the physical tablespace location,making the dba life easier.\newline
 
-When a new relation is created without the tablespace specification this defaults to the GUC
-parameter default\_tablespace or to the database's default tablespace. 
-On a fresh initialised cluster the initial value for the default tablespace is pg\_default which
-points to to the directory \$PGDATA/base . Alongside with pg\_default there is the pg\_global as
-well. This tablespace is reserved for the shared objects and points to the directory
-\$PGDATA/global.
+When a new physical relation is created without tablespace indication, the value defaults to the
+parameter default\_tablespace. If this parameter is not set then the relation's tablespace is set to
+the database's default tablespace. 
+Into a fresh initialised cluster there are two tablespaces initially. One is the pg\_default which
+points to the path \$PGDATA/base. The second is pg\_global which is reserved for the cluster's shared
+objects and its physical path is \$PGDATA/global.\newline
 
-Creating a new tablespace is very simple. The physical location must be owned by the postgres
-process user. 
-
-For example let's create a tablespace pointing to the folder /var/lib/postgresql/pg\_tbs/ts\_test
-with the name ts\_test.
+Creating a new tablespace is very simple. The physical location must be previously created and the os
+user running the postgres process shall be able to write into it. Let's create, for example, a tablespace
+pointing to the folder named /var/lib/postgresql/pg\_tbs/ts\_test. Our new tablespace will be named
+ts\_test.
 
 \begin{lstlisting}[style=pgsql]
 CREATE TABLESPACE ts_test 
@@ -566,12 +558,12 @@ LOCATION '/var/lib/postgresql/pg_tbs/ts_test' ;
 
 \end{lstlisting}
 
-Only superusers can create tablespaces. The OWNER clause is optional, if 
-omitted the tablespace's owner defaults to the database user logged in. The tablespaces are cluster
-wide and are listed into the pg\_tablespace system table.\newline
+Only superusers can create tablespaces. The clause OWNER is optional and if  is omitted the tablespace's
+owner defaults to the user issuing the command. The tablespaces are cluster wide and are listed into the
+pg\_tablespace system table.\newline
 
-Creating a new relation into the tablespace ts\_test requires the TABLESPACE clause followed by the
-tablespace name.
+The clause TABLESPACE followed by the tablespace name will create the new relation into the specified
+tablespace.
 
 \begin{lstlisting}[style=pgsql]
 CREATE TABLE t_ts_test
@@ -583,22 +575,21 @@ TABLESPACE ts_test ;
 
 \end{lstlisting}
 
-A relation can be moved from a tablespace to another using the ALTER command. For example let's
-move the table t\_ts\_test to the  pg\_default tablespace.
+A relation can be moved from a tablespace to another using the ALTER command. The following command
+moves the table t\_ts\_test from the tablespace ts\_test to pg\_default.
 
 \begin{lstlisting}[style=pgsql]
 ALTER TABLE t_ts_test SET TABLESPACE pg_default;
 \end{lstlisting}
 
-Changing the relation's tablespace is transaction safe but requires an exclusive lock on the
-affected relation. The lock prevents accessing the relation's data for the time required by the
-move.If the relation have a significant size this should be considered carefully. Because the
-exclusive lock conflicts with the locks issued by the backup, it's not possible to change the
-relation's tablespace when pg\_dump is running.\newline
+The move is transaction safe but requires an access exclusive lock on the affected relation. The lock
+prevents accessing the relation's data for the time required by the move.If the relation have a
+significant size this could result in a prolonged time where the table's data is not accessible.
+The exclusive lock conflicts any running pg\_dump which prevents any tablespace change.\newline
 
 
-A tablespace can be removed with DROP TABLESPACE command. The tablespace must be empty before the
-drop. There's no CASCADE clause to have the tablespace's contents dropped with the tablespace.
+A tablespace can be removed with DROP TABLESPACE command but must be empty before the drop. There's no
+CASCADE clause for the DROP TABLESPACE command.
 
 \begin{lstlisting}[style=pgsql]
 postgres=# DROP TABLESPACE ts_test;
@@ -612,83 +603,65 @@ DROP TABLESPACE
 \end{lstlisting}
 
 
-The tablespace feature adds flexibility to the space management. Even if not sophisticated like
-other DBMS this implementation, combined with a careful design can improve sensibly the
-performances.\newline
+A careful design using the tablespaces, for example putting tables and indices on different
+devices,can improve sensibly the cluster's performance.\newline
 
-In \ref{sub:TBS-PHYSICAL} we'll take a look to the how PostgreSQL implements the tablespaces on the
-physical side.
-
+In \ref{sub:TBS-PHYSICAL} we'll take a look to the how PostgreSQL implements the tablespaces from the
+physical point of view.
 
 
 \section{Transactions}
 \label{sec:TRANSACTION}
 \index{transactions}
-PostgreSQL implements the MVCC\index{MVCC} which stands for Multi Version 
-Concurrency Control\index{Multi Version Concurrency Control}. 
-This offers high efficiency in multi user access for read and write queries.
-When a new query starts a transaction identifier is assigned, the XID 
-\index{XID} a 32 bit quantity. To determine the transaction's snapshot 
-visibility, all the committed transactions with XID lesser than the current XID 
-are in the past and then visible. Otherwise, all the transactions with XID 
-greater than the current XID are in the future and not visible.\newline
+PostgreSQL implements the atomicity, the consistency and the isolation with the MVCC\index{MVCC}.
+The Multi Version Concurrency Control\index{Multi Version Concurrency Control}offers high efficiency in
+the concurrent user accesss.\newline 
 
-This comparison happens at tuple level using two system fields xmin and xmax 
-having the xid data type. 
-When a transaction creates a new tuple then the transaction's xid is put into 
-the tuple's xmin value. 
-When a transaction deletes a tuple then the xmax value is set to the 
-transaction's xid leaving the tuple in place for read consistency. 
-When a tuple is visible to any transaction is called a live tuple, a tuple 
-which is no longer visible is a dead tuple.\newline
+The MVCC logic is somewhat simple. When a transaction starts a write operation gets a transaction id,
+called XID,\index{XID} a 32 bit quantity. The XID value is used to determine the transaction's
+visibility, its relative position in an arbitrary timeline. All the transactions with XID smaller than
+the current XID in committed status are considered in the past and then visible. All the transactions
+with XID bigger than the current XID are in the future and therefore invisible.\newline
 
-PostgreSQL have no dedicated field for the update's xid. That's because when an 
-UPDATE is issued PostgreSQL creates a new tuple's version with the updated 
-data and sets the xmax value in the old version making it disappear.\newline
+The check is made at tuple level using two system fields xmin and xmax. When a new tuple is created the
+xmin is set with the transaction's xid. This field is also referred as the insert's transaction id. When
+a tuple is deleted then the xmax value is updated to the delete's xid. The xmax field is also know as
+the delete's  transaction id. The tuple is not physically removed in order to ensure the read consistency
+for any transaction in the tuple's past. The tuples having the xmax not set are live tuples. Therefore
+the tuples which xmax is set are dead tuples. In this model there is no field dedicated to the
+update which is an insert insert combined with a delete. The update's transaction id is used either for
+the new tuple's xmin and the old tuple's xmax.\newline
 
-A dead tuple can be reclaimed by VACUUM if no longer required by running 
-transactions, anyway tables updated often can result in data bloat for the dead 
-tuples and for the eventual indices.
-Look to \ref{sec:TUPLES} for more information on the 
-tuples.\newline
+The dead tuples are removed by VACUUM when no longer required by existing transactions.
+For the tuple detailed description check \ref{sec:TUPLES}.\newline
 
-When designing a new data model, the PostgreSQL's peculiar behaviour on the 
-update should be the first thing to consider, in order to limit the table 
-and index bloat. \newline
-
-Among the xmin,xmax two other system fields the cmin and cmax which data type 
-is CID, command id. Those are similar to the xmin/xmax quantities and usage 
-and their usage is to track the internal transaction's commands, in order to 
-avoid the command execution on the same tuple more than one time. The pratical 
-issue is explained in the well known Halloween Problem. For more informations 
-take a look here 
-\href{http://en.wikipedia.org/wiki/Halloween_Problem}{
+Alongside with xmin and xmax there are cmin and cmax which data type is the command id, CID. Those fields
+store the internal transaction's commands in order to avoid the command to be executed on the same tuple
+multiple times. One practical effect of those fiels is to solve the database's Halloween Problem
+described there \href{http://en.wikipedia.org/wiki/Halloween_Problem}{
 http://en.wikipedia.org/wiki/Halloween\_Problem}.\newline
 
-The SQL standard defines four level of transaction's isolation levels where 
-some phenomena are permitted or forbidden.
+The SQL standard defines four level of the transaction's isolation. Each level allows or deny the
+following transaction's anomalies.
 \index{transactions, isolation levels}
-Those phenomena are the following.
 
 \begin{itemize}
- \item \textbf{dirty read} A transaction reads data written by a concurrent 
-uncommitted transaction
+ \item \textbf{dirty read}\index{dirty read}, when a transaction can access the data written by a
+concurrent not committed transaction.
 
-\item \textbf{nonrepeatable read} A transaction re reads the data previously 
-read and finds the data changed by another transaction which has
-committed since the initial read
+\item \textbf{non repeatable read}\index{non repeatable read}, when a transaction repeats a previous read
+and finds the data changed by another transaction which has committed since the initial read.
 
-\item \textbf{phantom read} A transaction re executes a query returning a set 
-of rows satisfying a search condition and finds that the set of rows 
-satisfying the condition has changed because another recently-committed 
-transaction
+\item \textbf{phantom read}\index{phantom read}, when a transaction executes a previous query and
+finds a different set of rows with the same search condition because the results was changed by another
+committed transaction
 
 \end{itemize}
 
-Table \ref{tab:TRNISOLATION} shows the isolation levels with the 
-allowed phenomena. In PostgreSQL it's possible to set all the four 
-isolation levels but only the three more strict are supported. Setting the 
-isolation level to read uncommited fallback to the read committed in any case.
+The table \ref{tab:TRNISOLATION} shows the transaction's isolation levels and which anomalies are
+possible or not within. PostgreSQL supports the minimum isolation level to read committed. Setting the 
+isolation level to read uncommited does not cause an error. However, the system adjusts silently the
+level to read committed.
 
 \begin{table}[H]
   \begin{tabular}{cccc}
@@ -703,27 +676,29 @@ Read\\
   \caption{\label{tab:TRNISOLATION}SQL Transaction isolation levels}
 \end{table}
 
-By default the global isolation level is set to read committed, it's possible 
-to change the session's transaction isolation level using the command:
+The isolation level can be set per session with the command SET TRANSACTION ISOLATION LEVEL.
 \begin{lstlisting}[style=pgsql]
 SET TRANSACTION ISOLATION LEVEL { SERIALIZABLE | REPEATABLE READ | READ 
 COMMITTED | READ UNCOMMITTED }; 
 \end{lstlisting}
 
-To change the default transaction isolation level cluster wide there is the GUC 
+It's also possible to change the isolation level cluster wide changing the GUC
 parameter transaction\_isolation.
 
 
 \subsection{Snapshot exports}
 \label{sub:SNAPEXPORT}\index{transactions, snapshot export}
-Since PostgreSQL 9.2 are supported the transaction's snapshot exports. A session with an open 
-transaction, can export its consistent snapshot to any other session. The snapshot remains valid 
-meanwhile the transaction is open. Using this functionality offers a way to run multiple backends 
-on a consistent data set frozen in time. This feature resulted in the brilliant parallel export in 
-the 9.3's pg\_dump as described in \ref{sec:PGDUMPINT}.\newline
+PostgreSQL 9.2 introduced the transaction's snapshot exports. A session with an open transaction, can
+export its snapshot to other sessions. The snapshot can be imported as long as the exporting transaction
+is in progress. This feature opens some interesting scenarios where multiple backends can import a
+consistent snapshot and run, for example, read queries in parallel. One brilliant snapshot export's
+implementation is the parallel export available with the 9.3's pg\_dump. Check \ref{sec:PGDUMPINT} for
+more information.\newline
 
-In the following example, let's consider the table created in \ref{sec:VIEWS}. We'll first start an 
-explicit transaction and then we'll export the current snapshot.
+An example will help us to explain better the concept. We'll use the table created in \ref{sec:VIEWS}.
+The first thing to do is connecting to the cluster and start a new transaction with at least the
+REPEATABLE READ isolation level. Then the function pg\_export\_snapshot() is used to get the
+snapshot's identifier.
 
 \begin{lstlisting}[style=pgsql]
 postgres=# BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;
@@ -742,11 +717,7 @@ postgres=# SELECT count(*) FROM t_data;
 
 \end{lstlisting}
 
-We are first starting a transaction with the REPEATABLE READ isolation level. The second 
-statement exports the current snapshot using the function pg\_export\_snapshot(). Finally we are 
-checking with a simple row count the table t\_data have data inside.\newline
-
-We can now login with in a different session and delete all the rows from the t\_data table.
+Connectin with another backend let's remove all the rows from the table t\_data table.
 
 \begin{lstlisting}[style=pgsql]
 postgres=# DELETE FROM t_data;
@@ -759,7 +730,7 @@ postgres=# SELECT count(*) FROM t_data;
 
 \end{lstlisting}
 
-With the table now empty let's import the snapshot exported by the first backend.
+After importing the snapshot 00001369-1 the rows are back in place.
 
 \begin{lstlisting}[style=pgsql]
 postgres=# BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;
@@ -774,10 +745,8 @@ postgres=# SELECT count(*) FROM t_data;
 
 \end{lstlisting}
 
-The function pg\_export\_snapshot saves the current snapshot returning the text string which 
-identifies the snapshot. Passing the string to clients that want to import the snapshot gives to 
-independent sessions a single consistent vision. The import is possible only until the end of the 
-transaction that exported it. The export is useful only in the READ COMMITTED transactions, 
-because the REPEATABLE READ and higher isolation levels use the same snapshot within their 
-lifetime. 
+
+It's important to use at least the REPEATABLE READ as isolation level. Using the READ COMMITTED for the
+export does not generates an error. However the snapshot is discarded immediately because the READ
+COMMITTED takes a new snapshot for each command.
 
