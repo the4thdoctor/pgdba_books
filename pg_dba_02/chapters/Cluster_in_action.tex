@@ -1,10 +1,13 @@
 \chapter{The cluster in action}
-In order to understand how PostgreSQL deliver its functions we'll take a all around look to the cluster's 
-activity. We'll start looking to the memory interacting with the disk and how the backends interact each 
-other. The description is purposely not going into technical details. The main goal is to get a global 
-picture of a day in the life of a PostgreSQL's cluster.
+In order to understand how PostgreSQL delivers the data we'll take look all around to the cluster's 
+activity. The chapter will not deep into technical details. The main goal is to get a global picture of a 
+``day in the life'' of a PostgreSQL's cluster.
 
 \section{After the startup}
+As soon as the cluster is up it starts accepting the connections. Usually, before any backend is connected 
+the cluster waits without any further action. The postgres main process starts listening on the port 
+indicated in the postgresql.conf's parameter port for the addresses listed in listen\_addresses. 
+
 
 \section{The backends}
 
