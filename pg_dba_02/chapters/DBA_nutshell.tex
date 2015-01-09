@@ -2,23 +2,26 @@
 A database administrator is a strange combination of theory and practice. A mix of strictness and loose 
 rules. It's quite difficult to explain what exactly a DBA does. Working with databases requires passion, 
 knowledge and a strange combination of empathy and pragmatism in order to try to understand what the 
-cluster is thinking. With the commercial products the knowledge stops to the limits imposed by the vendor's 
-documentations. With a free DBMS like PostgreSQL the source code's availability facilitates the knowledge 
-acquisition. Also, reading the superb poetry written in C code and creates an intimate relation with the 
-cold binary programs.\newline
+DBMS is thinking. With the commercial products the knowledge is limited by the vendor's documentations 
+and is improved mostly by the personal experience. With a free DBMS like PostgreSQL the source code's 
+availability facilitates the knowledge acquisition. Also, reading the superb poetry which is the source 
+code, which is C language, creates an intimate relation with the cold binary programs and the 
+geniuses who create them.\newline
 
 A day in the life of a DBA does not have fixed boundaries. It can last one day or several months, for 
 example if there are long procedures to run inside the well controlled maintenance windows. Every day 
 is a different combination of the duties including the routine tasks, the monitoring and the proactive 
-thinking. The latter duty is probably the distinctive mark between a good and DBA and a cheap professional. 
-The capability of building a mental map of any possible issue projected in the near future, can make the 
-difference between spending the night sleeping or working frantically before the new day begins. Of course 
-when the emergency strikes there is the fourth and most important duty. The emergency handling. 
+thinking. The latter is probably the distinctive mark between a good and DBA and a cheap professional. 
+The capability of building a mental map for finding any possible issue, projected in the near future, can 
+make the difference between spending the night sleeping or working frantically before the next day begins. 
+Of course when the emergency strikes there is the fourth and most important duty. The emergency handling. 
 
 \section{Routine tasks}
 Under the group of routine tasks fall the procedures which are well consolidated on the documents and in 
 the DBA mind. For example, configuring the PostgreSQL's memory parameters should be something immediate. 
-Any task in this category is successful if remains completely unnoticed.
+Any task in this category is successful if remains completely unnoticed. Is not unlikely for the live 
+systems that the routine tasks are performed in antisocial hours like Sunday night or early morning in the 
+working days.
 
 \section{Monitoring}
 A system without monitoring is an one way ticket to the disaster. Whether solution is used it should be 
@@ -29,7 +32,23 @@ with the general purpose solutions like nagios there is a new interesting Postgr
 trap any possible server's misbehaviour. 
 
 \section{Proactive thinking}
+Reacting to the issues is fine. Trying to prevent them is much better. This kind of tasks is strictly 
+related with the monitoring. For example let's consider a master and a slave configured in continuous 
+recovery. Because the slave is made copying the data files we should expect both having the same size. 
+A (not so) small size difference between the master and the standby server can tell us the filesystem have 
+some problems or is configured not correctly on one box. In this example, assuming the filesystem is xfs a 
+bloating box is caused by the 
+\href{
+http://serverfault.com/questions/406069/why-are-my-xfs-filesystems-suddenly-consuming-more-space-and-full-of
+-sparse-file}{dynamic EOF allocation} introduced in the newer releases.
 
 \section{Emergency handling}
+Shit happens, deal with it. Not if but when happens. Sooner or later a disaster will strike requiring all 
+the experience and competence of the database experts for putting back the system in production state. It 
+doesn't matter if the issue is caused by an user screwing up the database or a power outage or a hardware 
+failure or a fleet of Vogon spaceships ready to demolish the earth. The rule number zero when in emergency 
+is \textit{never guess}. Guessing is a one way ticket to the disaster, in particular if what is the action 
+can destroy the database. 
+
 
 \section{Failure is not an option}
