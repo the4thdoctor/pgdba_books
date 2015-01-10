@@ -51,7 +51,7 @@ guess}. Guessing is a one way ticket to the disaster, in particular if what is t
 can destroy the database.\newline
 
 As example let's consider one of the most common causes of outage in the linux world, the distribution's 
-upgrade. Usually when the a linux distribution is upgraded, is very likely PostgreSQL will upgrade the 
+upgrade. Usually when a linux distribution is upgraded, is very likely PostgreSQL will upgrade the 
 binaries to a different major version. Now the data area is not compatible across the major releases. The 
 immediate effect when a system is upgraded is PostgreSQL will refuse to start because the version's 
 mismatch. The fix is quite simple. A dump and reload of the databases in the data area, or alternatively 
