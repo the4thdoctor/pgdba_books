@@ -763,7 +763,7 @@ The parameter sets the delay between two autovacuum runs on a specified database
 measured in seconds and the default value is 1 minute.
 
 \subsection{autovacuum\_vacuum\_scale\_factor}
-The parameter one specifies the fraction of the relation's live tuples to add to 
+The parameter one specifies the fraction of the relation's live tuples to add to the set in value in 
 autovacuum\_vacuum\_threshold in order to determine whether start the automatic VACUUM. The default is 0.2, 
 which is the table's 20\%. This setting can be overridden for individual tables by changing the storage 
 parameters.
@@ -786,7 +786,7 @@ This parameter sets the extra threshold of updated or deleted tuples to add to t
 autovacuum\_analyze\_scale\_factor. The value is used to  trigger an automatic ANALYZE. The default is 50 
 tuples. This setting can be overridden for individual tables by changing the storage parameters. For 
 example a 
-table with 10 million rows and autovacuum\_analyze\_scale\_factor,autovacuum\_analyze\_threshold set both 
+table with 10 million rows and autovacuum\_analyze\_scale\_factor, autovacuum\_analyze\_threshold set both 
 to their default values will start an automatic ANALYZE when 1,000,050 tuples are updated or deleted.
 
 \subsection{autovacuum\_freeze\_max\_age}
