@@ -63,5 +63,22 @@ pg\_resetxlog
 http://www.postgresql.org/docs/9.3/static/app-pgresetxlog.html} documentation. In the emergency, the 
 ``expert'' guess would transform a simple version's mismatch in a corrupted data area.
 
-
 \section{Failure is not an option}
+The failure is not an option. Despite this statement is quite pretentious is also the rule number 
+zero of any decent DBA. The task failure, should this be a simple alter table or an emergency 
+restore, is not acceptable. The database is the core of any application and therefore is the most important 
+element of the infrastructure.\newline
+
+In order to achieve this impossible level, any task should be considered single shot. Everything must run 
+perfectly at the first run like if without rollback plan. However the rollback procedure must be prepared 
+and tested alongside with the main task on the test environment in order to get a smooth transition if the 
+rollback should happen. It's also very important to remember the checklist. This allow the DBA to catch the 
+exact point of any possible failure ensuring a rapid fix when this happens.\newline
+
+Having a plan B gives a multiple approach for the task if something goes wrong. For example, when dealing 
+with normal size databases\footnote{I consider normal sized any database under the 500 GB} is possible to 
+implement many strategies for the disaster recovery having a similar time needed for the recovery. When the 
+amount of data becomes important this is no longer true. For example a logical restore takes more time than 
+a point in time recovery or a standby failover. In this case the plan A is the physical restore.If this does 
+not work then the logical recovery should be used instead.
+
