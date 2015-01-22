@@ -1,21 +1,32 @@
 \chapter{The cluster in action}
-In order to understand how PostgreSQL delivers the data we'll take look all around to the cluster's 
-activity. The chapter will not deep into technical details. The main goal is to get a global picture of a 
-``day in the life'' of a PostgreSQL's cluster.
+PostgreSQL delivers the data ensuring the ACID is enforced at any time. In order to understand how 
+this is possible we'll take look to a ``day in the life'' of a PostgreSQL's cluster. The chapter 
+is purposely skipping the technical details focusing on the global picture.
+
 
 \section{After the startup}
-As soon as the cluster is up it starts accepting the connections. Usually, before any backend is connected 
-the cluster waits without any further action. The postgres main process starts listening on the port 
-indicated in the postgresql.conf's parameter port for the addresses listed in listen\_addresses. 
+When the cluster completes the startup procedure the connections are allowed immediately. When a 
+client's connection is authorised the postgres main process forks into a new backend process which is 
+assigned to the connection for the client's lifetime. This process is quite expensive and does not work 
+very well for an high rate of connection's requests. The maximum number of connection is set at startup and 
+cannot be changed dynamically. Whether the connection is used or not ~400 bytes of shared memory are 
+consumed for each connection slot.\newline
 
+If there's no backend connected the cluster is not lazy. 
 
-\section{The backends}
-
-\section{The background writer}
+\section{The write ahead log}
+The data pages are cached into the shared buffer for read or write. A mechanism called pinning ensures that 
+only one backend at time is accessing the page in memory. If the page is modified becomes dirty, which 
+means the page is not yet written on the data file. The change is saved on the write ahead log as WAL
+record. The commit status for the transactions is saved in the directory clog or pg\_serial. This 
+is all the cluster needs to rebuild his last consistent state before a crash. 
 
 \section{The checkpoint}
 
-\section{The write ahead log}
+\section{The background writer}
+
 
 \section{Transactions}
+
+\section{The backends}
 
