@@ -50,18 +50,16 @@ spaceships ready to demolish the earth. The rule number zero when in handling an
 guess}. Guessing without knowledge can lead to the database destruction.\newline
 
 An example will give us a better understanding on this concept. Let's consider one of the most common 
-causes of outage in the linux world, the distribution's upgrade. Usually when a linux distribution is 
-upgraded, is very likely that PostgreSQL will upgrade the binaries jumping to a different major version. 
-Because the data area is not compatible across the major releases will prevent the cluster's start 
-after the distribution's upgrade. However the fix is quite simple installing the correct PostgreSQL's 
-version.\newline.
+causes of PostgreSQL's outage in the linux world, the distribution's upgrade. Usually when a linux 
+distribution is upgraded is very likely that PostgreSQL will jump to a different major version. 
+Because the data area is not compatible across the major releases this will prevent the cluster's to start. 
+However the fix is quite simple and requires just installing the correct PostgreSQL's version.\newline.
 
-Few years ago a desperate user stranded by a linux upgrade posted a message on a message 
-board. One ``expert'' guessed that pg\_resetxlog could be be useful. Before reading further please read the 
-pg\_resetxlog 
-\href{http://www.postgresql.org/docs/9.3/static/app-pgresetxlog.html}{
-http://www.postgresql.org/docs/9.3/static/app-pgresetxlog.html} documentation. The ``expert'' guess 
-transform a simple version mismatch's issue in a serious corruption to data area.
+Few years ago a desperate user posted the same question on a message board. One of the ``expert'' 
+guessed that pg\_resetxlog could be be useful in this case. Before reading further please read the 
+\href{http://www.postgresql.org/docs/9.3/static/app-pgresetxlog.html}{pg\_resetxlog documentation}. 
+Following the ``expert'' advice would transform a simple version mismatch's issue into a serious 
+data area corruption. 
 
 \section{Failure is not an option}
 The failure is not an option. Despite this statement is quite pretentious is also the rule number 
@@ -84,3 +82,4 @@ the recovery . When the amount of data becomes important this is no longer true.
 restore takes more time than a point in time recovery or a standby failover. In this case the plan A is the 
 physical restore and, if this does not work then there is the plan B, the logical recovery.
 
+\section{RTFM}

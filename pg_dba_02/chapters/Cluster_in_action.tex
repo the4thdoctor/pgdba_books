@@ -27,11 +27,11 @@ and starts a new one there is a xlog switch.
 
 \section{The checkpoint}
 On a regular basis the cluster starts a fundamental activity called checkpoint. The frequency of this 
-action is governed by the time between two distinct checkpoints and the space, measured in log 
-switches between two checkpoints. The checkpoint scans the shared buffer and writes down to the data 
-files all the dirty pages he find. When the checkpoint is complete the process determines the last 
-checkpoint location on the WAL segments and write down this important information on the control file 
-stored into the cluster's pg\_global tablespace.
+action is governed by the time and space, measured respectively in seconds and log switches between two 
+checkpoints. Whether event is happening first will trigger the checkpoint which scans the shared buffer 
+and writes down to the data files all the dirty pages. When the checkpoint is complete the process 
+determines checkpoint location and writes this information on the control file stored into the 
+cluster's pg\_global tablespace. 
 
 
 \section{The background writer}
