@@ -43,6 +43,7 @@ http://serverfault.com/questions/406069/why-are-my-xfs-filesystems-suddenly-cons
 -sparse-file}{dynamic EOF allocation} introduced in the newer XFS releases.
 
 \section{Emergency handling}
+\label{sec:DBAEMERGENCY}
 Shit happens, deal with it. Sooner or later a disaster will strike requiring all the experience and 
 efficiency of the database experts for putting back the system in production state. It doesn't matter if 
 the issue is caused by an user screwing up a database table, a hardware failure or a fleet of Vogon 
@@ -53,7 +54,7 @@ An example will give us a better understanding on this concept. Let's consider o
 causes of PostgreSQL's outage in the linux world, the distribution's upgrade. Usually when a linux 
 distribution is upgraded is very likely that PostgreSQL will jump to a different major version. 
 Because the data area is not compatible across the major releases this will prevent the cluster's to start. 
-However the fix is quite simple and requires just installing the correct PostgreSQL's version.\newline.
+However the fix is quite simple and requires just installing the correct PostgreSQL's version.\newline
 
 Few years ago a desperate user posted the same question on a message board. One of the ``expert'' 
 guessed that pg\_resetxlog could be be useful in this case. Before reading further please read the 
@@ -83,3 +84,19 @@ restore takes more time than a point in time recovery or a standby failover. In 
 physical restore and, if this does not work then there is the plan B, the logical recovery.
 
 \section{RTFM}
+The acronym RTFM stands for Read The Fucking Manual. It's quite obvious that reading the manual is the 
+perfect approach for finding the correct information or at least a hint for finding the solution.\newline
+
+The false confidence or a lack of humbleness make people to forget how important is to read the documents. 
+Understanding the documents is the next step, and is not simple indeed. In particular if the background is 
+poor or the reader have preconceptions which alter the word meanings.\newline
+
+On the same message board mentioned in \ref{sec:DBAEMERGENCY} an user asked some details about the binary 
+data. Another "expert" explained how PostgreSQL had two ways of storing the binary data. The bytea and the 
+OID, which maximum size limit was respectively  one and two GB. I replied with a simple question. 
+\textit{How is possible to store two GB in a four byte integer without strange voodoo 
+rituals?}\newline
+
+After an unpleasant argument finally the ``expert'' admitted he did not understood the mechanism used by 
+PostgreSQL to workaround the size limit of the TOASTed datum. If you are curious, well, 
+\href{http://www.postgresql.org/docs/9.3/static/largeobjects.html}{RTFM}!
