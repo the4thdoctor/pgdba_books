@@ -1,32 +1,44 @@
 \chapter{The cluster in action}
-PostgreSQL delivers the data ensuring the ACID is enforced at any time. In order to understand how 
-this is possible we'll take look to a ``day in the life'' of a PostgreSQL's cluster. The chapter 
-is purposely skipping the technical details focusing on the global picture.
-
+PostgreSQL delivers the data ensuring the ACID is enforced at any time. This chapter will give an outlook 
+on a ``day in the life'' of a PostgreSQL's cluster.
 
 \section{After the startup}
-When the cluster completes the startup procedure the connections are allowed immediately. When a 
-client's connection is authorised the postgres main process forks into a new backend process which is 
-assigned to the connection for the client's lifetime. This process is quite expensive and does not work 
-very well for an high rate of connection's requests. The maximum number of connection is set at startup and 
-cannot be changed dynamically. Whether the connection is used or not ~400 bytes of shared memory are 
-consumed for each connection slot.\newline
+When the cluster completes the startup procedure it starts accepting the connections. When a connection  
+is successful then the postgres main process forks into a new backend process which is assigned to the 
+connection for the client's lifetime. The fork is quite expensive and does not work very well for a high 
+rate of connection's requests. The maximum number of connections is set at startup and cannot be changed 
+dynamically. Whether the connection is used or not for each connection slot are consumed ~400 bytes of 
+shared memory.\newline
 
-If there's no backend connected the cluster is not lazy. 
+Even without connections the cluster keeps himself busy. 
 
 \section{The write ahead log}
-The data pages are cached into the shared buffer for read or write. A mechanism called pinning ensures that 
-only one backend at time is accessing the page in memory. If the page is modified becomes dirty, which 
-means the page is not yet written on the data file. The change is saved on the write ahead log as WAL
-record. The commit status for the transactions is saved in the directory clog or pg\_serial. This 
-is all the cluster needs to rebuild his last consistent state before a crash. 
+The \index{write ahead log} data pages are stored into the shared buffer for read or for write. A mechanism 
+called pinning ensures that only one backend at time is accessing the page. If the page\index{page, dirty} 
+is modified the becomes dirty, which 
+means the page is not yet written on the data file. The page's change is first saved on the write ahead log 
+as WAL record. The commit status for the transactions is then stored in the directory clog or the directory
+pg\_serial, depending on the transaction isolation leve. Those information is all the cluster needs to 
+rebuild his last consistent state if an unclean shutdown happens. The writes on the WAL are managed by a 
+background process called WAL writer\index{WAL writer}. This process were first introduced with PostgreSQL 
+8.3. The wal records are stored into a shared buffer's area sized by the parameter wal\_buffers before the 
+flush on disk. The WAL records are stored on fixed length segments. When the cluster fill up a WAL segment 
+and starts a new one there is a xlog switch.
 
 \section{The checkpoint}
+On a regular basis the cluster starts a fundamental activity called checkpoint. The frequency of this 
+action is governed by the time between two distinct checkpoints and the space, measured in log 
+switches between two checkpoints. The checkpoint scans the shared buffer and writes down to the data 
+files all the dirty pages he find. When the checkpoint is complete the process determines the last 
+checkpoint location on the WAL segments and write down this important information on the control file 
+stored into the cluster's pg\_global tablespace.
+
 
 \section{The background writer}
 
 
 \section{Transactions}
+
 
 \section{The backends}
 
