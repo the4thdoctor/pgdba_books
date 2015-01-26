@@ -1,37 +1,44 @@
 \chapter{The cluster in action}
-PostgreSQL delivers the data ensuring the ACID is enforced at any time. This chapter will give an outlook 
-on a ``day in the life'' of a PostgreSQL's cluster.
+PostgreSQL delivers his services ensuring the ACID rules are enforced at any time. This chapter will give 
+an outlook of a ``day in the life'' of a PostgreSQL's cluster. The chapter approach is purposely generic. 
+At this stage is very important to understand the global picture rather the technical details. 
 
 \section{After the startup}
 When the cluster completes the startup procedure it starts accepting the connections. When a connection  
 is successful then the postgres main process forks into a new backend process which is assigned to the 
-connection for the client's lifetime. The fork is quite expensive and does not work very well for a high 
-rate of connection's requests. The maximum number of connections is set at startup and cannot be changed 
-dynamically. Whether the connection is used or not for each connection slot are consumed ~400 bytes of 
-shared memory.\newline
+connection for the connection's lifetime. The fork is quite expensive and does not work very well for a 
+high rate of connection's requests. The maximum number of connections is set at startup and cannot be 
+changed dynamically. Whether the connection is used or not for each connection slot are consumed ~400 bytes 
+of shared memory.\newline
 
-Even without connections the cluster keeps himself busy. 
+Alongside the client's request the cluster have several subprocesses working in the background. 
 
-\section{The write ahead log}
-The \index{write ahead log} data pages are stored into the shared buffer for read or for write. A mechanism 
-called pinning ensures that only one backend at time is accessing the page. If the page\index{page, dirty} 
-is modified the becomes dirty, which 
-means the page is not yet written on the data file. The page's change is first saved on the write ahead log 
-as WAL record. The commit status for the transactions is then stored in the directory clog or the directory
-pg\_serial, depending on the transaction isolation leve. Those information is all the cluster needs to 
-rebuild his last consistent state if an unclean shutdown happens. The writes on the WAL are managed by a 
+\section{The write ahead log}\index{write ahead log} 
+The data pages are stored into the shared buffer either for read and write. A mechanism called pinning 
+ensures that only one backend at time is accessing the requested page. If the backend modifies the page then 
+this becomes dirty\index{page, dirty}. A dirty page is not yet written on its data file. However the page's 
+change is first saved on the write ahead log as WAL record and the commit status for the transactions is 
+then in the directory clog or the directory pg\_serial, depending on the transaction isolation level. The 
+wal records are stored into a shared buffer's area sized by the parameter wal\_buffers before the flush on 
+disk into the pg\_xlog directory on fixed length segments. When a WAL segment is full then a a new one is 
+created or recycled. When this happens there is a xlog switch. The writes on the WAL are managed by a 
 background process called WAL writer\index{WAL writer}. This process were first introduced with PostgreSQL 
-8.3. The wal records are stored into a shared buffer's area sized by the parameter wal\_buffers before the 
-flush on disk. The WAL records are stored on fixed length segments. When the cluster fill up a WAL segment 
-and starts a new one there is a xlog switch.
+8.3.
 
 \section{The checkpoint}
-On a regular basis the cluster starts a fundamental activity called checkpoint. The frequency of this 
-action is governed by the time and space, measured respectively in seconds and log switches between two 
-checkpoints. Whether event is happening first will trigger the checkpoint which scans the shared buffer 
-and writes down to the data files all the dirty pages. When the checkpoint is complete the process 
-determines checkpoint location and writes this information on the control file stored into the 
-cluster's pg\_global tablespace. 
+The cluster, on a regular basis, executes an important activity called checkpoint. The frequency 
+of this action is governed by the time and space, measured respectively in seconds and log switches between 
+two checkpoints. The checkpoint scans the shared buffer and writes down to the data files all the dirty 
+pages. When the checkpoint is complete the process determines the checkpoint location and writes this 
+information on the control file stored into the cluster's pg\_global tablespace. In the case of unclean 
+shutdown this value is used to determine the WAL segment from where to start the crash recovery. \newline
+
+Before the version 8.3 the checkpoint represented a potential bottleneck because the unavoidable IO spike 
+generated during the writes. That's the reason why the version 8.3 introduced the concept of spread 
+checkpoints. The cluster aims to a particular completion target time measured in percent of the checkpoint 
+timeout. The default values are respectively 0.5 and 5 minutes. This way the checkpoint will spread over a 
+target time of 2.5 minutes. From PostgreSQL 9.2 a new checkpointer process has been created to manage 
+efficiently the checkpoint.
 
 
 \section{The background writer}
