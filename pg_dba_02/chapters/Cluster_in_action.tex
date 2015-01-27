@@ -42,10 +42,14 @@ efficiently the checkpoint.
 
 
 \section{The background writer}
-
-
-\section{Transactions}
+Before the spread checkpoints the only solution to ease down the IO spike caused by the checkpoint was to 
+tweak the background writer. This process were introduced with the revolutionary PostgreSQL 8.0. The 
+writer, as the name suggests, works in the background searching for dirty buffers to write on the data 
+files. The writer works in rounds. When the process awakes scans the shared buffer for dirty buffers. When 
+the amount of buffers cleaned reaches the value set in bgwriter\_lru\_maxpages the process sleeps for the 
+time set in bgwriter\_delay. 
 
 
 \section{The backends}
 
+\section{Wrap up}
