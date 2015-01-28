@@ -51,5 +51,18 @@ time set in bgwriter\_delay.
 
 
 \section{The backends}
+The PostgreSQL backend architecture is the brilliant solution to a nasty problem. How to guarantee the 
+buffers are read only by one session at time and avoid the bottleneck of a long waiting queue. When a 
+backend needs to access a particular tuple, either for read or write, the relation's pages are accessed to 
+find the tuple matching the search criteria. When a buffer is accessed then the backend sets a pin on the 
+buffer which prevents the other backends requiring the same page to wait. As soon as the tuple is found and 
+processed the pin is removed. If the tuple is modified the MVCC enforces the tuple's visibility to the other 
+backends. The process is fine grained and very efficient. Even with an high concurrency rate on the same 
+buffers is very difficult to have the backends entangled.\newline
+
+A backend process is a fork of the main postgres process. It's very important to understand that the 
+backend is not the connection but a server process which interacts with the connection. Usually the backend 
+terminates when the connection disconnects. 
+
 
 \section{Wrap up}
