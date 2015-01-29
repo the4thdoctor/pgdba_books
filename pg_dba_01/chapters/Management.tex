@@ -190,9 +190,9 @@ is used to specify the shutdown mode and if is omitted it defaults to smart whic
 the SIGTERM signal. With the smart shuthdown the cluster stops accepting new connections and
 waits for all backends to quit. \newline
 
-When the shutdown mode is set to fast pg\_ctl sends the SIGQUIT signal to the postgres main process.
-Same as for the smart shutdown the cluster does not accepts new connections terminates the existing
-backends. Any open transaction is rolled back as well. \newline
+When the shutdown mode is set to fast pg\_ctl sends the SIGINT signal to the postgres main process.
+Like the smart shutdown the cluster does not accepts new connections and terminates the existing
+backends. Any open transaction is rolled back. \newline
 
 When the smart and the fast shutdown are complete they leave the cluster in clean state. This is
 true because when the postgres process initiate the final part of the shutdown it starts a
@@ -217,10 +217,10 @@ The subsequent start will require a crash recovery. The recovery is usually harm
 important exception. If the cluster contains unlogged tables those relations are recreated from
 scratch when the recovery happens and all the data in those table is lost.
 
-A final word about the SIGKILL signal, the dreaded kill -9. It can happen the cluster refuse to
-stop even using the immediate mode. In this case, as last resort the SIGKILL. Because this signal
+A final word about the SIGKILL signal, the dreaded kill -9. It could happen the cluster will not stop even 
+using the immediate mode. In this case, the last resort is to use SIGKILL. Because this signal
 cannot be trapped in any way, the resources like the shared memory and the inter process semaphores
-will stay in place after the kill. This will very likely affect the start of a fresh instance.
+will stay in place after killing the server. This will very likely affect the start of a fresh instance.
 Please refer to your sysadmin to find out the best way to cleanup the memory after the
 SIGKILL.
 

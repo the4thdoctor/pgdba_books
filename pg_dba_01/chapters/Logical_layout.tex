@@ -685,7 +685,6 @@ COMMITTED | READ UNCOMMITTED };
 It's also possible to change the isolation level cluster wide changing the GUC
 parameter transaction\_isolation.
 
-
 \subsection{Snapshot exports}
 \label{sub:SNAPEXPORT}\index{transactions, snapshot export}
 PostgreSQL 9.2 introduced the transaction's snapshot exports. A session with an open transaction, can
@@ -749,4 +748,3 @@ postgres=# SELECT count(*) FROM t_data;
 It's important to use at least the REPEATABLE READ as isolation level. Using the READ COMMITTED for the
 export does not generates an error. However the snapshot is discarded immediately because the READ
 COMMITTED takes a new snapshot for each command.
-
