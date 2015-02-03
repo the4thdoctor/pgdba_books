@@ -57,6 +57,7 @@ backend and appears in the view pg\_stat\_activity. Because the XID wraparound f
 the autovacuum to prevent wraparound starts even if the autovacuum is turned off.
 
 \section{The backends}
+\label{sec:CLUBACKEND}
 The PostgreSQL backend architecture is the brilliant solution for ensuring the concurrent access to the 
 buffers and avoid the bottleneck of a long waiting queue. When a backend needs to access a particular tuple, 
 either for read or write, the relation's pages are accessed to find the tuple matching the search criteria. 

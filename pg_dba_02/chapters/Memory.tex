@@ -1,11 +1,23 @@
 \chapter{The memory}
 \label{ch:PGMEMORY}
+The PostgreSQL memory at first sight looks simple. If compared with the complex structures implemented in 
+the other DBMS to a careless reader could seem rudimentary. However, the memory and in particular the 
+shared buffers implementation is complex and sophisticated. This chapter will dig down deep into the 
+PostgreSQL's memory.
 
 \section{The shared buffer}
-\subsection{Horrible history}
+The shared buffer is a segment allocated at cluster's startup. Its size is determined by the GUC parameter 
+shared\_buffers and the size can be changed only restarting the cluster. The shared buffer is used 
+to manage the data pages as seen in \ref{sec:CLUBACKEND}, which are called buffers when loaded in memory. 
+Having a shared area into the RAM have also the beneficial effect of keeping the data near the CPU for 
+rapid access, keeping in memory the important things and not everything. In the era of the \textit{in 
+memory databases} this could seems quite obsolete but the truth is that the resources, and the money, are 
+not infinite and the memory is not cheap.
+
+\subsection{An horrible history}
 \subsection{The clock sweep}
 \subsection{The wal buffers}
-\subsection{Context}
+\subsection{Memory context}
 
 \section{The user memory}
 \subsection{Work memory}
