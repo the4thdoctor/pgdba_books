@@ -18,12 +18,20 @@ to the history of the memory manager. The way PostgreSQL sticks an elephant into
 Timelord technology.
 
 Back in the old days PostgreSQL was quite rudimentary. The version 7.4 did not had tablespaces, it was 
-without a  nor a mechanism to prevent the XID wraparound failure (except the routine vacuuming of course) 
-and the memory the memory manager was a simple LRU buffer. Since then the algorithm evolved to become a 
-simple but sophisticated system to cache effectively the buffers. We'll look briefly to the memory 
-manager's history. 
+without a mechanism to prevent the XID wraparound failure (except for the routine vacuuming of course) 
+and the free space manager was a simple LRU buffer. Since then the algorithm evolved and became a 
+very efficient system to cache effectively the buffers. We'll look briefly to the free space manager's 
+history. 
 
 \subsection{PostgreSQL 7.4, the LRU list}
+In PostgreSQL 7.4 the free space in the shared buffer was managed using a simple last recently used list. 
+When a page is first request from disk the buffer manager puts it into the first buffer in the free LRU 
+list. If the first buffer is used by another page the list is shifted by one unity and the eventual last 
+page in the list is discarded. If a page in the list is requested again is put back into the first buffer 
+and so on.
+
+\subsubsection{The tale of the buffer}
+
 \subsection{PostgreSQL 8.0, the 2q}
 \subsubsection{the ARC}
 
@@ -34,11 +42,10 @@ manager's history.
 
 \subsection{PostgreSQL 9.4, huge pages}
 
-\subsection{The tale of the buffer}
-
 
 \subsection{The wal buffers}
 
+\subsection{The memory manager}
 \section{The user memory}
 \subsection{Work memory}
 \subsection{Maintenance work memory}
