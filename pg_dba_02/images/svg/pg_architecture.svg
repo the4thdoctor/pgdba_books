@@ -51,9 +51,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="1.4"
-     inkscape:cx="658.85718"
-     inkscape:cy="536.14591"
+     inkscape:zoom="0.7"
+     inkscape:cx="367.94621"
+     inkscape:cy="312.63399"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -72,6 +72,10 @@
        orientation="1,0"
        position="398.0001,439.41636"
        id="guide3037" />
+    <sodipodi:guide
+       orientation="1,0"
+       position="1012.8571,432.14286"
+       id="guide3057" />
   </sodipodi:namedview>
   <metadata
      id="metadata7">
@@ -89,184 +93,280 @@
      inkscape:groupmode="layer"
      id="layer1"
      transform="translate(0,-308.2677)">
-    <rect
-       style="fill:#ffccaa;fill-opacity:1;stroke:#000000;stroke-width:0.57917911;stroke-linecap:square;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
-       id="rect3790"
-       width="205.44444"
-       height="140.81062"
-       x="806.77454"
-       y="450.4523" />
-    <rect
-       style="fill:#b7c8c4;fill-opacity:1;stroke:#000000;stroke-width:1.2412653;stroke-linecap:square;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
-       id="rect3792"
-       width="284.2345"
-       height="276.53058"
-       x="519.75909"
-       y="698.23334" />
-    <rect
-       style="fill:#ffeeaa;fill-opacity:1;stroke:#000000;stroke-width:1.39999998;stroke-linecap:square;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
-       id="rect3798"
-       width="182.85715"
-       height="45.714287"
-       x="569.05591"
-       y="498.17438" />
-    <path
-       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-start:url(#Arrow1Lstart);marker-end:url(#Arrow1Lend)"
-       d="m 751.91306,520.96767 54.86148,-0.0383"
-       id="path3800"
-       inkscape:connector-type="polyline"
-       inkscape:connector-curvature="0"
-       inkscape:connection-start="#rect3798"
-       inkscape:connection-start-point="d4"
-       inkscape:connection-end="#rect3790"
-       inkscape:connection-end-point="d4" />
-    <path
-       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-start:url(#Arrow1Lstart);marker-end:url(#Arrow1Lend)"
-       d="m 660.58533,543.88866 0.68098,154.34468"
-       id="path3802"
-       inkscape:connector-type="polyline"
-       inkscape:connector-curvature="0"
-       inkscape:connection-start="#rect3798"
-       inkscape:connection-start-point="d4"
-       inkscape:connection-end="#rect3792"
-       inkscape:connection-end-point="d4" />
-    <text
-       xml:space="preserve"
-       style="font-size:13px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
-       x="659.7702"
-       y="523.88867"
-       id="text3804"
-       sodipodi:linespacing="125%"><tspan
-         sodipodi:role="line"
-         id="tspan3806"
-         x="659.7702"
-         y="523.88867">Postgres main process</tspan></text>
-    <text
-       xml:space="preserve"
-       style="font-size:20px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
-       x="916.4845"
-       y="527.46008"
-       id="text5174"
-       sodipodi:linespacing="125%"><tspan
-         sodipodi:role="line"
-         id="tspan5176"
-         x="916.4845"
-         y="527.46008">Shared buffer</tspan></text>
-    <text
-       xml:space="preserve"
-       style="font-size:27.67959404px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
-       x="661.32153"
-       y="765.93701"
-       id="text5178"
-       sodipodi:linespacing="125%"><tspan
-         sodipodi:role="line"
-         id="tspan5180"
-         x="661.32153"
-         y="765.93701">Data area</tspan></text>
     <g
-       id="g3093"
-       inkscape:connector-avoid="true">
+       id="g3024"
+       transform="translate(-172.14286,23.571429)">
       <rect
-         y="308.86322"
-         x="399.13483"
-         height="27.736538"
-         width="129.88815"
-         id="rect3007"
-         style="fill:#ffaaaa;fill-opacity:1;stroke:#000000;stroke-width:0.93758237;stroke-linecap:square;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
+         y="498.17438"
+         x="569.05591"
+         height="45.714287"
+         width="182.85715"
+         id="rect3798"
+         style="fill:#ffeeaa;fill-opacity:1;stroke:#000000;stroke-width:1.39999998;stroke-linecap:square;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
       <text
          sodipodi:linespacing="125%"
-         id="text3009"
-         y="326.45227"
-         x="464.64481"
-         style="font-size:13.39403439px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+         id="text3804"
+         y="523.88867"
+         x="659.7702"
+         style="font-size:13px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
          xml:space="preserve"><tspan
-           y="326.45227"
-           x="464.64481"
-           id="tspan3011"
-           sodipodi:role="line">Background writer</tspan></text>
-      <rect
-         y="350.78455"
-         x="399.43021"
-         height="27.736538"
-         width="129.88815"
-         id="rect3007-8"
-         style="fill:#ffaaaa;fill-opacity:1;stroke:#000000;stroke-width:0.93758237;stroke-linecap:square;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
-      <text
-         sodipodi:linespacing="125%"
-         id="text3009-7"
-         y="368.3736"
-         x="463.69781"
-         style="font-size:13.39403439px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
-         xml:space="preserve"><tspan
-           y="368.3736"
-           x="463.69781"
-           id="tspan3011-0"
-           sodipodi:role="line">Checkpointer</tspan></text>
-      <rect
-         y="391.94824"
-         x="399.17767"
-         height="27.736538"
-         width="129.88815"
-         id="rect3007-8-5"
-         style="fill:#ffaaaa;fill-opacity:1;stroke:#000000;stroke-width:0.93758237;stroke-linecap:square;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
-      <text
-         sodipodi:linespacing="125%"
-         id="text3009-7-3"
-         y="409.53729"
-         x="463.44528"
-         style="font-size:13.39403439px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
-         xml:space="preserve"><tspan
-           y="409.53729"
-           x="463.44528"
-           id="tspan3011-0-1"
-           sodipodi:role="line">WAL writer</tspan></text>
-      <rect
-         y="432.10181"
-         x="398.67258"
-         height="27.736538"
-         width="129.88815"
-         id="rect3007-8-53"
-         style="fill:#ffaaaa;fill-opacity:1;stroke:#000000;stroke-width:0.93758237;stroke-linecap:square;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
-      <text
-         sodipodi:linespacing="125%"
-         id="text3009-7-4"
-         y="449.69086"
-         x="462.94019"
-         style="font-size:13.39403439px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
-         xml:space="preserve"><tspan
-           y="449.69086"
-           x="462.94019"
-           id="tspan3011-0-2"
-           sodipodi:role="line">Stats collector</tspan></text>
-      <rect
-         y="470.48761"
-         x="399.17767"
-         height="27.736538"
-         width="129.88815"
-         id="rect3007-8-4"
-         style="fill:#ffaaaa;fill-opacity:1;stroke:#000000;stroke-width:0.93758237;stroke-linecap:square;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
-      <text
-         sodipodi:linespacing="125%"
-         id="text3009-7-5"
-         y="488.07666"
-         x="463.44528"
-         style="font-size:13.39403439px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
-         xml:space="preserve"><tspan
-           y="488.07666"
-           x="463.44528"
-           id="tspan3011-0-13"
-           sodipodi:role="line">Autovacuum</tspan></text>
+           y="523.88867"
+           x="659.7702"
+           id="tspan3806"
+           sodipodi:role="line">Postgres main process</tspan></text>
     </g>
-    <path
-       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="m 529.06583,95.275984 131.41865,0 0,94.630696"
-       id="path3118"
-       inkscape:connector-type="orthogonal"
-       inkscape:connector-curvature="0"
-       inkscape:connection-start="#g3093"
-       inkscape:connection-start-point="d4"
-       inkscape:connection-end="#rect3798"
-       inkscape:connection-end-point="d4"
-       transform="translate(0,308.2677)" />
+    <g
+       id="g3029">
+      <rect
+         y="450.4523"
+         x="806.77454"
+         height="140.81062"
+         width="205.44444"
+         id="rect3790"
+         style="fill:#ffccaa;fill-opacity:1;stroke:#000000;stroke-width:0.57917911;stroke-linecap:square;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+         ry="27.142857" />
+      <text
+         sodipodi:linespacing="125%"
+         id="text5174"
+         y="527.46008"
+         x="916.4845"
+         style="font-size:20px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+         xml:space="preserve"><tspan
+           y="527.46008"
+           x="916.4845"
+           id="tspan5176"
+           sodipodi:role="line">Shared buffer</tspan></text>
+    </g>
+    <g
+       id="g3034"
+       transform="matrix(0.72920659,0,0,0.7602372,515.63236,129.61004)">
+      <rect
+         y="699.66193"
+         x="398.33054"
+         height="276.53058"
+         width="284.2345"
+         id="rect3792"
+         style="fill:#b7c8c4;fill-opacity:1;stroke:#000000;stroke-width:1.2412653;stroke-linecap:square;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
+      <text
+         sodipodi:linespacing="125%"
+         id="text5178"
+         y="849.50842"
+         x="541.60724"
+         style="font-size:27.67959404px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+         xml:space="preserve"><tspan
+           y="849.50842"
+           x="541.60724"
+           id="tspan5180"
+           sodipodi:role="line">Data area</tspan></text>
+    </g>
+    <g
+       id="g3039">
+      <g
+         inkscape:connector-avoid="true"
+         id="g3093">
+        <rect
+           style="fill:#ffaaaa;fill-opacity:1;stroke:#000000;stroke-width:0.93758237;stroke-linecap:square;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+           id="rect3007"
+           width="129.88815"
+           height="27.736538"
+           x="399.13483"
+           y="308.86322" />
+        <text
+           xml:space="preserve"
+           style="font-size:13.39403439px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+           x="464.64481"
+           y="326.45227"
+           id="text3009"
+           sodipodi:linespacing="125%"><tspan
+             sodipodi:role="line"
+             id="tspan3011"
+             x="464.64481"
+             y="326.45227">Background writer</tspan></text>
+        <rect
+           style="fill:#ffaaaa;fill-opacity:1;stroke:#000000;stroke-width:0.93758237;stroke-linecap:square;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+           id="rect3007-8"
+           width="129.88815"
+           height="27.736538"
+           x="399.43021"
+           y="350.78455" />
+        <text
+           xml:space="preserve"
+           style="font-size:13.39403439px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+           x="463.69781"
+           y="368.3736"
+           id="text3009-7"
+           sodipodi:linespacing="125%"><tspan
+             sodipodi:role="line"
+             id="tspan3011-0"
+             x="463.69781"
+             y="368.3736">Checkpointer</tspan></text>
+        <rect
+           style="fill:#ffaaaa;fill-opacity:1;stroke:#000000;stroke-width:0.93758237;stroke-linecap:square;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+           id="rect3007-8-5"
+           width="129.88815"
+           height="27.736538"
+           x="399.17767"
+           y="391.94824" />
+        <text
+           xml:space="preserve"
+           style="font-size:13.39403439px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+           x="463.44528"
+           y="409.53729"
+           id="text3009-7-3"
+           sodipodi:linespacing="125%"><tspan
+             sodipodi:role="line"
+             id="tspan3011-0-1"
+             x="463.44528"
+             y="409.53729">WAL writer</tspan></text>
+        <rect
+           style="fill:#ffaaaa;fill-opacity:1;stroke:#000000;stroke-width:0.93758237;stroke-linecap:square;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+           id="rect3007-8-53"
+           width="129.88815"
+           height="27.736538"
+           x="398.67258"
+           y="432.10181" />
+        <text
+           xml:space="preserve"
+           style="font-size:13.39403439px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+           x="462.94019"
+           y="449.69086"
+           id="text3009-7-4"
+           sodipodi:linespacing="125%"><tspan
+             sodipodi:role="line"
+             id="tspan3011-0-2"
+             x="462.94019"
+             y="449.69086">Stats collector</tspan></text>
+        <rect
+           style="fill:#ffaaaa;fill-opacity:1;stroke:#000000;stroke-width:0.93758237;stroke-linecap:square;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+           id="rect3007-8-4"
+           width="129.88815"
+           height="27.736538"
+           x="399.17767"
+           y="470.48761" />
+        <text
+           xml:space="preserve"
+           style="font-size:13.39403439px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+           x="463.44528"
+           y="488.07666"
+           id="text3009-7-5"
+           sodipodi:linespacing="125%"><tspan
+             sodipodi:role="line"
+             id="tspan3011-0-13"
+             x="463.44528"
+             y="488.07666">Autovacuum</tspan></text>
+      </g>
+    </g>
+    <g
+       id="g3212"
+       transform="translate(0,-72)">
+      <rect
+         y="653.72827"
+         x="398.49542"
+         height="45.714287"
+         width="182.85715"
+         id="rect3798-1"
+         style="fill:#d7f4ee;fill-opacity:1;stroke:#000000;stroke-width:1.39999998;stroke-linecap:square;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
+      <text
+         sodipodi:linespacing="125%"
+         id="text3804-9"
+         y="679.44257"
+         x="489.20972"
+         style="font-size:13px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+         xml:space="preserve"><tspan
+           y="679.44257"
+           x="489.20972"
+           id="tspan3806-0"
+           sodipodi:role="line">Postgres backend #1</tspan></text>
+    </g>
+    <g
+       transform="translate(-1.1948571e-5,118.18787)"
+       id="g3212-2">
+      <rect
+         y="653.72827"
+         x="398.49542"
+         height="45.714287"
+         width="182.85715"
+         id="rect3798-1-9"
+         style="fill:#d7f4ee;fill-opacity:1;stroke:#000000;stroke-width:1.39999998;stroke-linecap:square;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
+      <text
+         sodipodi:linespacing="125%"
+         id="text3804-9-8"
+         y="679.44257"
+         x="489.20972"
+         style="font-size:13px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+         xml:space="preserve"><tspan
+           y="679.44257"
+           x="489.20972"
+           sodipodi:role="line"
+           id="tspan3244">Postgres backend #N</tspan></text>
+    </g>
+    <g
+       id="g3334">
+      <rect
+         ry="14.009345"
+         y="716.1806"
+         x="185.0571"
+         height="42.028023"
+         width="107.68794"
+         id="rect3248"
+         style="fill:#e9c6af;fill-opacity:1;stroke:#000000;stroke-width:1.79837191;stroke-linecap:square;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
+      <text
+         sodipodi:linespacing="125%"
+         id="text3275"
+         y="733.23517"
+         x="241.16249"
+         style="font-size:20px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+         xml:space="preserve"><tspan
+           style="font-size:10px"
+           y="733.23517"
+           x="242.75429"
+           id="tspan3277"
+           sodipodi:role="line">Maintenance </tspan><tspan
+           id="tspan3279"
+           style="font-size:10px"
+           y="745.73517"
+           x="241.16249"
+           sodipodi:role="line">work memory</tspan></text>
+      <rect
+         ry="14.009345"
+         y="771.73895"
+         x="186.57233"
+         height="42.028023"
+         width="107.68794"
+         id="rect3248-0"
+         style="fill:#e9c6af;fill-opacity:1;stroke:#000000;stroke-width:1.79837191;stroke-linecap:square;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
+      <text
+         sodipodi:linespacing="125%"
+         id="text3275-0"
+         y="794.79352"
+         x="242.67772"
+         style="font-size:20px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+         xml:space="preserve"><tspan
+           id="tspan3279-2"
+           style="font-size:10px"
+           y="794.79352"
+           x="242.67772"
+           sodipodi:role="line">Work memory</tspan></text>
+      <rect
+         ry="14.009345"
+         y="827.21613"
+         x="185.74493"
+         height="42.028023"
+         width="107.68794"
+         id="rect3248-0-7"
+         style="fill:#e9c6af;fill-opacity:1;stroke:#000000;stroke-width:1.79837191;stroke-linecap:square;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
+      <text
+         sodipodi:linespacing="125%"
+         id="text3275-0-7"
+         y="850.27069"
+         x="241.85031"
+         style="font-size:20px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+         xml:space="preserve"><tspan
+           id="tspan3279-2-7"
+           style="font-size:10px"
+           y="850.27069"
+           x="241.85031"
+           sodipodi:role="line">Temporary memory</tspan></text>
+    </g>
   </g>
 </svg>

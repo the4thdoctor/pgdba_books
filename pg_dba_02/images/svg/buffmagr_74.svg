@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="744.09448819"
+   height="1052.3622047"
+   id="svg2"
+   version="1.1"
+   inkscape:version="0.48.4 r9939"
+   sodipodi:docname="buffmagr_74.svg">
+  <defs
+     id="defs4">
+    <marker
+       inkscape:stockid="Arrow1Lend"
+       orient="auto"
+       refY="0.0"
+       refX="0.0"
+       id="Arrow1Lend"
+       style="overflow:visible;">
+      <path
+         id="path3987"
+         d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1.0pt;"
+         transform="scale(0.8) rotate(180) translate(12.5,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow1Lstart"
+       orient="auto"
+       refY="0.0"
+       refX="0.0"
+       id="Arrow1Lstart"
+       style="overflow:visible">
+      <path
+         id="path3984"
+         d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1.0pt"
+         transform="scale(0.8) translate(12.5,0)" />
+    </marker>
+    <linearGradient
+       id="linearGradient3915">
+      <stop
+         style="stop-color:#007dff;stop-opacity:1;"
+         offset="0"
+         id="stop3917" />
+      <stop
+         id="stop3927"
+         offset="0.5"
+         style="stop-color:#7f0042;stop-opacity:0.49803922;" />
+      <stop
+         style="stop-color:#ff2c00;stop-opacity:0.90588236;"
+         offset="1"
+         id="stop3919" />
+    </linearGradient>
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient3915"
+       id="linearGradient3921"
+       x1="49.807625"
+       y1="61.734753"
+       x2="49.365742"
+       y2="638.87762"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(0.56633221,0,0,0.76475835,37.378492,-10.318232)" />
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="0.7"
+     inkscape:cx="821.94778"
+     inkscape:cy="586.20691"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     inkscape:window-width="1920"
+     inkscape:window-height="1025"
+     inkscape:window-x="-2"
+     inkscape:window-y="-3"
+     inkscape:window-maximized="1" />
+  <metadata
+     id="metadata7">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <image
+       y="-25.445072"
+       x="1189.2888"
+       id="image3044"
+       xlink:href="file:///home/thedoctor/Dropbox/pgdba/pg_book/immagini/01_shared_buffer_7.4.jpg"
+       height="400"
+       width="586" />
+    <image
+       y="372.19394"
+       x="-943.04297"
+       id="image3106"
+       xlink:href="file:///home/thedoctor/Dropbox/pgdba/pg_book/immagini/02_shared_buffer_7.4.jpg"
+       height="400"
+       width="628" />
+    <rect
+       style="fill:url(#linearGradient3921);fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.92135245;stroke-linecap:square;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+       id="rect3111"
+       width="57.208199"
+       height="443.42798"
+       x="65.98259"
+       y="35.867348"
+       ry="0" />
+    <g
+       id="g3954"
+       transform="matrix(1.578608,0,0,1.578608,-296.6273,-511.06283)">
+      <rect
+         ry="48.57143"
+         y="812.36218"
+         x="325.71429"
+         height="171.42857"
+         width="270"
+         id="rect3948"
+         style="fill:#ffeeaa;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:1.39999998;stroke-linecap:square;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
+      <text
+         sodipodi:linespacing="125%"
+         id="text3950"
+         y="908.43384"
+         x="460.16107"
+         style="font-size:32.24802399px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+         xml:space="preserve"><tspan
+           y="908.43384"
+           x="460.16107"
+           id="tspan3952"
+           sodipodi:role="line">DATA AREA</tspan></text>
+    </g>
+    <g
+       id="g3965"
+       transform="matrix(1.4286097,0,0,1.4286097,-227.87531,-270.51725)">
+      <path
+         transform="matrix(1.1677815,0,0,0.77736481,-116.39793,121.18735)"
+         d="m 642.85713,258.79074 c 0,61.93479 -61.08115,112.14286 -136.42857,112.14286 -75.34742,0 -136.42858,-50.20807 -136.42858,-112.14286 0,-61.93479 61.08116,-112.14286 136.42858,-112.14286 75.34742,0 136.42857,50.20807 136.42857,112.14286 z"
+         sodipodi:ry="112.14286"
+         sodipodi:rx="136.42857"
+         sodipodi:cy="258.79074"
+         sodipodi:cx="506.42856"
+         id="path3959"
+         style="fill:#ffaaaa;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:1.39999998;stroke-linecap:square;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+         sodipodi:type="arc" />
+      <text
+         sodipodi:linespacing="125%"
+         id="text3961"
+         y="326.52115"
+         x="470.35339"
+         style="font-size:31.11482048px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+         xml:space="preserve"><tspan
+           y="326.52115"
+           x="470.35339"
+           id="tspan3963"
+           sodipodi:role="line">Shared Buffer</tspan></text>
+    </g>
+    <text
+       xml:space="preserve"
+       style="font-size:20px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="87.142853"
+       y="520.93365"
+       id="text3970"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan3972"
+         x="90.326447"
+         y="520.93365">LRU </tspan><tspan
+         sodipodi:role="line"
+         x="87.142853"
+         y="545.93359"
+         id="tspan3974">Free list</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:4.2;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-start:url(#Arrow1Lstart);marker-end:url(#Arrow1Lend);stroke-miterlimit:4;stroke-dasharray:4.2,4.2;stroke-dashoffset:0"
+       d="m 450.71426,322.67692 0,448.66169"
+       id="path3978"
+       inkscape:connector-type="orthogonal"
+       inkscape:connector-curvature="0"
+       inkscape:connection-start="#g3965"
+       inkscape:connection-start-point="d4"
+       inkscape:connection-end="#g3954"
+       inkscape:connection-end-point="d4" />
+  </g>
+</svg>
