@@ -28,11 +28,43 @@ In PostgreSQL 7.4 the free space in the shared buffer was managed using a simple
 When a page is first request from disk the buffer manager puts it into the first buffer in the free LRU 
 list. If the first buffer is used by another page the list is shifted by one unity and the eventual last 
 page in the list is discarded. If a page in the list is requested again is put back into the first buffer 
-and so on.
+and so on. This simple approach worked quite well with some unpleasant effects. After all the buffer is 
+shared and is not uncommon to have more than one database on the same cluster, each database different 
+design and purposes. This worked quite bad with the LRU list causing unnecessary disk IO because the 
+buffers were evicted without considering their usage frequency. This lead us to the tale of the buffer.
 
 \subsubsection{The tale of the buffer}
+I've read this interesting description years ago on the Bruce Momjian website and explains very well how a 
+minimal change can dramatically degrade the database performance.\newline
+
+Our tale will start with a PostgreSQL 7.4 with a 1000 buffers allocated into the shared memory. The page 
+size is the default, 8192 bytes. We have in total \begin{math}8192 * 1000 = 8192000\end{math} bytes. On the 
+data area we have a full packed table without indices which is consuming 1000 pages on the disk. If we run 
+a simple select from the table PostgreSQL  will execute the table's sequential scan in order to get the 
+buffers in memory. The sequential is a top to bottom operation. But the shared buffer stores the buffers in 
+reverse order. After the initial read, that will take some time because the disk IO, the table fits 
+completely into the shared buffer with the pages in reverse order. A second select will find start another 
+sequential scan. The buffer manager will search for the table's pages into the shared buffer and will find 
+the first table's page into the last slot of the LRU list. This will cause the page move from the last slot 
+to the first. The other buffers will shift by one slot all togheter and the second table's page will move 
+into the last LRU slot. The buffer manager will find the second table's page in memory and will move the 
+page into the first LRU slot causing the buffers shift again. The final result is a faster read because the 
+table is totally read from the memory.\newline
+
+Let's add a new row to our table. Because is full packed this will cause a new page to be added to the 
+table which page's count becomes 1001. A select with the shared buffer empty will take the same time of the 
+previous condition with one notable exception. When the page 1001 is read from disk the first table's page 
+is evicted from the shared buffer to make room. The second select will search for the first table's page 
+and it will read from the disk, evicting the second page from the shared buffer. Which is read from disk a 
+moment later causing the third page eviction and so on. One single extra page causes the cache spoil. This 
+is a corner case of course but tells us an important lesson on the database nature. They are discreet 
+systems and most of their behaviour is triggered. Usually there is no soft transition between good and bad
+performance. 
 
 \subsection{PostgreSQL 8.0, the 2q}
+The revolutionary PostgreSQL 8.0 introduced a new algorithm which was not so effective as 
+planned, thanks to the software patents. 
+
 \subsubsection{the ARC}
 
 \subsection{PostgreSQL 8.1, the clock sweep}
