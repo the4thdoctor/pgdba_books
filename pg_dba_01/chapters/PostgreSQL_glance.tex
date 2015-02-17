@@ -94,7 +94,11 @@ in a low activity server this can leave the standby behind the master for a whil
 to limit the problem using the archive\_timeout parameter which forces a log swith after the given 
 number of seconds. However, using the streaming replication\index{streaming replication} a standby 
 server can get the wal blocks over a database connection in almost real time. This feature allows 
-the physical blocks to be transmitted over a conventional database connection.
+the physical blocks to be transmitted over a conventional database connection. The version 9.4 introduces 
+the replication slots which makes simple to manage multiple slaves attached to the master.
+
+\subsection{ALTER SYSTEM}
+This long waited feature permits changing the cluster's configuration using the 
 
 
 \subsection{Procedural languages}

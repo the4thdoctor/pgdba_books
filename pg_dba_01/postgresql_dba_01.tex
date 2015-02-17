@@ -18,7 +18,7 @@
 
 \author{Federico Campoli}
 \title{PostgreSQL Database Administration \\ Volume 1 \\ Basic concepts}
-\date{First edition, 2015, some rights reserved} 
+\date{Second edition, 2015, some rights reserved} 
 
 \makeindex
 
@@ -79,9 +79,9 @@ restrict others from doing anything the license permits.
 
 \chapter*{Copyright}
 PostgreSQL Database Administration Volume 1 - Basic concepts\newline
+Covers PostgreSQL 9.4
 Federico Campoli \copyright \space 2015 \newline
-First edition\newline
-ISBN 978-1-326-14892-8\newline %CROWN QUARTO FORMAT ISBN
+Second edition\newline
 
 
  
@@ -106,6 +106,8 @@ the github repository where I'm sharing the latex sources
 \href{https://github.com/the4thdoctor/pgdba\_books}{
 https://github.com/the4thdoctor/pgdba\_books}.\newline
 
+The book is the second edition update to PostgreSQL 9.4. There is an extra chapter which covers the 
+version's upgrades.
 
 \section*{Intended audience}
 Database administrators, System administrators, Developers
@@ -125,8 +127,9 @@ giving advice that can seem quite obvious. But it's better to repeat things than
 mistakes when building an application. 
 
 \chapter*{Version and platform}
-This book is based on PostgreSQL version 9.3 running on Debian GNU Linux 7.
+This book is based on PostgreSQL version 9.4 running on Debian GNU Linux 7.
 References to older versions or different platforms are explicitly specified.
+
 
 \chapter*{Thanks}
 A big thank you to Craig Barnes for the priceless work on the book review.\newline
@@ -145,11 +148,10 @@ Chiaretta e Bon }.\newline
 \input{chapters/Maintenance}
 \input{chapters/Backup}
 \input{chapters/Restore}
+\input{chapters/Upgrades}
 \input{chapters/Couple_things}
-
 \appendix
 \input{appendix/Versioning}
-\input{appendix/Pg_94}
 \input{appendix/Contacts}
 \listoffigures
 \listoftables
