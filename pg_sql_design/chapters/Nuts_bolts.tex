@@ -1,26 +1,33 @@
 \chapter{Nuts and bolts}
-Before to get knee deep with the book's topic I want to explain how to set up an
-efficient environment and a set of methods which can improve the quality of coding.
-Some of those things are in open contrast with the general code style trending.
-Unfortunately the SQL universe is a strange place and requires strange behaviours.
-There is a visual match between the query's sections and the logic which requires a clear
-and well defined formatting to make it understandable.\newline
-Let's start then with a todo list for our workshop.
-\section{The editor}
-Unlikely many commercial RDBMS PostgreSQL, alongside his command line psql, have many unofficial
-clients. Those products have generally a good support for the database features and  a good
-connectivity layer. There is an exhaustive list on the PostgreSQL wiki\newline
-\href{https://wiki.postgresql.org/wiki/Community\_Guide\_to\_PostgreSQL\_GUI\_Tools}{
-https://wiki.postgresql.org/wiki/Community\_Guide\_to\_PostgreSQL\_GUI\_Tools}. I'm not telling you
-which editor is the best. I tested some of them, TOra, SQL workbench and SQL Maestro. I finally
-decided to use PgAdmin 3 because it offered me the best compromise between editing and database
-schema browsing.\newline
+Before starting with the book's topic I want to explain how to set up an
+efficient environment and some good practice which can improve the code's readability and quality.
+As somebody will notice these methods are completely opposite to the general code style trends. I'll 
+try to give the motivation for each rule. Anyway, in general because the SQL universe is a strange 
+place this requires strange approach. In order to write and read effectively the SQL the coder should gain 
+the capability to get a mental map  between the query's sections and the underlying logic. This can be 
+facilitated using a clear and well defined formatting.\newline
 
-The tool of choice should have the following features.
+\section{Code Indention}
+
+\section{The Hungarian notation}
+
+
+\section{The editor}
+Unlikely many commercial RDBMS PostgreSQL, ships only with the command line client psql. There is a 
+good quantity of third party clients with good support for the database features and a good connectivity 
+layer. An exhaustive list of those clients can be found on the PostgreSQL wiki\newline
+\href{https://wiki.postgresql.org/wiki/Community\_Guide\_to\_PostgreSQL\_GUI\_Tools}{
+https://wiki.postgresql.org/wiki/Community\_Guide\_to\_PostgreSQL\_GUI\_Tools}. Is difficult to say 
+which editor is the best. When I started learning PostgreSQL the only tool available were PGAdmin 2 and 
+phpPgAdmin. I decided for the former and I welcomed the newer version PgAdmin 3. However I tested some of 
+the other clients like TOra, SQL workbench and SQL Maestro and I never found the same confidence and ease 
+of usage like PgAdmin 3. Whether is the tool of your choice this should have the following features.
 
 \subsection{Native connector}
-One of the reasons I did not considered SQL workbench it was the JDBC connector. For me writing and
-testing the SQL is a process similar to the compulsive obsessive disorder. I write, I test, I
-change the query I test again. In this context the quick reaction from the client is absolutely
-important. The native connector have virtually no lag, except the disk/network bandwidth.
+One of the reasons I do not like SQL workbench is the JDBC connector. For me writing and testing the SQL 
+code is a quick process. I write the code which is run against the database, then I update the query, 
+another run and so on. The client response in this method is absolutely important. The native connector 
+have virtually no lag, except the disk/network bandwidth.
+
+
 
