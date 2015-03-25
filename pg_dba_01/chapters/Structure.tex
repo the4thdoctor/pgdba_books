@@ -14,28 +14,25 @@ The install from source creates into the target directory four subfolders \texti
 
 
 The packaged install puts the binaries and the libraries in the folder /usr/lib/postgresql 
-organised by major version. For example the 9.3 install will put the binaries into 
-/usr/lib/postgresql/9.3/bin and the libraries in /usr/lib/postgresql/9.3/lib. The extensions and 
-contributed modules are installed into the folder /usr/share/postgresql with the same structure. In 
-the directory /usr/bin/ are installed the debian's specific utilities and the symbolic link psql 
-pointing the file /usr/lib/share/postgresql-common/pg\_wrapper. This file is a perl script which 
-calls the PostgreSQL client reading the version the cluster and the default database from the file 
-~/.postgresqlrc or in /etc/postgresql-common/user\_clusters.\newline
+organised by major version. For example the 9.4 installation will put the binaries into 
+/usr/lib/postgresql/9.4/bin and the libraries in /usr/lib/postgresql/9.4/lib. The extensions and 
+contributed modules are installed into the folder /usr/share/postgresql/9.4. In the directory /usr/bin/ 
+there are the debian's specific utilities and the symbolic link psql pointing to the \newline
+/usr/lib/share/postgresql-common/pg\_wrapper. This file is a perl script which calls a specific PostgreSQL 
+client version the cluster using the data stored into the files ~/.postgresqlrc or\newline
+/etc/postgresql-common/user\_clusters.\newline
 
+The PostgreSQL binaries can be split in two groups, the core programs and the additional modules.
+Those are some specific wrappers and contributed modules which improve the PostgreSQL's features. 
 
 \section{The core binaries}
-The PostgreSQL binaries can be split in two groups, the core and the wrappers alongside with the 
-contributed modules. Let's start then with the former group.
 
 \subsection{postgres}\index{postgres}
 \label{sec:POSTGRES}
-This is the PostgreSQL's main process. The program can be started directly or using the pg\_ctl 
-utility. The second method is to be preferred as offer a simpler way to control the postgres 
-process. The direct execution is the unavoidable choice when the database won't start for an old XID 
-near to the wraparound failure\index{XID wraparound failure}. 
-In this case the cluster can only start in single user mode to perform a cluster wide vacuum. For 
-historical reasons there's also a symbolic link named postmaster pointing to the postgres 
-executable.
+This is the PostgreSQL's main process. The program can be started on the command line or using the pg\_ctl 
+utility. The second method is to be preferred because gives a simple way to control the postgres 
+main process. The command line is required when the database won't start because of the risk of the 
+XID wraparound failure\index{XID wraparound failure}. 
 
 \subsection{pg\_ctl}\index{pg\_ctl}
 \label{sub:PGCTL}
