@@ -1,19 +1,18 @@
 \chapter{Database installation}
 \label{cha:DB_INSTALL}
-In this chapter will see how to install PostgreSQL on Debian Gnu Linux. We'll take a look to 
+In this chapter we will see how to install PostgreSQL on Debian Gnu Linux. We'll take a look at 
 two procedures, compiling from source and using the packages shipped by the pgdg 
 \index{pgdg apt repository} apt repository.\newline 
-There are advantages and disadvantages on both procedures. The compile from source offers a fine
-grain control on all the aspects of the binaries configuration. Also doesn't have risks of
-unwanted restarts when upgrading and it's possible to install and upgrade the binaries with normal
-privileges.\newline
+There are advantages and disadvantages to both procedures. Compiling from source offers fine
+grained control of all the aspects of the binaries configuration. It also doesn't have the risks of
+unwanted restarts when upgrading and it's possible to install and upgrade the binaries without administrator privileges.\newline
 
-The packaged install is easier to manage when deploying the new binaries on the server, in
+The packaged install is easier to manage when deploying the new binaries to a server, in
 particular if there is a large number of installations to manage. The binary packages are
-released shortly after a new update is released. Because the frequency for the minor
-releases is not fixed, it could happen to have in place bugs affecting the production for months.
-For example the bug causing the standby server crashing when the master found invalid pages during
-a conventional vacuum, it was fixed almost immediately. Unfortunately the release with the fix
+released shortly after a new update is released. Because the frequency of the minor
+releases is not fixed it could happen to have bugs for months.
+For example: The bug which caused the standby server to crash when the master found invalid pages during
+a conventional vacuum was fixed almost immediately. Unfortunately the release with the fix only
 appeared after five months.\newline
 
 
