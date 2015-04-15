@@ -32,6 +32,20 @@ Before starting the PostgreSQL part ask your sysadmin to run the following comma
  \item apt-get install build-essential  libreadline6-dev  zlib1g-dev
 \end{itemize}
 
+% apt-get build-dep postgresql
+%
+% build-dep
+%     build-dep causes apt-get to install/remove packages in an attempt to
+%     satisfy the build dependencies for a source package. By default the
+%     dependencies are satisfied to build the package natively. If desired a
+%     host-architecture can be specified with the --host-architecture option
+%     instead.
+%
+% When run on a Vagrant box this installed the following:
+%     build-essential debhelper dh-apparmor dpkg-dev g++ g++-4.6 gettext
+%     html2text intltool-debian libcroco3 libdpkg-perl libgettextpo0
+%     libstdc++6-4.6-dev libunistring0 make po-debconf
+
 Please note the second step will require creating a new user password. Unless is a personal
 test it's better to avoid obvious passwords like \textit{postgres}.\newline
 
