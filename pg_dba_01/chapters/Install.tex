@@ -1,28 +1,27 @@
 \chapter{Database installation}
 \label{cha:DB_INSTALL}
-In this chapter will see how to install PostgreSQL on Debian Gnu Linux. We'll take a look to 
+In this chapter we will see how to install PostgreSQL on Debian Gnu Linux. We'll take a look at 
 two procedures, compiling from source and using the packages shipped by the pgdg 
 \index{pgdg apt repository} apt repository.\newline 
-There are advantages and disadvantages on both procedures. The compile from source offers a fine
-grain control on all the aspects of the binaries configuration. Also doesn't have risks of
-unwanted restarts when upgrading and it's possible to install and upgrade the binaries with normal
-privileges.\newline
+There are advantages and disadvantages to both procedures. Compiling from source offers fine
+grained control of all the aspects of the binaries configuration. It also doesn't have the risks of
+unwanted restarts when upgrading and it's possible to install and upgrade the binaries without administrator privileges.\newline
 
-The packaged install is easier to manage when deploying the new binaries on the server, in
+The packaged install is easier to manage when deploying the new binaries to a server, in
 particular if there is a large number of installations to manage. The binary packages are
-released shortly after a new update is released. Because the frequency for the minor
-releases is not fixed, it could happen to have in place bugs affecting the production for months.
-For example the bug causing the standby server crashing when the master found invalid pages during
-a conventional vacuum, it was fixed almost immediately. Unfortunately the release with the fix
+released shortly after a new update is released. Because the frequency of the minor
+releases is not fixed it could happen to have bugs for months.
+For example: The bug which caused the standby server to crash when the master found invalid pages during
+a conventional vacuum was fixed almost immediately. Unfortunately the release with the fix only
 appeared after five months.\newline
 
 
 \section{Install from source}
 \label{sec:INSTSOURCE}
 Using the configure script with the default settings requires the root access when installing.
-That's because the permissions in the target location /usr/local don't allow the write for normal
+That's because the permissions of the target location /usr/local don't allow writing by normal
 users. This method adopts a different install location and requires the root access only for the os
-user creation and the dependencies install. 
+user creation and the installation of the dependencies. 
 Before starting the PostgreSQL part ask your sysadmin to run the following commands.
 
 \begin{itemize}
@@ -33,7 +32,21 @@ Before starting the PostgreSQL part ask your sysadmin to run the following comma
  \item apt-get install build-essential  libreadline6-dev  zlib1g-dev
 \end{itemize}
 
-Please note the second step will require inserting a new user password. Unless is a personal
+% apt-get build-dep postgresql
+%
+% build-dep
+%     build-dep causes apt-get to install/remove packages in an attempt to
+%     satisfy the build dependencies for a source package. By default the
+%     dependencies are satisfied to build the package natively. If desired a
+%     host-architecture can be specified with the --host-architecture option
+%     instead.
+%
+% When run on a Vagrant box this installed the following:
+%     build-essential debhelper dh-apparmor dpkg-dev g++ g++-4.6 gettext
+%     html2text intltool-debian libcroco3 libdpkg-perl libgettextpo0
+%     libstdc++6-4.6-dev libunistring0 make po-debconf
+
+Please note the second step will require creating a new user password. Unless is a personal
 test it's better to avoid obvious passwords like \textit{postgres}.\newline
 
 In order to build the binaries we must download and extract the PostgreSQL's source tarball.
@@ -47,9 +60,9 @@ cd postgresql-9.3.5
 \end{verbatim}
 
 
-Using the configure script's option --prefix we'll point the install directory to a writable
-location. We can also use a director named after the the major version's numbering. This will allow
-us to have installed different PostgreSQL versions without problems.
+Using the configure script's --prefix option we'll point the install directory to a writable
+location. We can also use a directory named after the the major version number. This will allow
+us to have different PostgreSQL versions installed without problems.
 
 \begin{verbatim}
 mkdir -p /home/postgres/bin/9.3
@@ -58,8 +71,8 @@ mkdir -p /home/postgres/bin/9.3
 
 The configuration script will check all the dependencies and, if there's no error, will generate 
 the makefiles. Then we can start the build simply running the command \textit{make}. The time
-required for compiling is variable and depends from the system's power. If you have a multicore
-processor the make -j option can improve significantly the build time. When the build is is complete
+required for compiling is variable and depends on the system's power. If you have a multicore
+processor the make -j option can significantly improve the build time. When the build is complete
 it's a good idea to to run the regression tests. Those tests are designed to find any regression or
 malfunction before the binaries are installed.
 
@@ -83,8 +96,8 @@ make install
 \section{Packaged install}
 \label{sec:DEBIAN_INSTALL}
 
-The PostgreSQL Global Development Group manages a repository in order to facilitate the
-installations on the Linux distributions based on the debian's packaging system. 
+The PostgreSQL Global Development Group manages a repository in order to facilitate 
+installations on Debian based Linux distributions using Debian's packaging system. 
 
 Currently the supported distributions are
 
@@ -107,13 +120,13 @@ The PostgreSQL's versions available are
  \item PostgreSQL 9.4
 \end{itemize}
 
-The he packages are available either for amd64 and i386 architecture.
+The packages are available for both amd64 and i386 architectures.
 
 Anyway, the up to date list is available on the the wiki page 
 \href{http://wiki.postgresql.org/wiki/Apt}{http://wiki.postgresql.org/wiki/Apt}.\newline
 
 All the installation steps require root privileges, via sudo or acquiring the root login via su.
-Before starting configuring the repository it's a good idea to import the GPG key for the
+Before starting to configure the repository it's a good idea to import the GPG key for the
 package validation.
 
 In a root shell simply run

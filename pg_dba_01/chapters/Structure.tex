@@ -2,25 +2,25 @@
 Depending on the installation method, the install structure is set up in a single directory or 
 in multiple folders.\newline
 
-The install from source creates into the target directory four subfolders \textit{bin} 
-\textit{include} \textit{lib} and \textit{share}.
+The install from source creates four subfolders in the target directory: \textit{bin},
+\textit{include}, \textit{lib} and \textit{share}.
 
 \begin{itemize}
- \item \textbf{bin} is the location for PostgreSQL's binaries
+ \item \textbf{bin} contains the PostgreSQL binaries
  \item \textbf{include} contains the server's header files
- \item \textbf{lib} is the location where to put the shared libraries
- \item \textbf{share} is where the example files and the extension configurations are stored
+ \item \textbf{lib} contains the shared libraries
+ \item \textbf{share} contains the example files and the extension configurations
 \end{itemize}
 
 
 The packaged install puts the binaries and the libraries in the folder /usr/lib/postgresql 
 organised by major version. For example the 9.3 install will put the binaries into 
 /usr/lib/postgresql/9.3/bin and the libraries in /usr/lib/postgresql/9.3/lib. The extensions and 
-contributed modules are installed into the folder /usr/share/postgresql with the same structure. In 
-the directory /usr/bin/ are installed the debian's specific utilities and the symbolic link psql 
-pointing the file /usr/lib/share/postgresql-common/pg\_wrapper. This file is a perl script which 
+contributed modules are installed into the folder /usr/share/postgresql with the same structure. The
+Debian specific utilities and the symbolic link to the psql binary (which is at 
+/usr/lib/share/postgresql-common/pg\_wrapper) are stored in the directory /usr/bin/. This file is a perl script which 
 calls the PostgreSQL client reading the version the cluster and the default database from the file 
-~/.postgresqlrc or in /etc/postgresql-common/user\_clusters.\newline
+~/.postgresqlrc or /etc/postgresql-common/user\_clusters.\newline
 
 
 \section{The core binaries}
@@ -30,8 +30,8 @@ contributed modules. Let's start then with the former group.
 \subsection{postgres}\index{postgres}
 \label{sec:POSTGRES}
 This is the PostgreSQL's main process. The program can be started directly or using the pg\_ctl 
-utility. The second method is to be preferred as offer a simpler way to control the postgres 
-process. The direct execution is the unavoidable choice when the database won't start for an old XID 
+utility. The second method is to be preferred as it offers a simpler way to control the postgres 
+process. Direct execution is the unavoidable choice when the database won't start for an old XID 
 near to the wraparound failure\index{XID wraparound failure}. 
 In this case the cluster can only start in single user mode to perform a cluster wide vacuum. For 
 historical reasons there's also a symbolic link named postmaster pointing to the postgres 
@@ -40,9 +40,9 @@ executable.
 \subsection{pg\_ctl}\index{pg\_ctl}
 \label{sub:PGCTL}
 This utility is the simplest way for managing a PostgreSQL instance. The program reads the postgres 
-pid from the cluster's data area and sending the os signals manages the start the stop or the 
-process reload. It's also possible to send kill signals to the running instance. 
-The pg\_ctl The supported actions are the following.
+pid from the cluster's data area and sends the os signals to start, stop or reload the
+process. It's also possible to send kill signals to the running instance. 
+pg\_ctl provides the following actions:
 
 \begin{itemize}
  \item \textbf{init[db]} initialises a directory as PostgreSQL data area
@@ -58,17 +58,18 @@ In \ref{cha:MANAGING} we'll se how to manage the cluster.
 
 \subsection{initdb}\index{initdb}
 Is the binary which initialises the PostgreSQL data area. The directory to initialise must 
-be empty. Various options can be specified on the command line, like the character enconding or the 
+be empty. Various options can be specified on the command line, like the character encoding or the 
 collation order. 
 
 \subsection{psql}\index{psql}
+% TODO: Review statement 'The client it looks very essential'
 This is the PostgreSQL command line client. The client it looks very essential, however is one of 
 the most flexible tools available to interact with the server and the only choice when working on 
 the command line.
 
 \subsection{pg\_dump}\index{pg\_dump}
 \label{sub:PGDUMP}
-This is the binary dedicated to the backup. Can produce consistent backups in various formats. The 
+This is the binary dedicated to backup. Can produce consistent backups in various formats. The 
 usage is described shown in \ref{cha:BACKUP}.
 
 \subsection{pg\_restore}\index{pg\_restore}
@@ -77,18 +78,18 @@ format. It's able to run the restore in multiple jobs in order to speed up the p
 is described in \ref{cha:RESTORE}
 
 \subsection{pg\_controldata}\index{pg\_controldata}\label{sub:PGCONTROLDATA}
-This program can query the cluster's control file where PostgreSQLstores critical informations for 
+This program can query the cluster's control file where PostgreSQL stores critical information about 
 the cluster activity and reliability. 
 
 \subsection{pg\_resetxlog}\index{pg\_resetxlog}
-If a WAL file becomes corrupted the cluster cannot perform a crash recovery. This lead to a not 
-startable cluster in case of system crash. In this catastrophic scenario there's still a 
-possibility to start the cluster. Using pg\_resetxlog the cluster is cleared of any WAL file, the  
+If a WAL file becomes corrupted the cluster cannot perform a crash recovery. This lead to an
+unstartable cluster in case of system crash. In this catastrophic scenario there's still a 
+way to start the cluster. Using pg\_resetxlog the cluster is cleared of any WAL file, the  
 control file is initialised from scratch and the transaction's count is restarted.\newline
 
-The \textit{tabula rasa} have a cost indeed. The cluster lose any reference between the 
-transactions progression and the data files. The physical integrity is lost and any attempt to run 
-queries which write data will results in corruption.\newline 
+The \textit{tabula rasa} comes with a cost indeed. The cluster loses any reference between the 
+transaction progression and the data files. The physical integrity is lost and any attempt to run 
+queries which write data will result in corruption.\newline 
 
 The PostgreSQL's documentation is absolutely clear on this point.
 
@@ -100,14 +101,14 @@ from scratch using initdb and then the dump file can be restored using psql or p
 \end{verbatim}
 
 \section{Wrappers and contributed modules}
-The second group of binaries is composed by the contributions and the wrappers. The 
+The second group of binaries is composed of the contributions and the wrappers. The 
 contributed modules add functions otherwise not available. The wrappers add command line 
 functions already present as SQL statements. Someone will notice the lack of HA specific binaries 
-like pg\_receivexlog and pg\_archivecleanup. They have been purposely skipped because beyond the 
+like pg\_receivexlog and pg\_archivecleanup. They have been purposely skipped because they are beyond the 
 scope of this book.
 
 \subsection{The create and drop utilities}
-The  binaries with the prefix create and drop like, createdb createlang createuser and dropdb, 
+The binaries with the prefix create and drop like, createdb createlang createuser and dropdb, 
 droplang, dropuser, are wrappers for the corresponding SQL functions. Each program performs the 
 creation and the drop action on the corresponding named object. For example createdb adds a 
 database to the cluster and dropdb will drop the specified database. 
@@ -119,7 +120,7 @@ take a look to CLUSTER and VACUUM FULL.
 
 \subsection{reindexdb}\index{reindexdb}
 The command does a database wide reindex. It's possible to run the command just on a table or index 
-passing the relation's name on the command line. In \ref{sec:REINDEX} we'll take a good look to 
+passing the relation's name on the command line. In \ref{sec:REINDEX} we'll take a good look at 
 the index management.
 
 \subsection{vacuumdb}\index{vacuumdb}
@@ -135,21 +136,21 @@ bytea data type. The limit for a large object it is 2 GB since the version 9.2. 
 9.3 the limit was increased to 4 TB. 
 
 \section{Debian's specific utilities}
-Finally let's take a look to the debian's specific utilities. They are a collection of perl scripts 
-used to simplify the cluster's management. Their install location is /usr/bin mostly like symbolic 
+Finally let's take a look at the Debian specific utilities. They are a collection of perl scripts 
+used to simplify the cluster's management. They are installed in /usr/bin and mostly consist of symbolic 
 links to the actual executable. We already mentioned one of them in the chapter's introduction, the 
 psql pointing to the pg\_wrapper PERL script.
 
 \subsection{pg\_createcluster}\index{pg\_createcluster}
 This script adds a new PostgreSQL cluster with the given major version, if installed, and the 
-given name. The script puts all the configurations in /etc/postgresql. Each major version have a 
-dedicated directory under which is present a group of directories with the cluster's specific 
-configuration files. If not specified the data directory is created into the folder 
-/var/lib/postgresql. It's also possible to specify the options for initd.
+given name. The script puts all the configuration in /etc/postgresql. Each major version has a 
+dedicated directory within which is a group of directories containing the cluster's specific 
+configuration files. If not specified the data directory is created in the folder 
+/var/lib/postgresql. It's possible to specify the options for initd.
 
 \subsection{pg\_dropcluster}\index{pg\_dropcluster}
-The program delete a PostgreSQL cluster created previously with pg\_createcluster. The 
-program will not drop a running cluster. If the dropped cluster have any tablespace those must be 
+The program will delete a PostgreSQL cluster created previously with pg\_createcluster. The 
+program will not drop a running cluster. If the dropped cluster has any tablespace those must be 
 manually removed after the drop as the program doesn't follow the symbolic links.
 
 \subsection{pg\_lscluster}\index{pg\_lscluster}
@@ -157,13 +158,14 @@ Lists the clusters created with pg\_createcluster.
 
 \subsection{pg\_ctlcluster}\index{pg\_ctlcluster}
 \label{sub:PGCTLDEB}
+% TODO: Understand this better to rewrite
 The program manages the cluster in a similar way pg\_ctl does. 
-Before the version 9.2 this wrapper had a dangerous behaviour for the shutdown. The script did not 
+Before version 9.2 this wrapper had dangerous behaviour for the shutdown. The script did not 
 offered a flexible way to provide the shutdown mode. More informations about the shutdown 
 sequence are in \ref{sec:SHUTDOWN_SEQ}. 
-Without any option pg\_ctlcluster performs a smart shutdown mode.
+When run without any arguments pg\_ctlcluster performs a smart shutdown mode.
 The --force option tells the script to try a \textit{fast} shutdown mode. Unfortunately if the 
 database doesn't shutdown in a \textit{reasonable time} the script performs an \textit{immediate} 
 shutdown. After another short wait, if the the instance is still up the script sends a 
-\textit{kill -9} to the postgres process. Because this kind of actions can result in data loss  
-they should be made manually by the DBA. It's better to avoid the shutdown using pg\_ctlcluster.
+\textit{kill -9} to the postgres process. Because these kind of actions can result in data loss  
+they should be done manually by the DBA. It's better to avoid using pg\_ctlcluster for the shutdown.

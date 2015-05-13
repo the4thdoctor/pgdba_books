@@ -1,18 +1,87 @@
 \chapter{The cluster in action}
-In order to understand how PostgreSQL deliver its functions we'll take a all around look to the cluster's 
-activity. We'll start looking to the memory interacting with the disk and how the backends interact each 
-other. The description is purposely not going into technical details. The main goal is to get a global 
-picture of a day in the life of a PostgreSQL's cluster.
+PostgreSQL delivers his services ensuring the ACID rules are enforced at any time. This chapter will give 
+an outlook of a ``day in the life'' of a PostgreSQL's cluster. The chapter approach is purposely generic. 
+At this stage is very important to understand the global picture rather the technical details. 
 
 \section{After the startup}
+When the cluster completes the startup procedure it starts accepting the connections. When a connection  
+is successful then the postgres main process forks into a new backend process which is assigned to the 
+client for the connection's lifetime. The fork is quite expensive and does not work very well for a 
+high rate of connection's requests. The maximum number of connections is set at startup and cannot be 
+changed dynamically. Whether the connection is used or not for each connection slot are consumed ~400 bytes 
+of shared memory.\newline
 
-\section{The backends}
+Alongside the client's request the cluster have several processes working in the background. 
 
-\section{The background writer}
+\section{The write ahead log}\index{write ahead log} 
+The data pages are stored into the shared buffer either for read and write. A mechanism called pinning 
+ensures that only one backend at time is accessing the requested page. If the backend modifies the page then 
+this becomes dirty\index{page, dirty}. A dirty page is not yet written on its data file. However the page's 
+change is first saved on the write ahead log as WAL record and the commit status for the transactions is 
+stored in the directory clog or pg\_serial, depending on the transaction isolation level. The wal buffers 
+ready for the flush are stored into a shared buffer's area sized by the parameter wal\_buffers.  
+Inside the pg\_xlog directory there are the actual WAL files organised in fixed size segments. When a 
+WAL segment is full then a a new one is created or recycled. When this happens there is a xlog switch. The 
+dedicated background process WAL writer\index{WAL writer} manages the writes to the WAL. This process 
+is present from PostgreSQL 8.3.
 
 \section{The checkpoint}
+The cluster, on a regular basis, executes an important activity called checkpoint. The frequency 
+of this action is governed by the time and space, measured respectively in seconds and log switches between 
+two checkpoints. The checkpoint scans the shared buffer and writes down to the data files all the dirty 
+buffers. When the checkpoint is complete the process determines the checkpoint location and writes this 
+information on the control file stored into the cluster's pg\_global tablespace. In the case of an unclean 
+shutdown this value is used to determine the WAL segment from where to start the crash recovery. \newline
 
-\section{The write ahead log}
+Before the version 8.3 the checkpoint represented a potential bottleneck because the unavoidable IO spike 
+generated during the writes. That's the reason why it was introduced the concept of spread checkpoint. The 
+cluster aims to a particular completion target time measured in percentage of the checkpoint timeout. The 
+default values are respectively 0.5 and 5 minutes which corresponds to a target time of 2.5 minutes. From 
+PostgreSQL 9.2 a dedicated checkpointer process manages the checkpoint activity.
 
-\section{Transactions}
 
+\section{The background writer}
+Before the spread checkpoints the only solution to reduce the IO spike caused by the checkpoint was to 
+tweak the background writer. This was one of the new features of the revolutionary PostgreSQL 8.0. The 
+writer, as the name suggests, works in the background searching for the dirty buffers to write on the data 
+files. The writer works in rounds. When the process awakes scans the shared buffer and stops when has 
+cleaned the amount of buffers set in bgwriter\_lru\_maxpages. The process then sleeps for the time set in 
+bgwriter\_delay. 
+
+\section{The autovacuum}
+The routine vacuuming is an important task to prevent the table bloat and the dreaded XID wraparound 
+failure. If enabled the autovacuum launcher take care of this taks automatically. The launcer starts one 
+daemon for each relation with enough dead tuples to trigger the conditions set in 
+autovacuum\_vacuum\_threshold and autovacuum\_vacuum\_scale\_factor. An autovacuum daemon is a normal 
+backend and appears in the view pg\_stat\_activity. Because the XID wraparound failure is a serious issue, 
+the autovacuum to prevent wraparound starts even if the autovacuum is turned off.
+
+\section{The backends}
+\label{sec:CLUBACKEND}
+The PostgreSQL backend architecture is the brilliant solution for ensuring the concurrent access to the 
+buffers and avoid the bottleneck of a long waiting queue. When a backend needs to access a particular tuple, 
+either for read or write, the relation's pages are accessed to find the tuple matching the search criteria. 
+When a buffer is accessed then the backend sets a pin onto it preventing the other backends to access the 
+same page. As soon as the tuple is found and processed the pin is removed and the next backend in the queue 
+will get the pin. If the tuple is modified the MVCC guarantee the other backends will see the correct 
+tuple's version. The process is fine grained and very efficient. Even with an high concurrency rate on the 
+same buffers is very difficult to have the backends entangled.\newline
+
+A backend process is a fork of the main postgres process. It's very important to understand that the 
+backend is not the connection but a server process assigned to the connection. Usually the backend 
+terminates when the connection disconnects. However, if a client disconnects ungracefully meanwhile a query 
+is running and does not signal the backend, the query will continue to run and eventually will find 
+that the client is disappeared.  This is bad for many reasons. First because is consuming 
+a connection slot for nothing. Also the cluster is doing something useless consuming CPU cycles and memory. 
+\newline
+
+Like everything in PostgreSQL the backend architecture is oriented to protect the data and in particular 
+the volatile shared buffer. If for some reasons one of the backend process crashes then the postgres 
+process terminates all the backends in order to prevent the potential shared buffer corruption. The clients 
+should be able to manage this exception resetting the connection when required.\newline
+
+\section{Wrap up}
+The cluster's background activity remains most of the time unnoticed. The users and the developers can 
+ignore this aspect of the PostgreSQL architecture leaving the difficult taks of understanding the 
+database's heartbeat to the DBA, which should have the final word on any potential mistake in the design 
+specs. The next chapters will explore the PostgreSQL's architecture in details.

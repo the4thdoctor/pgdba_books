@@ -1,4 +1,4 @@
-\documentclass[oneside]{book}
+\documentclass[twoside]{book}
 \usepackage[utf8]{inputenc}
 \usepackage{makeidx}
 \usepackage{graphicx}
@@ -12,7 +12,7 @@
 \usepackage{float}
 \usepackage{pdfpages}
 \usepackage{listings}
-\usepackage[paperwidth=21.59cm,paperheight=27.94cm]{geometry}
+\usepackage[paperwidth=18.91cm,paperheight=24.59cm,top=2cm,bottom=4cm]{geometry}
 \usepackage{xcolor}
 
 
@@ -109,7 +109,7 @@ The book starts where the first volume ends. Reading first the volume one is war
 
 
 \chapter*{Version and platform}
-This book is based on PostgreSQL version 9.3 running on Debian GNU Linux 7.
+This book is based on PostgreSQL version 9.4 running on Debian GNU Linux 7.
 References to older versions or different platforms are explicitly specified.
 
 \chapter*{Thanks}
@@ -117,13 +117,15 @@ The beautiful cover has been made by \href{http://www.bonland.eu/}{Chiaretta e B
 
 \tableofcontents{}
 
+\input{chapters/DBA_nutshell}
 \input{chapters/Cluster_in_action}
-\input{chapters/Data_area}
-\input{chapters/Processes}
 \input{chapters/Memory}
-\chapter{SQL under the bonnet}
+\input{chapters/Data_area}
+\input{chapters/Architecture}
 \chapter{Point in time recovery}
 \chapter{High availability}
+\chapter{Logical replication}
+\chapter{SQL under the bonnet}
 \chapter{Performance Tuning}
 
 \appendix
