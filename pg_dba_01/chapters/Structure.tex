@@ -1,9 +1,8 @@
 \chapter{Install structure}\label{cha:INSTALLSTRUCT}
-Depending on the installation method, the install structure is set up in a single directory or 
-in multiple folders.\newline
+Depending on the installation method, the install structure can be into a single directory or in multiple 
+folders.\newline
 
-The install from source creates into the target directory four subfolders \textit{bin} 
-\textit{include} \textit{lib} and \textit{share}.
+The install from source creates into the target directory four subfolders.
 
 \begin{itemize}
  \item \textbf{bin} is the location for PostgreSQL's binaries
@@ -13,17 +12,18 @@ The install from source creates into the target directory four subfolders \texti
 \end{itemize}
 
 
-The packaged install puts the binaries and the libraries in the folder /usr/lib/postgresql 
-organised by major version. For example the 9.4 installation will put the binaries into 
-/usr/lib/postgresql/9.4/bin and the libraries in /usr/lib/postgresql/9.4/lib. The extensions and 
-contributed modules are installed into the folder /usr/share/postgresql/9.4. In the directory /usr/bin/ 
-there are the debian's specific utilities and the symbolic link psql pointing to the \newline
-/usr/lib/share/postgresql-common/pg\_wrapper. This file is a perl script which calls a specific PostgreSQL 
-client version the cluster using the data stored into the files ~/.postgresqlrc or\newline
+The packaged install spreads the binaries and the libraries in different folders with the name organised by 
+major version. For example the 9.4 installation will put the binaries into /usr/lib/postgresql/9.4/bin and 
+the libraries in /usr/lib/postgresql/9.4/lib. The extensions and the contributed modules are installed into 
+the folder /usr/share/postgresql/9.4. The debian package also ships with wrappers stored in the directory 
+/usr/bin/. In particular the symbolic link psql ponts the perl script \newline
+/usr/lib/share/postgresql-common/pg\_wrapper which calls a specific PostgreSQL client version the cluster 
+using the data stored into the files ~/.postgresqlrc or into \newline 
 /etc/postgresql-common/user\_clusters.\newline
 
-The PostgreSQL binaries can be split in two groups, the core programs and the additional modules.
-Those are some specific wrappers and contributed modules which improve the PostgreSQL's features. 
+Whether is the installation method, PostgreSQL binaries can be grouped in two categories, the core 
+programs and the additional modules. The latter are a collection of wrappers and contributed 
+modules for improving the PostgreSQL's functionality. 
 
 \section{The core binaries}
 
@@ -36,10 +36,10 @@ XID wraparound failure\index{XID wraparound failure}.
 
 \subsection{pg\_ctl}\index{pg\_ctl}
 \label{sub:PGCTL}
-This utility is the simplest way for managing a PostgreSQL instance. The program reads the postgres 
-pid from the cluster's data area and sending the os signals manages the start the stop or the 
-process reload. It's also possible to send kill signals to the running instance. 
-The pg\_ctl The supported actions are the following.
+This utility is the simplest way for managing a PostgreSQL cluster. The program read the postgres 
+pid from the cluster's data area and sends the os signals to the main server process according to the 
+command shipped on the command line. It's also possible to send custom signals to the running 
+instance. The pg\_ctl The supported operations are the following.
 
 \begin{itemize}
  \item \textbf{init[db]} initialises a directory as PostgreSQL data area
