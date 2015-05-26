@@ -232,12 +232,14 @@ The toast table is composed by three fields. The chunk\_id is an OID used to sto
 The chunk\_seq is an integer which stores the chunk orders. The chunk\_data is a bytea field containing the 
 the actual data converted in a binary string.\newline 
 
-The chunk size is normally 2k and is controlled at compile time by the symbol TOAST\_MAX\_CHUNK\_SIZE. The 
-TOAST code is triggered by the value TOAST\_TUPLE\_THRESHOLD, also 2k by default. When the tuple's size is 
-bigger than TOAST\_TUPLE\_THRESHOLD then the TOAST routines are triggered.\newline
+The chunk size is normally 2k and is controlled at compile time by the symbol\newline 
+TOAST\_MAX\_CHUNK\_SIZE. The TOAST code is triggered by the value\newline  TOAST\_TUPLE\_THRESHOLD, also 2k 
+by default. When the tuple's size is 
+bigger than \newline TOAST\_TUPLE\_THRESHOLD then the TOAST routines are triggered.\newline
 
 The TOAST\_TUPLE\_TARGET, default 2 kB, governs the compression's behaviour. PostgreSQL will compress the 
-datum to achieve a final size lesser than TOAST\_TUPLE\_TARGET. Otherwise the out of line storage is used.
+datum to achieve a final size lesser than \newline TOAST\_TUPLE\_TARGET. Otherwise the out of line storage 
+is used.
 
 TOAST offers four different storage strategies. Each strategy can be changed per column using the  ALTER 
 TABLE SET STORAGE statement.

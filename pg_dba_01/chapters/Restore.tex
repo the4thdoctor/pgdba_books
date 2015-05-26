@@ -319,7 +319,7 @@ custom format, using the schema and the data restore.\newline
 First we'll do a pg\_dump in custom format.
 
 \begin{verbatim}
-postgres@tardis:~/dump$ pg_dump -Fc -f db_addr.dmp  db_addr
+$ pg_dump -Fc -f db_addr.dmp  db_addr
 pg_dump: reading schemas
 pg_dump: reading user-defined tables
 pg_dump: reading extensions
@@ -381,7 +381,7 @@ CREATE DATABASE
 The schema restore is done with using the following command.
 
 \begin{verbatim}
-postgres@tardis:~/dump$ pg_restore -v -s -d db_addr_restore_bin db_addr.dmp 
+$ pg_restore -v -s -d db_addr_restore_bin db_addr.dmp 
 pg_restore: connecting to database for restore
 pg_restore: creating SCHEMA public
 pg_restore: creating COMMENT SCHEMA public
@@ -426,7 +426,7 @@ Then we are ready to load the data. We'll disable again the triggers in order to
 load failures as seen in \ref{sec:PLAINFORMAT}.
 
 \begin{verbatim}
-postgres@tardis:~/dump$ pg_restore --disable-triggers -v -a -d db_addr_restore_bin db_addr.dmp 
+$ pg_restore --disable-triggers -v -a -d db_addr_restore_bin db_addr.dmp 
 pg_restore: connecting to database for restore
 pg_restore: disabling triggers for t_address
 pg_restore: processing data for table "t_address"
@@ -449,7 +449,7 @@ performance.\newline
 
 The pre-data section will restore just the bare relations.
 \begin{verbatim}
-postgres@tardis:~/dump$ pg_restore --section=pre-data -v  -d db_addr_restore_bin db_addr.dmp 
+$ pg_restore --section=pre-data -v  -d db_addr_restore_bin db_addr.dmp 
 pg_restore: connecting to database for restore
 pg_restore: creating SCHEMA public
 pg_restore: creating COMMENT SCHEMA public
@@ -483,7 +483,7 @@ pg_restore: setting owner and privileges for DEFAULT i_id_city
 The data section will then load the data contents as fast as possible.
 
 \begin{verbatim}
-postgres@tardis:~/dump$ pg_restore --section=data -v  -d db_addr_restore_bin db_addr.dmp 
+$ pg_restore --section=data -v  -d db_addr_restore_bin db_addr.dmp 
 pg_restore: connecting to database for restore
 pg_restore: implied data-only restore
 pg_restore: processing data for table "t_address"
@@ -500,7 +500,7 @@ pg_restore: setting owner and privileges for SEQUENCE SET t_city_i_id_city_seq
 Finally, the post-data section will create the constraint and the indices over the existig data.
 
 \begin{verbatim}
-postgres@tardis:~/dump$ pg_restore --section=post-data -v  -d db_addr_restore_bin db_addr.dmp 
+$ pg_restore --section=post-data -v  -d db_addr_restore_bin db_addr.dmp 
 pg_restore: connecting to database for restore
 pg_restore: creating CONSTRAINT pk_i_id_city
 pg_restore: creating CONSTRAINT pk_id_address
@@ -581,7 +581,7 @@ memory. Finally the remaining value must be divided by the max connections.\newl
 
 Let's consider a a system with 26GB ram. If we set the shared\_buffer to 2 GB and 10 max connections, the 
 maintenance\_work\_mem will be 2.14 GB.
-\newpage
+
 \begin{verbatim}
 26 - 10% =  23.4
 23.4 - 2 = 21.4
