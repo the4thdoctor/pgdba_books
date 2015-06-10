@@ -62,11 +62,11 @@ systems and most of their behaviour is triggered. Usually there is no soft trans
 performance. 
 
 \subsection{PostgreSQL 8.0, the 2q}
-With the revolutionary PostgreSQL 8.0 the PostgreSQL development group decided to improve the 
-rudimentary memory manager in the 7.4. They initially used a new strategy which algorithm was under 
-software patent. Before the stable release the memory manager were replaced with a less efficient 
-buffer manager. The two queues.\newline 
+The revolutionary PostgreSQL 8.0 introduced a more sophisticated memory manager, the two queues.\newline 
 
+The buffer manager keeps three list of pointers to the buffer pages called cache directory blocks (CDB) T1,T2 and B1.
+
+The pointers in T1 and T2 point actually shared buffer's pages. 
 
 
 \subsubsection{the ARC}
