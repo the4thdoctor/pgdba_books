@@ -19,6 +19,19 @@
   <defs
      id="defs4">
     <marker
+       inkscape:stockid="SquareL"
+       orient="auto"
+       refY="0.0"
+       refX="0.0"
+       id="SquareL"
+       style="overflow:visible">
+      <path
+         id="path4141"
+         d="M -5.0,-5.0 L -5.0,5.0 L 5.0,5.0 L 5.0,-5.0 L -5.0,-5.0 z "
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1.0pt"
+         transform="scale(0.8)" />
+    </marker>
+    <marker
        inkscape:stockid="Arrow1Lend"
        orient="auto"
        refY="0.0"
@@ -68,7 +81,7 @@
        x2="49.365742"
        y2="638.87762"
        gradientUnits="userSpaceOnUse"
-       gradientTransform="matrix(0.56633221,0,0,0.76475835,37.378492,-10.318232)" />
+       gradientTransform="matrix(0.56634204,0,0,0.76310207,134.65786,-668.71503)" />
   </defs>
   <sodipodi:namedview
      id="base"
@@ -77,9 +90,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="0.7"
-     inkscape:cx="821.94778"
-     inkscape:cy="586.20691"
+     inkscape:zoom="0.78015268"
+     inkscape:cx="542.9645"
+     inkscape:cy="571.34736"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -87,7 +100,18 @@
      inkscape:window-height="1025"
      inkscape:window-x="-2"
      inkscape:window-y="-3"
-     inkscape:window-maximized="1" />
+     inkscape:window-maximized="1"
+     showguides="true"
+     inkscape:guide-bbox="true">
+    <sodipodi:guide
+       orientation="1,0"
+       position="180,595.71429"
+       id="guide4336" />
+    <sodipodi:guide
+       orientation="1,0"
+       position="622.85714,468.57143"
+       id="guide4338" />
+  </sodipodi:namedview>
   <metadata
      id="metadata7">
     <rdf:RDF>
@@ -96,7 +120,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -112,92 +136,117 @@
        height="400"
        width="586" />
     <image
-       y="372.19394"
-       x="-943.04297"
+       y="460.76538"
+       x="1202.6713"
        id="image3106"
        xlink:href="file:///home/thedoctor/Dropbox/pgdba/pg_book/immagini/02_shared_buffer_7.4.jpg"
        height="400"
        width="628" />
-    <rect
-       style="fill:url(#linearGradient3921);fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.92135245;stroke-linecap:square;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
-       id="rect3111"
-       width="57.208199"
-       height="443.42798"
-       x="65.98259"
-       y="35.867348"
-       ry="0" />
     <g
        id="g3954"
-       transform="matrix(1.578608,0,0,1.578608,-296.6273,-511.06283)">
+       transform="matrix(1.636857,0,0,1.578608,-352.31102,-775.34855)" />
+    <g
+       id="g3016"
+       inkscape:export-filename="/home/thedoctor/Documents/git/github/pgdba_books/pg_dba_02/images/shared_buffer_74.png"
+       inkscape:export-xdpi="91.834862"
+       inkscape:export-ydpi="91.834862">
       <rect
-         ry="48.57143"
-         y="812.36218"
-         x="325.71429"
-         height="171.42857"
-         width="270"
+         transform="matrix(0,1,-1,0,0,0)"
+         ry="0"
+         y="-622.62946"
+         x="163.26245"
+         height="442.46762"
+         width="57.209187"
+         id="rect3111"
+         style="fill:url(#linearGradient3921);fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:0.92036217;stroke-linecap:square;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
+      <rect
+         style="fill:#aaccff;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:1.39999998000000003;stroke-linecap:square;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
          id="rect3948"
-         style="fill:#ffeeaa;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:1.39999998;stroke-linecap:square;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
+         width="270"
+         height="171.42857"
+         x="325.71429"
+         y="812.36218"
+         ry="48.57143"
+         transform="matrix(1.636857,0,0,1.578608,-352.31102,-775.34855)" />
+      <text
+         xml:space="preserve"
+         style="font-size:32.24802399000000008px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+         x="460.16107"
+         y="908.43384"
+         id="text3950"
+         sodipodi:linespacing="125%"
+         transform="matrix(1.636857,0,0,1.578608,-352.31102,-775.34855)"><tspan
+           sodipodi:role="line"
+           id="tspan3952"
+           x="460.16107"
+           y="908.43384">DATA AREA</tspan></text>
       <text
          sodipodi:linespacing="125%"
-         id="text3950"
-         y="908.43384"
-         x="460.16107"
-         style="font-size:32.24802399px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+         id="text3970"
+         y="112.69816"
+         x="403.13321"
+         style="font-size:20px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
          xml:space="preserve"><tspan
-           y="908.43384"
-           x="460.16107"
-           id="tspan3952"
-           sodipodi:role="line">DATA AREA</tspan></text>
+           id="tspan3974"
+           y="112.69816"
+           x="403.13321"
+           sodipodi:role="line">SHARED BUFFER</tspan><tspan
+           id="tspan3011"
+           y="137.69815"
+           x="403.13321"
+           sodipodi:role="line">(FIFO)</tspan></text>
     </g>
     <g
-       id="g3965"
-       transform="matrix(1.4286097,0,0,1.4286097,-227.87531,-270.51725)">
-      <path
-         transform="matrix(1.1677815,0,0,0.77736481,-116.39793,121.18735)"
-         d="m 642.85713,258.79074 c 0,61.93479 -61.08115,112.14286 -136.42857,112.14286 -75.34742,0 -136.42858,-50.20807 -136.42858,-112.14286 0,-61.93479 61.08116,-112.14286 136.42858,-112.14286 75.34742,0 136.42857,50.20807 136.42857,112.14286 z"
-         sodipodi:ry="112.14286"
-         sodipodi:rx="136.42857"
-         sodipodi:cy="258.79074"
-         sodipodi:cx="506.42856"
-         id="path3959"
-         style="fill:#ffaaaa;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:1.39999998;stroke-linecap:square;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
-         sodipodi:type="arc" />
+       id="g3065">
+      <rect
+         rx="0"
+         ry="27.736195"
+         y="163.8701"
+         x="181.10867"
+         height="55.472389"
+         width="52.526688"
+         id="rect3013-8"
+         style="fill:#ffccaa;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:1.02712715000000010;stroke-linecap:square;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:1.02712712000000006, 1.02712712000000006;stroke-dashoffset:0" />
       <text
          sodipodi:linespacing="125%"
-         id="text3961"
-         y="326.52115"
-         x="470.35339"
-         style="font-size:31.11482048px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+         id="text3051"
+         y="199.12367"
+         x="206.83955"
+         style="font-size:20px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
          xml:space="preserve"><tspan
-           y="326.52115"
-           x="470.35339"
-           id="tspan3963"
-           sodipodi:role="line">Shared Buffer</tspan></text>
+           y="199.12367"
+           x="206.83955"
+           id="tspan3053"
+           sodipodi:role="line">8K</tspan></text>
     </g>
-    <text
-       xml:space="preserve"
-       style="font-size:20px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
-       x="87.142853"
-       y="520.93365"
-       id="text3970"
-       sodipodi:linespacing="125%"><tspan
-         sodipodi:role="line"
-         id="tspan3972"
-         x="90.326447"
-         y="520.93365">LRU </tspan><tspan
-         sodipodi:role="line"
-         x="87.142853"
-         y="545.93359"
-         id="tspan3974">Free list</tspan></text>
+    <g
+       transform="translate(310.06257,343.29652)"
+       id="g3065-9">
+      <rect
+         rx="0"
+         ry="27.736195"
+         y="164.09669"
+         x="181.10867"
+         height="55.472389"
+         width="52.526688"
+         id="rect3013-8-7"
+         style="fill:#ffeeaa;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:1.02712715;stroke-linecap:square;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:1.02712712, 1.02712712;stroke-dashoffset:0" />
+      <text
+         sodipodi:linespacing="125%"
+         id="text3051-9"
+         y="199.12367"
+         x="206.83955"
+         style="font-size:20px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+         xml:space="preserve"><tspan
+           y="199.12367"
+           x="206.83955"
+           id="tspan3053-3"
+           sodipodi:role="line">8K</tspan></text>
+    </g>
     <path
-       style="fill:none;stroke:#000000;stroke-width:4.2;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-start:url(#Arrow1Lstart);marker-end:url(#Arrow1Lend);stroke-miterlimit:4;stroke-dasharray:4.2,4.2;stroke-dashoffset:0"
-       d="m 450.71426,322.67692 0,448.66169"
-       id="path3978"
-       inkscape:connector-type="orthogonal"
-       inkscape:connector-curvature="0"
-       inkscape:connection-start="#g3965"
-       inkscape:connection-start-point="d4"
-       inkscape:connection-end="#g3954"
-       inkscape:connection-end-point="d4" />
+       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-start:url(#Arrow1Lstart);marker-end:url(#SquareL)"
+       d="m 211.49706,217.91014 0,135.87084 306.35029,0 0,152.53424"
+       id="path3101"
+       inkscape:connector-curvature="0" />
   </g>
 </svg>
