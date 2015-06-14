@@ -11,9 +11,10 @@ shared\_buffers and the size can be changed only restarting the cluster. The sha
 to manage the data pages as seen in \ref{sec:CLUBACKEND}, which are called buffers when loaded in 
 rhw memory. Having a RAM segment is not uncommon in the database universe. Is a rapid exchange 
 area where the buffers are kept across the sessions and keeps the data near the CPU. Like his competitors 
-PostgreSQL strives to keep in memory what is important things and not everything. In the era of the 
+PostgreSQL strives to keep in memory what is important and not everything. In the era of the 
 \textit{in memory databases} this could seems an obsolete concept. Unfortunately the truth is that the 
-resources, and so the money, are not infinite. Before digging into the technical details we'll have a look 
+resources, and so the money, are not infinite. And after all an in memory database is a database without the D IN 
+the ACID. Before digging into the technical details we'll have a look 
 to the history of the memory manager. The way PostgreSQL sticks an elephant into a small car without 
 Timelord technology.
 
@@ -51,7 +52,7 @@ into the last LRU slot. The buffer manager will find the second table's page in 
 page into the first LRU slot causing the buffers shift again. The final result is a faster read because the 
 table is totally read from the memory.\newline
 
-Let's add a new row to our table. Because is full packed this will cause a new page to be added to the 
+Let's add a new row to our table. Because is fully packed this will cause a new page to be added to the 
 table which page's count becomes 1001. A select with the shared buffer empty will take the same time of the 
 previous condition with one notable exception. When the page 1001 is read from disk the first table's page 
 is evicted from the shared buffer to make room. The second select will search for the first table's page 
@@ -62,14 +63,42 @@ systems and most of their behaviour is triggered. Usually there is no soft trans
 performance. 
 
 \subsection{PostgreSQL 8.0, the 2q}
-The revolutionary PostgreSQL 8.0 introduced a more sophisticated memory manager, the two queues.\newline 
+With the revolutionary PostgreSQL 8.0 the PostgreSQL global team introduced a different memory manager, the two 
+queues.\newline 
 
-The buffer manager keeps three list of pointers to the buffer pages called cache directory blocks (CDB) T1,T2 and B1.
+The buffer manager keeps three list of pointers to the buffer pages called cache directory blocks (CDB) T1,T2 and 
+B1. Each list is a simple FIFO buffer.\newline
 
-The pointers in T1 and T2 point actually shared buffer's pages. 
+The list T1 is used as LRU for the pages loaded from disk. The list T2 is used as LRU list for pages already cached 
+and evicted from the list T1. The list B1 is a list of pages recently evicted from the shared buffer.
+
+When a new page is read from disk is put initialy at the beginning of T1. All the CDB in T1 are shifted and the 
+last element in T1 is evicted from the shared buffer and his CDB is put at the B1's top.\newline 
+
+When a backend requests a page present in T1 its CDB is removed from T1 and placed at the T2's top. The last 
+element in T2 is  evicted from the shared buffer and its CDB is put at the B1's top.\newline
+
+When a backend requests a page in T2 the CDB is moved to the list's top.\newline
+
+Finally, when a page is read from disk and its CDB is present in B1 then the page is put into T2 instead of 
+T1.\newline
+
+The list T1 acts like a LRU list where the pages requested only one time are evicted quickly if no longer required. 
+The list T2 acts like a MRU list where the pages are moved back on the top when required and where the pages from 
+T1 are stored if required more than once. The list B1 is used as extra cache to track pages recently evicted from 
+the shared buffer that need to stay in T2 if requested again.\newline
+
+Because PostgreSQL can access the page buffers twice when pinning the buffer, in order to avoid the page stored in 
+T1 to be moved immediately in T2, the 2q was modified in the evaluation process. The tricky process has shown no 
+brilliant performances in production.
 
 
 \subsubsection{the ARC}
+The 2q algorithm was an emergency implementation caused by a software patent held on the algorithm initially 
+chosen for the PostgreSQL 8.0's memory manager. Old books, printed meanwhile the 8.0 was in development 
+wrongly list the ARC as memory manager. The ARC is an efficient algorithm which keeps in memory two 
+lists of page buffers, one for the LRU and for the MRU. Each list adapts dynamically with the different requests 
+of the cluster's activity. 
 
 \subsection{PostgreSQL 8.1, the clock sweep}
 
