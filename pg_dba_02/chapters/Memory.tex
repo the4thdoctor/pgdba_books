@@ -38,9 +38,15 @@ buffers were evicted without considering their usage frequency. This lead us to 
 \subsection{PostgreSQL 8.0, the 2q}
 With the revolutionary PostgreSQL 8.0 the PostgreSQL global team introduced a different memory manager, the two 
 queues.\newline 
-
 The buffer manager keeps three list of pointers to the buffer pages called cache directory blocks (CDB) T1,T2 and 
 B1. Each list is a simple FIFO buffer.\newline
+
+\begin{figure}[H]
+\includegraphics[scale=0.20]{images/shared_buffer_80.png}
+
+\caption{PostgreSQL 8.0, Buffer manager}
+
+\end{figure}
 
 The list T1 is used as LRU for the pages loaded from disk. The list T2 is used as LRU list for pages already cached 
 and evicted from the list T1. The list B1 is a list of pages recently evicted from the shared buffer.
