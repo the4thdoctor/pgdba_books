@@ -42,9 +42,9 @@ The buffer manager keeps three list of pointers to the buffer pages called cache
 B1. Each list is a simple FIFO buffer.\newline
 
 \begin{figure}[H]
-\includegraphics[scale=0.20]{images/shared_buffer_80.png}
+\includegraphics[scale=0.6]{images/shared_buffer_80.png}
 
-\caption{PostgreSQL 8.0, Buffer manager}
+\caption{PostgreSQL 8.0, CDB lists}
 
 \end{figure}
 
@@ -54,13 +54,41 @@ and evicted from the list T1. The list B1 is a list of pages recently evicted fr
 When a new page is read from disk is put initialy at the beginning of T1. All the CDB in T1 are shifted and the 
 last element in T1 is evicted from the shared buffer and his CDB is put at the B1's top.\newline 
 
+\begin{figure}[H]
+\includegraphics[scale=0.4]{images/2q_01.png}
+
+\caption{2q, read from disk}
+
+\end{figure}
+
 When a backend requests a page present in T1 its CDB is removed from T1 and placed at the T2's top. The last 
 element in T2 is  evicted from the shared buffer and its CDB is put at the B1's top.\newline
 
+\begin{figure}[H]
+\includegraphics[scale=0.4]{images/2q_02.png}
+
+\caption{2q, page in T1}
+
+\end{figure}
+
 When a backend requests a page in T2 the CDB is moved to the list's top.\newline
+
+\begin{figure}[H]
+\includegraphics[scale=0.4]{images/2q_03.png}
+
+\caption{2q, page in T2}
+
+\end{figure}
 
 Finally, when a page is read from disk and its CDB is present in B1 then the page is put into T2 instead of 
 T1.\newline
+
+\begin{figure}[H]
+\includegraphics[scale=0.4]{images/2q_04.png}
+
+\caption{2q, page in B1}
+
+\end{figure}
 
 The list T1 acts like a LRU list where the pages requested only one time are evicted quickly if no longer required. 
 The list T2 acts like a MRU list where the pages are moved back on the top when required and where the pages from 
@@ -80,6 +108,8 @@ lists of page buffers, one for the LRU and for the MRU. Each list adapts dynamic
 of the cluster's activity. 
 
 \subsection{PostgreSQL 8.1, the clock sweep}
+
+\subsection{PostgreSQL 8.2, the ringh buffers}
 
 \subsection{PostgreSQL 9.3, SHMMAX no more}
 %todo, the change of memory allocation method happened with the 9.3
