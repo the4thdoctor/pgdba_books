@@ -36,10 +36,10 @@ buffers were evicted without considering their usage frequency. This lead us to 
 
 
 \subsection{PostgreSQL 8.0, the 2q}
-With the revolutionary PostgreSQL 8.0 the PostgreSQL global team introduced a different memory manager, the two 
-queues.\newline 
-The buffer manager keeps three list of pointers to the buffer pages called cache directory blocks (CDB) T1,T2 and 
-B1. Each list is a simple FIFO buffer.\newline
+With the revolutionary PostgreSQL 8.0 were introduced a different memory manager, the two queues.\newline 
+
+This algorithm uses three list of buffer page pointers called cache directory blocks (CDB). The lists T1,T2 are 
+actually pointing buffered pages. B1 lists pages been recently in the shared buffer. 
 
 \begin{figure}[H]
 \includegraphics[scale=0.6]{images/shared_buffer_80.png}
@@ -49,10 +49,10 @@ B1. Each list is a simple FIFO buffer.\newline
 \end{figure}
 
 The list T1 is used as LRU for the pages loaded from disk. The list T2 is used as LRU list for pages already cached 
-and evicted from the list T1. The list B1 is a list of pages recently evicted from the shared buffer.
+and evicted from the list T1. The list B1 is a LRU list of pages recently evicted from the shared buffer.
 
-When a new page is read from disk is put initialy at the beginning of T1. All the CDB in T1 are shifted and the 
-last element in T1 is evicted from the shared buffer and his CDB is put at the B1's top.\newline 
+When a new page is read from disk is put initially at the beginning of T1. All the CDB in T1 are shifted and the 
+last element in T1 is evicted from the shared buffer, its CDB is put at the B1's top.\newline 
 
 \begin{figure}[H]
 \includegraphics[scale=0.4]{images/2q_01.png}
@@ -80,8 +80,8 @@ When a backend requests a page in T2 the CDB is moved to the list's top.\newline
 
 \end{figure}
 
-Finally, when a page is read from disk and its CDB is present in B1 then the page is put into T2 instead of 
-T1.\newline
+Finally, when a page is read from the disk but its CDB is present in B1, then the page is put at the T2's 
+top.\newline
 
 \begin{figure}[H]
 \includegraphics[scale=0.4]{images/2q_04.png}
@@ -90,19 +90,18 @@ T1.\newline
 
 \end{figure}
 
-The list T1 acts like a LRU list where the pages requested only one time are evicted quickly if no longer required. 
-The list T2 acts like a MRU list where the pages are moved back on the top when required and where the pages from 
-T1 are stored if required more than once. The list B1 is used as extra cache to track pages recently evicted from 
-the shared buffer that need to stay in T2 if requested again.\newline
+The list T1 is the LRU list where the pages requested only one time are evicted quickly from the shared buffer. 
+The list T2 is a MRU list where the pages are moved back on the top when required and where the pages from 
+T1 are stored if required before the eviction. The list B1 is used as extra cache to track pages 
+recently evicted from the shared buffer that need to stay in T2 if requested again.\newline
 
-Because PostgreSQL can access the page buffers twice when pinning the buffer, in order to avoid the page stored in 
-T1 to be moved immediately in T2, the 2q was modified in the evaluation process. The tricky process has shown no 
-brilliant performances in production.
+Despite the interesting approach, this tricky process did not show good performances in production. Things changed 
+when the clock sweep was implemented in PostgreSQL 8.1.
 
 
 \subsubsection{the ARC}
 The 2q algorithm was an emergency implementation caused by a software patent held on the algorithm initially 
-chosen for the PostgreSQL 8.0's memory manager. Old books, printed meanwhile the 8.0 was in development 
+chosen for the PostgreSQL 8.0's memory manager. Old books, printed meanwhile the 8.0 was in development, 
 wrongly list the ARC as memory manager. The ARC is an efficient algorithm which keeps in memory two 
 lists of page buffers, one for the LRU and for the MRU. Each list adapts dynamically with the different requests 
 of the cluster's activity. 
