@@ -7,9 +7,78 @@ place this requires strange approach. In order to write and read effectively the
 the capability to get a mental map  between the query's sections and the underlying logic. This can be 
 facilitated using a clear and well defined formatting.\newline
 
-\section{Code Indention}
+\section{Code indention}
+The SQL language is based on statements. Each statement is terminated by a specific character, by default ; . PostgreSQL 
+supports a minimal flow control over the results with the CASE construct but nothing sophisticated like an high level 
+language can offer. In order to understand the logic of the SQL statements is very important to get the statements 
+formatted in the same way the database execute them. 
+\subsection{SELECT}
+The PostgreSQL documentation describes the process clearly.
 
-\section{The Hungarian notation}
+\begin{smallverbatim}
+ 
+
+SELECT retrieves rows from zero or more tables. The general processing of SELECT is as follows:
+
+1. All queries in the WITH list are computed. 
+These effectively serve as temporary tables that can be referenced in the FROM list. 
+A WITH query that is referenced more than once in FROM is computed only once. 
+
+
+2. All elements in the FROM list are computed. 
+(Each element in the FROM list is a real or virtual table.) 
+If more than one element is specified in the FROM list, they are cross-joined together.
+
+
+3. If the WHERE clause is specified, all rows that do not satisfy the condition 
+are eliminated from the output. 
+
+
+4. If the GROUP BY clause is specified, or if there are aggregate function calls, 
+the output is combined into groups of rows that match on one or more values, 
+and the results of aggregate functions are computed. 
+If the HAVING clause is present, it eliminates groups that do not satisfy the 
+given condition. 
+
+
+5. The actual output rows are computed using the SELECT output expressions 
+for each selected row or row group. 
+
+
+6. SELECT DISTINCT eliminates duplicate rows from the result. 
+SELECT DISTINCT ON eliminates rows that match on all the specified expressions. 
+SELECT ALL (the default) will return all candidate rows, including duplicates. 
+
+
+7. Using the operators UNION, INTERSECT, and EXCEPT, the output of more than one 
+SELECT statement can be combined to form a single result set. 
+The UNION operator returns all rows that are in one or both of the result sets. 
+The INTERSECT operator returns all rows that are strictly in both result sets. 
+The EXCEPT operator returns the rows that are in the first result set but not in the second. 
+In all three cases, duplicate rows are eliminated unless ALL is specified. 
+The noise word DISTINCT can be added to explicitly specify eliminating duplicate rows. 
+Notice that DISTINCT is the default behavior here, even though ALL is the default for SELECT itself. 
+
+
+8. If the ORDER BY clause is specified, the returned rows are sorted in the specified order. 
+If ORDER BY is not given, the rows are returned in whatever order the system finds fastest to produce. 
+
+
+9. If the LIMIT (or FETCH FIRST) or OFFSET clause is specified, the SELECT statement only returns 
+a subset of the result rows. 
+
+10. If FOR UPDATE, FOR NO KEY UPDATE, FOR SHARE or FOR KEY SHARE is specified, 
+the SELECT statement locks the selected rows against concurrent updates. 
+
+\end{smallverbatim}
+
+
+
+\subsection{DML}
+
+\subsection{DDL}
+
+\section{Type based field name}
 
 
 \section{The editor}
