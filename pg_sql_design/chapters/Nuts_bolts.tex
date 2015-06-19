@@ -7,13 +7,33 @@ place this requires strange approach. In order to write and read effectively the
 the capability to get a mental map  between the query's sections and the underlying logic. This can be 
 facilitated using a clear and well defined formatting.\newline
 
-\section{Code indention}
+\section{Code formatting}
 The SQL language is based on statements. Each statement is terminated by a specific character, by default ; . PostgreSQL 
 supports a minimal flow control over the results with the CASE construct but nothing sophisticated like an high level 
 language can offer. In order to understand the logic of the SQL statements is very important to get the statements 
-formatted in the same way the database execute them. 
+formatted in the same way the database execute them. We'll look to the SELECT, the DML and the DDL. Each of those 
+queries need different formatting because each one have a particular logic. The elements in common are the following.
+
+\begin{itemize}
+ \item Tab separator of 7 spaces; It's equivalent to the SELECT word plus an extra space
+ \item All the keywords must be in uppercase
+ \item After a round bracket there is a carriage return and one tab indented 
+\end{itemize}
+
+
+
 \subsection{SELECT}
-The PostgreSQL documentation describes the process clearly.
+When processing a query the parser works backward. It starts from the innermost complete statements and moves upward to 
+get the entire picture. There is one remarkable exception. The WITH statements are computed first because required in 
+the rest of the query. Actually the WITH acts like a temporary table. In order to see immediately the way PostgreSQL 
+processes the query the indention should follow the same logic. 
+
+
+
+
+
+
+This is the way the PostgreSQL documentation describes the process clearly.
 
 \begin{smallverbatim}
  
