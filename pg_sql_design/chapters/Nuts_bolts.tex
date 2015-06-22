@@ -23,10 +23,22 @@ a different logic and therefore a specific set of formatting rules. The common e
 
 
 \subsection{SELECT}
-When processing a query the parser works backward. It starts from the innermost complete statements and moves upward to 
-get the entire picture. There is one remarkable exception. The WITH statements are computed first because required in 
-the rest of the query. Actually the WITH acts like a temporary table. In order to see immediately the way PostgreSQL 
-processes the query the indention should follow the same logic. 
+When processing a query the parser works backward. It starts from the deepest and innermost complete statements 
+and moving upward to get the entire picture. There is one remarkable exception. The WITH statements are computed 
+first because they are required in the other parts of the query. Actually the WITH acts like a temporary table. 
+The following rules can improve the query readability. We'll first look to the SELECT section.
+
+\begin{itemize}
+ \item After the word SELECT there is a carriage return
+ \item The field's list after the SELECT indent by one tab
+ \item Each field is on a different line 
+ \item Aliases are separated by one space after the field's name
+ \item CASE and END indent to the same field's level
+ \item WHEN and ELSE indent one tab stop from CASE
+ \item The subqueries's surrounding brackets will indent to the same field's level
+ \item The subqueries's contents will indent one tab from the brackets
+ 
+\end{itemize}
 
 
 
