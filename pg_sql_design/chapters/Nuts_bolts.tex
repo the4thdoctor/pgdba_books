@@ -8,29 +8,90 @@ the capability to get a mental map  between the query's sections and the underly
 facilitated using a clear and well defined formatting.\newline
 
 \section{Code formatting}
-The SQL language is based on statements. Each statement is terminated by a specific character, by default ; . PostgreSQL 
-supports a minimal flow control over the results with the CASE construct but nothing sophisticated like an high level 
-language can offer. In order to understand the logic of the SQL statements is very important to get the statements 
-formatted in the same way the database execute them. We'll look to the SELECT, the DML and the DDL. Each of those 
-queries need different formatting because each one have a particular logic. The elements in common are the following.
+The SQL language is based on statements. Each statement is terminated by a specific character, by default ``;'' . 
+In order to understand the logic of the SQL statements is very important to get the statements formatted in the same 
+way the database executes them. We'll look first how to format the SELECT, then the DML and finally the DDL. Each of 
+those queries needs a different structure because of the different logic. The common formatting rules are the following.
 
 \begin{itemize}
- \item Tab separator of 7 spaces; It's equivalent to the SELECT word plus an extra space
+ \item The tab separator is 7 spaces; It's equivalent to the SELECT word plus an extra space
  \item All the keywords must be in uppercase
  \item After a round bracket there is a carriage return and one tab indented 
+ \item The opening and closing round brackets are indented at the same level
 \end{itemize}
 
 
 
 \subsection{SELECT}
-When processing a query the parser works backward. It starts from the innermost complete statements and moves upward to 
-get the entire picture. There is one remarkable exception. The WITH statements are computed first because required in 
-the rest of the query. Actually the WITH acts like a temporary table. In order to see immediately the way PostgreSQL 
-processes the query the indention should follow the same logic. 
+When processing a query the parser works backward. It starts from the innermost and lowest complete statements and 
+moves upward in order to get the entire picture. There is one remarkable exception. The WITH statements are computed 
+first because required in the rest of the query. Actually the WITH acts like a temporary table. In order to see 
+immediately the way PostgreSQL processes the query the indention should follow the same logic. \newline
+
+The following rules apply to a simple select from one relation with one or more condition in the where section.
+\begin{itemize}
+ \item After the word SELECT there is a carriage return
+ \item The list of columns after the word SELECT indent one tab from the word SELECT
+ \item The word FROM indents at the same level of SELECT 
+ \item The relation indent one tab from the word FROM
+ \item The word WHERE indents at the same level of SELECT and FROM
+ \item A single condition indents one tab from the WHERE 
+ \item Multiple conditions indent two tabs from the where and the logical operators indent one tab from the where
+ \item Between the logical operators and the condition there is one tab
+ \item The terminator character indents at the same level of the SELECT,FROM and WHERE
+\end{itemize}
+
+Let's format the following query.
+
+\begin{lstlisting}[style=pgsql]
+ select v_field1,i_field2,i_field3 from t_table1 where i_field2=125;
+\end{lstlisting}
+
+The first thing to do is to change all the keywords in uppercase.
+
+\begin{lstlisting}[style=pgsql]
+ SELECT v_field1,i_field2,i_field3 FROM t_table1 WHERE i_field2=125;
+\end{lstlisting}
+
+We'll then format the select list.
+
+\begin{lstlisting}[style=pgsql]
+SELECT 
+	v_field1,
+	i_field2,
+	i_field3 
+FROM t_table1 WHERE i_field2=125;
+\end{lstlisting}
+
+Finally the from and the where.
+
+\begin{lstlisting}[style=pgsql]
+SELECT 
+	v_field1,
+	i_field2,
+	i_field3 
+FROM 
+	t_table1 
+WHERE 
+	i_field2=125
+;
+\end{lstlisting}
 
 
+Having multiple conditions requires an extra tab in order to keep aligned the logical operators.
 
-
+\begin{lstlisting}[style=pgsql]
+SELECT 
+	v_field1,
+	i_field2,
+	i_field3 
+FROM 
+	t_table1 
+WHERE 
+		i_field2=125
+	AND	i_field3=440
+;
+\end{lstlisting}
 
 
 This is the way the PostgreSQL documentation describes the process clearly.
@@ -118,5 +179,7 @@ code is a quick process. I write the code which is run against the database, the
 another run and so on. The client response in this method is absolutely important. The native connector 
 have virtually no lag, except the disk/network bandwidth.
 
+\subsection{Removal of the Byte Order Mark (BOM)} 
 
 
+\section{wrap up}
