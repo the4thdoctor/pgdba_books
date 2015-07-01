@@ -16,6 +16,15 @@ those queries needs a different structure because of the different logic. The co
 \begin{itemize}
  \item The tab separator is 7 spaces; It's equivalent to the SELECT word plus an extra space
  \item All the keywords must be in uppercase
+SQL is a statement based language. Each statement is terminated by a specific character, by 
+default the semi colon. PostgreSQL supports the CASE construct which offers some control over the data flow. In 
+order to understand the logic of the SQL statements is very important to get the statements formatted in the same 
+way the database execute them; For each specific type of query, the SELECT, the DML and the DDL, there is 
+a different logic and therefore a specific set of formatting rules. The common elements are the following.
+
+\begin{itemize}
+ \item There is a tab separator of 7 spaces
+ \item All the keywords are in upper case
  \item After a round bracket there is a carriage return and one tab indented 
  \item The opening and closing round brackets are indented at the same level
 \end{itemize}
@@ -27,6 +36,19 @@ When processing a query the parser works backward. It starts from the innermost 
 moves upward in order to get the entire picture. There is one remarkable exception. The WITH statements are computed 
 first because required in the rest of the query. Actually the WITH acts like a temporary table. In order to see 
 immediately the way PostgreSQL processes the query the indention should follow the same logic. \newline
+
+\begin{itemize}
+ \item After the word SELECT there is a carriage return
+ \item The field's list after the SELECT indent by one tab
+ \item Each field is on a different line 
+ \item Aliases are separated by one space after the field's name
+ \item CASE and END indent to the same field's level
+ \item WHEN and ELSE indent one tab stop from CASE
+ \item The subqueries's surrounding brackets will indent to the same field's level
+ \item The subqueries's contents will indent one tab from the brackets
+ 
+\end{itemize}
+>>>>>>> 5970d9cd1f59f0a37b125e45ee667294f885d796
 
 The following rules apply to a simple select from one relation with one or more condition in the where section.
 \begin{itemize}
@@ -94,7 +116,7 @@ WHERE
 \end{lstlisting}
 
 
-This is the way the PostgreSQL documentation describes the process clearly.
+This is the way the PostgreSQL documentation describes how the select is processed.
 
 \begin{smallverbatim}
  
