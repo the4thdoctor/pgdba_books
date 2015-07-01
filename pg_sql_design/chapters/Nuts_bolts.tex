@@ -40,6 +40,8 @@ Basic formatting rules.
  \item A single condition indents one tab from the WHERE 
  \item Multiple conditions indent two tabs from the where and the logical operators indent one tab from the where
  \item Between the logical operators and the condition there is one tab
+ \item Group by and order by follow the same rules of the select list
+ \item The queries joined by UNION, INTERSECT, and EXCEPT indent one tab 
  \item The terminator character indents at the same level of the SELECT,FROM and WHERE
 \end{itemize}
 
@@ -164,6 +166,72 @@ WHERE
 	AND	t1.i_field3=440
 ;
 \end{lstlisting}
+
+Subqueries
+\begin{itemize}
+ \item All the subqueries will indent one tab from the surrounding brackets
+ \item If the subquery is short in can stay in line with the round brackets (e.g. SELECT now())
+\end{itemize}
+
+
+Query with subselect in the SELECT's list
+\begin{lstlisting}[style=pgsql]
+SELECT 
+	t1.v_field1,
+	t1.i_field2,
+	t2.i_field3,
+	(
+		SELECT 
+			i_field2
+		FROM
+			t_table4 t4
+		WHERE
+			t4.v_field1=t2.v_field1
+	) AS i_field4
+FROM 
+	t_table1 t1 
+	INNER JOIN t_table2 t2
+		LEFT OUTER JOIN t_table3 t3
+			ON
+				t3.i_field1=t2.i_field1
+		ON
+			t1.v_field1=t2.v_field2
+WHERE 
+		t1.i_field2=125
+	AND	t1.i_field3=440
+;
+\end{lstlisting}
+
+Query with subselect in the FROM's list
+\begin{lstlisting}[style=pgsql]
+SELECT 
+	t1.v_field1,
+	t1.i_field2,
+	t2.i_field3,
+	t4.i_field4
+FROM 
+	t_table1 t1 
+	INNER JOIN t_table2 t2
+		LEFT OUTER JOIN t_table3 t3
+			ON
+				t3.i_field1=t2.i_field1
+		ON
+			t1.v_field1=t2.v_field2
+	INNER JOIN 	(
+				SELECT 
+					i_field2,
+					v_field1
+				FROM
+					t_table4 t4
+			) t4
+		ON
+			t4.v_field1=t2.v_field1
+WHERE 
+		t1.i_field2=125
+	AND	t1.i_field3=440
+;
+\end{lstlisting}
+
 
 
 
