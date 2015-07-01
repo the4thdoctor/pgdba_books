@@ -14,15 +14,6 @@ way the database executes them. We'll look first how to format the SELECT, then 
 those queries needs a different structure because of the different logic. The common formatting rules are the following.
 
 \begin{itemize}
- \item The tab separator is 7 spaces; It's equivalent to the SELECT word plus an extra space
- \item All the keywords must be in uppercase
-SQL is a statement based language. Each statement is terminated by a specific character, by 
-default the semi colon. PostgreSQL supports the CASE construct which offers some control over the data flow. In 
-order to understand the logic of the SQL statements is very important to get the statements formatted in the same 
-way the database execute them; For each specific type of query, the SELECT, the DML and the DDL, there is 
-a different logic and therefore a specific set of formatting rules. The common elements are the following.
-
-\begin{itemize}
  \item There is a tab separator of 7 spaces
  \item All the keywords are in upper case
  \item After a round bracket there is a carriage return and one tab indented 
@@ -37,23 +28,12 @@ moves upward in order to get the entire picture. There is one remarkable excepti
 first because required in the rest of the query. Actually the WITH acts like a temporary table. In order to see 
 immediately the way PostgreSQL processes the query the indention should follow the same logic. \newline
 
-\begin{itemize}
- \item After the word SELECT there is a carriage return
- \item The field's list after the SELECT indent by one tab
- \item Each field is on a different line 
- \item Aliases are separated by one space after the field's name
- \item CASE and END indent to the same field's level
- \item WHEN and ELSE indent one tab stop from CASE
- \item The subqueries's surrounding brackets will indent to the same field's level
- \item The subqueries's contents will indent one tab from the brackets
- 
-\end{itemize}
->>>>>>> 5970d9cd1f59f0a37b125e45ee667294f885d796
 
-The following rules apply to a simple select from one relation with one or more condition in the where section.
+Basic formatting rules.
 \begin{itemize}
  \item After the word SELECT there is a carriage return
- \item The list of columns after the word SELECT indent one tab from the word SELECT
+ \item The columns are separated by a comma and a carriage return
+ \item The indent one tab from the respective SELECT
  \item The word FROM indents at the same level of SELECT 
  \item The relation indent one tab from the word FROM
  \item The word WHERE indents at the same level of SELECT and FROM
@@ -63,7 +43,7 @@ The following rules apply to a simple select from one relation with one or more 
  \item The terminator character indents at the same level of the SELECT,FROM and WHERE
 \end{itemize}
 
-Let's format the following query.
+Let's format a simple select from one relation and with one or more condition in the where section.
 
 \begin{lstlisting}[style=pgsql]
  select v_field1,i_field2,i_field3 from t_table1 where i_field2=125;
@@ -100,7 +80,8 @@ WHERE
 \end{lstlisting}
 
 
-Having multiple conditions requires an extra tab in order to keep aligned the logical operators.
+Having multiple conditions requires an extra tab in order to keep aligned the logical operators and the 
+conditions.
 
 \begin{lstlisting}[style=pgsql]
 SELECT 
@@ -114,6 +95,76 @@ WHERE
 	AND	i_field3=440
 ;
 \end{lstlisting}
+
+
+Joins.
+\begin{itemize}
+ \item If using the implicit joins the relations are separated by a comma and a carriage return, and indented at 
+the same level
+ \item When using explicit joins specify the kind of join [INNER,LEFT OUTER,CROSS etc.] 
+ \item After the left hand relation there is a carriage return
+ \item The join clause indents at the same level of the left hand relation
+ \item After the words [INNER,LEFT OUTER,CROSS] JOIN follows the relation's name and a carriage return
+ \item The word ON indents one tab from the JOIN and there is a carriage return
+ \item The join conditions follow the same rules of the WHERE condition
+ \item Nested joins indent one tab from the upper join
+ \item The usage of the aliases, with the optional word AS is strongly encouraged
+ \end{itemize}
+
+Query with implicit join
+\begin{lstlisting}[style=pgsql]
+SELECT 
+	t1.v_field1,
+	t1.i_field2,
+	t2.i_field3 
+FROM 
+	t_table1 t1,
+	t_table2 t2
+WHERE 
+		t1.i_field2=125
+	AND	t1.i_field3=440
+	AND	t1.v_field1=t2.v_field2
+;
+\end{lstlisting}
+
+
+Query with explicit inner join
+\begin{lstlisting}[style=pgsql]
+SELECT 
+	t1.v_field1,
+	t1.i_field2,
+	t2.i_field3 
+FROM 
+	t_table1 t1 
+	INNER JOIN t_table2 t2
+		ON
+			t1.v_field1=t2.v_field2
+WHERE 
+		t1.i_field2=125
+	AND	t1.i_field3=440
+;
+\end{lstlisting}
+
+Query with explicit inner join and a nested join
+\begin{lstlisting}[style=pgsql]
+SELECT 
+	t1.v_field1,
+	t1.i_field2,
+	t2.i_field3 
+FROM 
+	t_table1 t1 
+	INNER JOIN t_table2 t2
+		LEFT OUTER JOIN t_table3 t3
+			ON
+				t3.i_field1=t2.i_field1
+		ON
+			t1.v_field1=t2.v_field2
+WHERE 
+		t1.i_field2=125
+	AND	t1.i_field3=440
+;
+\end{lstlisting}
+
 
 
 This is the way the PostgreSQL documentation describes how the select is processed.
