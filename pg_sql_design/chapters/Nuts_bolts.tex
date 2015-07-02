@@ -29,18 +29,20 @@ first because required in the rest of the query. Actually the WITH acts like a t
 immediately the way PostgreSQL processes the query the indention should follow the same logic. \newline
 
 
-Basic formatting rules.
+\subsubsection{General formatting}
+
+The following rules define the general shape of a SELECT statement. 
 \begin{itemize}
  \item After the word SELECT there is a carriage return
  \item The columns are separated by a comma and a carriage return
- \item The indent one tab from the respective SELECT
+ \item The columns indent one tab from the respective SELECT
  \item The word FROM indents at the same level of SELECT 
  \item The relation indent one tab from the word FROM
  \item The word WHERE indents at the same level of SELECT and FROM
  \item A single condition indents one tab from the WHERE 
  \item Multiple conditions indent two tabs from the where and the logical operators indent one tab from the where
  \item Between the logical operators and the condition there is one tab
- \item Group by and order by follow the same rules of the select list
+ \item GROUP BY and ORDER BY follow the same rules of the select list
  \item The queries joined by UNION, INTERSECT, and EXCEPT indent one tab 
  \item The terminator character indents at the same level of the SELECT,FROM and WHERE
 \end{itemize}
@@ -51,7 +53,7 @@ Let's format a simple select from one relation and with one or more condition in
  select v_field1,i_field2,i_field3 from t_table1 where i_field2=125;
 \end{lstlisting}
 
-The first thing to do is to change all the keywords in uppercase.
+The first thing to do is to change all the keywords in upper case.
 
 \begin{lstlisting}[style=pgsql]
  SELECT v_field1,i_field2,i_field3 FROM t_table1 WHERE i_field2=125;
@@ -99,7 +101,8 @@ WHERE
 \end{lstlisting}
 
 
-Joins.
+\subsubsection{Joins}
+
 \begin{itemize}
  \item If using the implicit joins the relations are separated by a comma and a carriage return, and indented at 
 the same level
@@ -166,8 +169,8 @@ WHERE
 	AND	t1.i_field3=440
 ;
 \end{lstlisting}
+\subsubsection{Subqueries}
 
-Subqueries
 \begin{itemize}
  \item All the subqueries will indent one tab from the surrounding brackets
  \item If the subquery is short in can stay in line with the round brackets (e.g. SELECT now())
@@ -233,8 +236,11 @@ WHERE
 \end{lstlisting}
 
 
+\subsubsection{WITH statements}
 
 
+
+\subsubsection{Under the bonnet}
 This is the way the PostgreSQL documentation describes how the select is processed.
 
 \begin{smallverbatim}
