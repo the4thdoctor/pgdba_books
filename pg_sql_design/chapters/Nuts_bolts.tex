@@ -237,6 +237,67 @@ WHERE
 
 
 \subsubsection{WITH statements}
+Because the WITH statement works like having a temporary table, the formatting will follow rules similar to the 
+CREATE TABLE statement.
+
+\begin{itemize}
+ \item Between the WITH and the alias there is a tab followed by the word AS and a carriage return
+ \item The  round brackets surrounding the inner query indent one tab from the alias
+ \item The inner query indents one tab from the round brackets
+\end{itemize}
+
+
+
+\begin{lstlisting}[style=pgsql]
+WITH	t_sub1 AS
+		(
+			SELECT 
+				t1.v_field1,
+				t1.i_field2,
+				t2.i_field3,
+				t4.i_field4
+			FROM 
+				t_table1 t1 
+				INNER JOIN t_table2 t2
+					LEFT OUTER JOIN t_table3 t3
+						ON
+							t3.i_field1=t2.i_field1
+					ON
+						t1.v_field1=t2.v_field2
+				INNER JOIN 	(
+							SELECT 
+								i_field2,
+								v_field1
+							FROM
+								t_table4 t4
+						) t4
+					ON
+						t4.v_field1=t2.v_field1
+			WHERE 
+					t1.i_field2=125
+				AND	t1.i_field3=440
+		
+		),
+	t_sub1 AS
+		(
+			SELECT
+				t5.v_field1,
+				t5.i_field2
+			FROM
+				t_table5 t5
+			WHERE 
+				t5.i_field1=42
+		
+		)
+SELECT 
+	t_sub1.v_field1
+FROM
+	t_sub1
+	INNER JOIN t_sub2
+		ON
+			t_sub1.i_field2=t_sub2.i_field2
+;
+\end{lstlisting}
 
 
 
