@@ -301,8 +301,24 @@ FROM
 
 
 
-\subsubsection{Under the bonnet}
-This is the way the PostgreSQL documentation describes how the select is processed.
+\subsubsection{Conclusions}
+
+This coding style is at first sight complex and with some drawback as it can slow down the coding process because 
+of more keystrokes required for the uppercase and the carriage return. However, when the writing automatism is acquired 
+the coding speed is very fast.\newline
+
+This coding style creates the query using a top down structure where the different part of the query are 
+indented in order to reflecting their level inside the query's logic. This increases the query readability in 
+particular when dealing with complex queries. The vertical block structure gives great control on the query's sub 
+sections. With query editors supporting the partial code execution  (e.g. pgadmin3's query ) is possible to highlight 
+the query's single sections and execute them immediately. 
+
+I developed this style from the induction I received in my first DBA job. My employer enforced along the developers and 
+DBA a similar set of rules which worked perfectly, improving the productivity and the code's consistency across the 
+company.\newline
+
+Incidentally this matches almost perfectly the way PostgreSQL processes a select. What follow is an excerpt of the 
+PostgreSQL' manual describing how the select is processed.
 
 \begin{smallverbatim}
  
