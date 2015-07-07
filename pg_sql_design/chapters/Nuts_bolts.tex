@@ -23,6 +23,7 @@ those queries needs a different structure because of the different logic. The co
 
 
 \subsection{SELECT}
+\label{sub:FRMSELECT}
 When processing a query the parser works backward. It starts from the innermost and lowest complete statements and 
 moves upward in order to get the entire picture. There is one remarkable exception. The WITH statements are computed 
 first because required in the rest of the query. Actually the WITH acts like a temporary table. In order to see 
@@ -248,6 +249,7 @@ CREATE TABLE statement.
 
 
 
+
 \begin{lstlisting}[style=pgsql]
 WITH	t_sub1 AS
 		(
@@ -379,11 +381,152 @@ the SELECT statement locks the selected rows against concurrent updates.
 
 
 
-\subsection{DML}
+\subsection{INSERT}
+The INSERT statement is composed by two elements, the attribute list and the values list. The lists are positional.
+The formatting should mark clearly the various elements of the query in order to make it simpler to spot the 
+correspondence between the attribute and the value. 
+
+\begin{itemize}
+ \item After the words INSERT INTO there is one space followed by the table's name
+ \item After the table's name there is one carriage return
+ \item The attributes if present are enclosed between round brackets indented one tab from the word INSERT
+ \item The attribute's list indents one tab from the round brackets
+ \item The attributes indent one tab fro the round brackets and are separated by a carriage return
+ \item The word VALUES indents at the same level of INSERT and is followed by a carriage return
+ \item The value's list is surrounded by round brackets indented one tab from the  word VALUE
+ \item The values indent one tab fro the round brackets and are separated by a carriage return
+\end{itemize}
+\newpage
+
+\begin{lstlisting}[style=pgsql]
+
+INSERT INTO t_table
+VALUES
+	(
+		'test',
+		'test2',
+		'this is a test',
+		42
+	)
+;
+
+
+INSERT INTO t_table
+	(
+		v_field1,
+		v_field2,
+		t_field3
+		i_field4
+	)
+VALUES
+	(
+		'test',
+		'test2',
+		'this is a test',
+		42
+	)
+;
+
+\end{lstlisting}
+
+\subsection{UPDATE}
+The WHERE condition on the update is the same of the SELECT. Take a look to \ref{sub:FRMSELECT} for more 
+informations. Just after the table's name there is the keyword SET and the list of the updates. The 
+formatting should reflect this particular structure.
+
+\begin{itemize}
+ \item After the table's name there is one carriage return
+ \item The word SET indents one tab from the word UPDATE
+ \item The update's list indents one tab from the word set
+ \item Each update is separated by a carriage return
+\end{itemize}
+
+
+\begin{lstlisting}[style=pgsql]
+
+UPDATE t_table
+	SET
+		v_field1='test',
+		v_field2'test2',
+		t_field3='this is a test',
+		i_field4=42
+WHERE
+	i_field5=33
+;
+
+\end{lstlisting}
+
+
+
+\subsection{DELETE}
+The delete is the simplest of the DML as lists just the target relation and the eventual WHERE condition.
+The formatting is quite simple as the where condition is the only part which requires to be structured as seen in 
+\ref{sub:FRMSELECT}.
+
+\begin{lstlisting}[style=pgsql]
+DELETE FROM t_table
+WHERE
+	i_field5=33
+;
+\end{lstlisting}
+
 
 \subsection{DDL}
 
 \section{Type based field name}
+Debugging a query is not a simple task. Mostly because there is no debugger. Any little bit of clarity when 
+designing the schema is a massive help for this difficult task. Adding a simple prefix to the field's name have a  
+beneficial effect in making clear which data type is stored inside the column. Obiously having a design diagram or 
+a data dictionary can help but they can be outdated or maybe are not generally accessible.\newline 
+
+This convention have another great advantage. 
+
+\begin{table}[H]
+\begin{tabular}{ll}
+ \textbf{Object} & \textbf{Prefix}  \\
+ \hline
+ Table & t\_ \\
+ View & v\_ \\
+Btree Index & idx\_bt\_ \\
+GiST Index & idx\_gst\_ \\
+GIN Index & idx\_gin\_ \\
+Unique index & u\_idx\_ \\
+Primary key & pk\_ \\
+Foreign key & fk\_ \\
+Check & chk\_ \\
+Unique key & uk\_ \\
+Type & ty\_ \\
+Sql function & fn\_sql\_ \\
+PlPgsql function & fn\_plpg\_ \\
+PlPython function & fn\_plpy\_ \\
+PlPerl function & fn\_plpr\_ \\
+Trigger & trg\_ \\
+rule & rul\_ \\
+
+\end{tabular}
+\end{table}
+
+A similar approach can be used for the column names, making the data type immediately recognisable.
+
+\begin{table}[H]
+\begin{tabular}{ll}
+ \textbf{Type} & \textbf{Prefix}  \\
+ \hline
+ Character & c\_ \\
+ Character varying & v\_ \\
+Integer & i\_ \\
+Text & t\_ \\
+Bytea & by\_ \\
+Numeric & n\_ \\
+Timestamp & ts\_ \\
+Date & d\_ \\
+Double precision & dp\_ \\
+Hstore & hs\_ \\
+Custom data type & ty\_ \\
+
+\end{tabular}
+\end{table}
+
 
 
 \section{The editor}
