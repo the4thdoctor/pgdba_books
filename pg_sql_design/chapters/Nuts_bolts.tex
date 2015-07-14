@@ -473,17 +473,18 @@ WHERE
 \end{lstlisting}
 
 
-As said before the DML queries have a different logic so they require a different formatting style. 
+
 
 \subsection{Data Definition Language}
 
-\section{Type based field name}
-Debugging a query is not a simple task. Mostly because there is no debugger. Any little bit of clarity when 
-designing the schema is a massive help for this difficult task. Adding a simple prefix to the field's name have a  
-beneficial effect in making clear which data type is stored inside the column. Obiously having a design diagram or 
-a data dictionary can help but they can be outdated or maybe are not generally accessible.\newline 
+\section{Named identifiers}
+Working with SQL is not simple.  Adding a prefix to the field's name gives to the SQL developer that little bit of 
+clarity which becomes a massive help when doing performance tuning and debugging.\newline 
 
-This convention have another great advantage. 
+Adopting this naming convention prevents usage of reserved keywords as identifier's name. The difference between the 
+tables, physical entities, and the views, logical shortcut to SQL, is clearly stamped limiting the risk of view joins. 
+\newline
+
 
 \begin{table}[H]
 \begin{tabular}{ll}
@@ -491,24 +492,22 @@ This convention have another great advantage.
  \hline
  Table & t\_ \\
  View & v\_ \\
-Btree Index & idx\_bt\_ \\
-GiST Index & idx\_gst\_ \\
-GIN Index & idx\_gin\_ \\
-Unique index & u\_idx\_ \\
+Index & idx\_bt\_ \\
+Unique index & uidx\_ \\
 Primary key & pk\_ \\
 Foreign key & fk\_ \\
 Check & chk\_ \\
 Unique key & uk\_ \\
-Type & ty\_ \\
-Sql function & fn\_sql\_ \\
-PlPgsql function & fn\_plpg\_ \\
-PlPython function & fn\_plpy\_ \\
-PlPerl function & fn\_plpr\_ \\
+Custom Type & ty\_ \\
+Enumerated & en\_ \\
+Function & fn\_ \\
+Trigger function & fn\_trg\_ \\
 Trigger & trg\_ \\
 rule & rul\_ \\
 
 \end{tabular}
 \end{table}
+
 
 A similar approach can be used for the column names, making the data type immediately recognisable.
 
