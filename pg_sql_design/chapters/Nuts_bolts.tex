@@ -476,14 +476,98 @@ WHERE
 
 
 \subsection{Data Definition Language}
+The data definition language groups all the commands defining, altering or dropping the database's relations. Each 
+command type follows a different syntax structure.
+
+\subsubsection{CREATE}
+The create statement is composed by the verb CREATE followed by the object type (e.g. TABLE) and the new relation's 
+name followed by a carriage return. The rest of the statement indents one tab from the verb CREATE.\newline
+
+The rules for the CREATE TABLE are the following.
+\begin{itemize}
+ \item The fields are indented one tab stop from the surrounding brackets
+ \item Between the field's name and the type there is one or more tab stops
+ \item The number of tabs is determined by the field with the longest name
+ \item Between the field's type and the optional DEFAULT there is one space
+ \item Between the the optional DEFAULT and the optional field's constraint there is one space
+ \item If the DEFAULT is missing, between the field's type and the field's constraint there is one space
+ \item Table constraints will require the constraint name followed by one carriage return 
+ \item The constraint type indents one tab from the word CONSTRAINT
+ \item Any clause indents one tab from the constraint type
+\end{itemize}
+
+\begin{lstlisting}[style=pgsql]
+CREATE TABLE t_table1
+	(
+		i_id_t1	serial,
+		v_field1	character varying(255) DEFAULT '' NOT NULL,
+		i_field2	integer NOT NULL,
+		CONSTRAINT pk_t_table1
+			PRIMARY KEY(i_id_t1)
+	)
+;
+
+CREATE TABLE t_table2
+	(
+		i_id_t2	serial,
+		i_id_t1	integer NOT NULL,
+		v_field1	character varying(255) DEFAULT '' NOT NULL,
+		i_field2	integer NOT NULL,
+		CONSTRAINT pk_t_table2
+			PRIMARY KEY(i_id_t2),
+		CONSTRAINT fk_t_table2_to_t_table1
+			FOREIGN KEY (i_id_t1) REFERENCES t_table1(i_id_t1)
+				ON DELETE CASCADE ON UPDATE RESTRICT
+		
+	)
+;
+\end{lstlisting}
+
+The rules for the CREATE VIEW are the following.
+\begin{itemize}
+ \item After the view name there is one carriage return
+ \item The word AS indents one tab from the verb CREATE
+ \item The round brackets surrounding the view definition indents at the same level of the word AS
+ \item The view's SELECT follows the same rules defined in \ref{sub:FRMSELECT}
+\end{itemize}
+
+
+\begin{lstlisting}[style=pgsql]
+CREATE OR REPLACE VIEW v_view1
+	AS
+	(
+		SELECT
+			i_id_t1 AS id,
+			v_field1 AS field1
+		FROM
+			t_table1
+		
+	)
+;
+
+\end{lstlisting}
+
+
+\subsubsection{ALTER}
+
+
+\subsubsection{DROP}
+The drop is the simplest to format. After the verb DROP there is the object's kind followed by the object's 
+name and the optional clause CASCADE.
+
+\begin{lstlisting}[style=pgsql]
+DROP TABLE t_table1 CASCADE;
+\end{lstlisting}
+
 
 \section{Named identifiers}
-Working with SQL is not simple.  Adding a prefix to the field's name gives to the SQL developer that little bit of 
+Working with SQL is not simple.  Adding a prefix to the field's name gives to the SQL developer a little bit of 
 clarity which becomes a massive help when doing performance tuning and debugging.\newline 
 
-Adopting this naming convention prevents usage of reserved keywords as identifier's name. The difference between the 
-tables, physical entities, and the views, logical shortcut to SQL, is clearly stamped limiting the risk of view joins. 
-\newline
+Adopting this naming convention prevents usage of reserved keywords in the identifier's name. The difference between 
+the tables, physical entities, and the views, a logical shortcut to SQL, becomes clear and prevents the risk of 
+using the view in joins. \newline
+
 
 
 \begin{table}[H]
@@ -508,8 +592,7 @@ rule & rul\_ \\
 \end{tabular}
 \end{table}
 
-
-A similar approach can be used for the column names, making the data type immediately recognisable.
+Adopting a similar approach for the column names makes the data type immediately recognisable.
 
 \begin{table}[H]
 \begin{tabular}{ll}
@@ -530,6 +613,9 @@ Custom data type & ty\_ \\
 \end{tabular}
 \end{table}
 
+One big con of this naming convention is when the object type changes. For example if a table becomes a view the name 
+should reflect the change. In an ideal world this shouldn't happen. Having a solid schema design reduces greatly this 
+kind of issues. 
 
 
 \section{The editor}
