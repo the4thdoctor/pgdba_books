@@ -549,11 +549,18 @@ CREATE OR REPLACE VIEW v_view1
 
 
 \subsubsection{ALTER}
+The alter statement's only rule is very simple, all the alter actions indent by one tab fromt he ALTER verb and are 
+separated by a carriage return.
+
+\begin{lstlisting}[style=pgsql]
+ALTER TABLE t_table1
+	ADD COLUMN ts_datetime1 timestamp with time zone,
+	ADD COLUMN ts_datetime2 timestamp with time zone;
+\end{lstlisting}
 
 
 \subsubsection{DROP}
-The drop is the simplest to format. After the verb DROP there is the object's kind followed by the object's 
-name and the optional clause CASCADE.
+The drop statement's formatting is very simple. Everything is on a single line.
 
 \begin{lstlisting}[style=pgsql]
 DROP TABLE t_table1 CASCADE;
@@ -615,7 +622,8 @@ Custom data type & ty\_ \\
 
 One big con of this naming convention is when the object type changes. For example if a table becomes a view the name 
 should reflect the change. In an ideal world this shouldn't happen. Having a solid schema design reduces greatly this 
-kind of issues. 
+kind of issues. However, changing the data type, in particular if dealing with big tables, is more complicated than 
+renaming a field.
 
 
 \section{The editor}
