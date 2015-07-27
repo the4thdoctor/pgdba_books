@@ -107,6 +107,12 @@ lists of page buffers, one for the LRU and for the MRU. Each list adapts dynamic
 of the cluster's activity. 
 
 \subsection{PostgreSQL 8.1, the clock sweep}
+The buffer manager used in PostgreSQL 8.1 was a success. Despite the algorithm simplicity offers an incredible 
+flexibility adapting constantly the shared buffer's contents to the cluster's activity.\newline
+
+The clock sweep algorithm is based on two concepts. An usage counter for the buffer and a freelist managed by a 
+circular buffer. 
+
 
 \subsection{PostgreSQL 8.2, the ring buffers}
 
