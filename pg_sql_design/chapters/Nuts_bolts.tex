@@ -8,6 +8,7 @@ the capability to get a mental map  between the query's sections and the underly
 facilitated using a clear and well defined formatting.\newline
 
 \section{Code formatting}
+\label{sec:codeformat}
 The SQL language is based on statements. Each statement is terminated by a specific character, by default ``;'' . 
 In order to understand the logic of the SQL statements is very important to get the statements formatted in the same 
 way the database executes them. We'll look first how to format the SELECT, then the DML and finally the DDL. Each of 
@@ -568,13 +569,8 @@ DROP TABLE t_table1 CASCADE;
 
 
 \section{Named identifiers}
-Working with SQL is not simple.  Adding a prefix to the field's name gives to the SQL developer a little bit of 
-clarity which becomes a massive help when doing performance tuning and debugging.\newline 
-
-Adopting this naming convention prevents usage of reserved keywords in the identifier's name. The difference between 
-the tables, physical entities, and the views, a logical shortcut to SQL, becomes clear and prevents the risk of 
-using the view in joins. \newline
-
+Writing and debugging the SQL is not simple and a little bit of clarity becomes a massive help. Adding a prefix 
+to the identifiers gives to the SQL developer a great knowledge about the database schema.\newline 
 
 
 \begin{table}[H]
@@ -590,7 +586,7 @@ Foreign key & fk\_ \\
 Check & chk\_ \\
 Unique key & uk\_ \\
 Custom Type & ty\_ \\
-Enumerated & en\_ \\
+Enumeration & en\_ \\
 Function & fn\_ \\
 Trigger function & fn\_trg\_ \\
 Trigger & trg\_ \\
@@ -598,6 +594,9 @@ rule & rul\_ \\
 
 \end{tabular}
 \end{table}
+
+This naming convention makes clear the difference between tables  which are physical entities, and the views which 
+are names for saved SQL statement. \newline
 
 Adopting a similar approach for the column names makes the data type immediately recognisable.
 
@@ -620,10 +619,12 @@ Custom data type & ty\_ \\
 \end{tabular}
 \end{table}
 
-One big con of this naming convention is when the object type changes. For example if a table becomes a view the name 
-should reflect the change. In an ideal world this shouldn't happen. Having a solid schema design reduces greatly this 
-kind of issues. However, changing the data type, in particular if dealing with big tables, is more complicated than 
-renaming a field.
+Both naming schemas prevent the risk of having reserved keywords used for the identifier's name.\newline
+
+The drawback is if the object type changes. For example if a table becomes a view the name should reflect the 
+change. In an ideal world this shouldn't happen. In the real life building a solid schema design reduces greatly 
+this kind of issues. However, changing the data type, in particular if dealing with big tables, is more complicated 
+than renaming a field and, after all is a DBA problem.
 
 
 \section{The editor}
@@ -632,18 +633,20 @@ good quantity of third party clients with good support for the database features
 layer. An exhaustive list of those clients can be found on the PostgreSQL wiki\newline
 \href{https://wiki.postgresql.org/wiki/Community\_Guide\_to\_PostgreSQL\_GUI\_Tools}{
 https://wiki.postgresql.org/wiki/Community\_Guide\_to\_PostgreSQL\_GUI\_Tools}. Is difficult to say 
-which editor is the best. When I started learning PostgreSQL the only tool available were PGAdmin 2 and 
-phpPgAdmin. I decided for the former and I welcomed the newer version PgAdmin 3. However I tested some of 
-the other clients like TOra, SQL workbench and SQL Maestro and I never found the same confidence and ease 
-of usage like PgAdmin 3. Whether is the tool of your choice this should have the following features.
+which editor is the best. When I started learning PostgreSQL the only tool available were PgAdmin 2 and 
+phpPgAdmin. I decided for the former and then I switched to the newer PgAdmin 3 which added a powerful editor and 
+multi platform support. In the years I tested some of the other clients like TOra, SQL workbench and SQL Maestro 
+and I never found the same confidence and ease of usage like PgAdmin 3. Whether is the tool of your choice this 
+should have the following features.
 
-\subsection{Native connector}
-One of the reasons I do not like SQL workbench is the JDBC connector. For me writing and testing the SQL 
-code is a quick process. I write the code which is run against the database, then I update the query, 
-another run and so on. The client response in this method is absolutely important. The native connector 
-have virtually no lag, except the disk/network bandwidth.
+\subsection{libpq connector}
+One of the reasons I do not like SQL workbench is the JDBC connector. Writing and testing the SQL code is a quick
+process. Write the statement, test it, then change it, the test it again and so on. The client response in this 
+method is absolutely important. The libpq connector have virtually no lag, except the disk/network bandwidth.
 
 \subsection{Removal of the Byte Order Mark (BOM)} 
+The BOM is a marker set in the UTF8 files to determine the byte order. The client psql manages the presence but 
+for some reasons it can fail with an error when running sql scripts with this marker. In PgAdmin 3 is 
+possible to disable the BOM when saving the files.
 
 
-\section{wrap up}
