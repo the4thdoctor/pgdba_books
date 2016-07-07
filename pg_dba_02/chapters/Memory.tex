@@ -1,45 +1,70 @@
 \chapter{The memory}
 \label{ch:PGMEMORY}
-The PostgreSQL memory at first sight looks simple. If compared with the complex structures implemented in 
-the other DBMS to a careless reader could seem rudimentary. However, the memory and in particular the 
-shared buffers implementation is complex and sophisticated. This chapter will dig down deep into the 
-PostgreSQL's memory.
+The PostgreSQL memory at first sight looks simple if compared with the other RDBMS.
+Actually the way PostgreSQL implements the memory manager to make the shared buffer 
+capable to cache the data pages is sophisticated but incredibly simple to understand.
 
 \section{The shared buffer}
-The shared buffer is a segment allocated at cluster's startup. Its size is determined by the GUC parameter 
-shared\_buffers and the size can be changed only restarting the cluster. The shared buffer is used 
-to manage the data pages as seen in \ref{sec:CLUBACKEND}, which are called buffers when loaded in 
-rhw memory. Having a RAM segment is not uncommon in the database universe. Is a rapid exchange 
-area where the buffers are kept across the sessions and keeps the data near the CPU. Like his competitors 
-PostgreSQL strives to keep in memory what is important and not everything. In the era of the 
-\textit{in memory databases} this could seems an obsolete concept. Unfortunately the truth is that the 
-resources, and so the money, are not infinite. And after all an in memory database is a database without the D IN 
-the ACID. Before digging into the technical details we'll have a look 
-to the history of the memory manager. The way PostgreSQL sticks an elephant into a small car without 
-Timelord technology.
+The shared buffer is a shared segment allocated in the server's memory at cluster's startup. 
+Its size is determined by the GUC parameter shared\_buffers and can be set only at the startup. 
+The shared buffer is used to manage the data pages as seen in \ref{sec:CLUBACKEND}. When a page is loaded
+in the shared buffer is called buffer. Shared segments in memory to speedup the data acces is common in the database universe. 
+The drawback with this approach is that the memory is volatile and is completely lost if, for example, there is a power cut.
 
-Back in the old days PostgreSQL was quite rudimentary. The version 7.4 did not had tablespaces, it was 
-without a mechanism to prevent the XID wraparound failure (except for the routine vacuuming of course) 
-and the memory manager was a simple LRU buffer. Since then the algorithm evolved and became a very efficient system to 
-cache effectively the buffers. We'll look briefly to the free space manager's history. 
+PostgreSQL aim to keep in memory only what is really important for the cluster's activity. In the era of the 
+\textit{in memory databases} this maybe seems an obsolete concept. Unfortunately the sad truth is that the 
+resources, are not infinite and sometimes the best line of action is a good compromise between cost and performance.
+Before looking to the technical details we'll have a look to the history of the memory manager. 
+
 
 \subsection{PostgreSQL 7.4, the LRU list}
-In PostgreSQL 7.4 the free space in the shared buffer was managed using a simple last recently used list implemented using a FIFO list.
+Back in the old days PostgreSQL was quite rudimentary. The version 7.4 did not had tablespaces, it was 
+without a mechanism to alert the DBA of the impending XID wraparound failure and the memory manager was a simple LRU buffer. 
+Since then the algorithm evolved and became a very efficient system to cache the buffers. 
 
-When a page is first request from disk the buffer manager puts it into the first buffer in the free LRU 
-list. If the first buffer is used by another page the list is shifted by one unity and the eventual last 
-page in the list is discarded. If a page in the list is requested again is put back into the first buffer 
-and so on. This simple approach worked quite well with some unpleasant effects. After all the buffer is 
-shared and is not uncommon to have more than one database on the same cluster, each database different 
-design and purposes. This worked quite bad with the LRU list causing unnecessary disk IO because the 
-buffers were evicted without considering their usage frequency. This lead us to the tale of the buffer.
+In PostgreSQL 7.4 the free space in the shared buffer was managed using a simple last recently used list implemented using a last recently used list.
+
+There is a  list of pointers to the shared buffers. When a page is requested from the disk the buffer manager puts the buffer pointer into the first available position 
+in the LRU list, switching the others pointers, if any, by one position. The last buffer in the list is evicted and then the pointer is removed. 
+
+When a page is requested and is already present in the LRU LIST the corresponding pointer is moved on the top of the list. 
+This simple approach works generally well. But because of the shared buffer is actually shared across the backends and the databases in the cluster, the different application logics
+implemented for different databases can cause a suboptimal usage of the memory and an unnecessary disk IO. 
+
+\subsubsection{The tale of the buffer}
+I've found this interesting example years ago on Bruce Momjian's blog. The example explains very well how a 
+minimal change in size can dramatically degrade the database performance.\newline
+
+Our tale starts with a PostgreSQL 7.4 having a shared buffer sized to 1000 buffers. The page size is the default, 8192 bytes. 
+We have in total \begin{math}8192 * 1000 = 8192000\end{math} available bytes to cache. 
+Inside the data area we have a table without indices which is exactly 1000 pages. If we run a simple SELECT from the table,
+PostgreSQL  will access the table with a sequential scan in order to get the buffers in memoy for reading. 
+The sequential scan is a top to down operation. It starts from the first table's page and go on until reaches
+the table's end. All the table's pages are read as the evaluation of the eventual WHERE condition is done in memory.
+
+Initially the shared buffer is empty and the table's first page is put into the first slot of the LRU LIST.
+The second page is then loaded causing the first page to shift a position in the LRU list. Then the third page is loaded as well causing another shift and so on.
+When the table's read is finished the buffers are stored in the LRU list in reverse order. The first table's page is now allocated in the last LRU slot.
+
+In this scenario, running again the SELECT is considerably faster. The table is again accessed in sequential scan but this time the first page is found in memory.
+When accessed by the backend the page is moved in the first LRU slot causing the other buffers to shift and moving the second table's buffer into the empty slot of the LRU'S bottom.
+Then the second page is accessed and moved on the top, causing the first page to shift on the second position and the third page to shift in the LRU bottom.
+When the read is complete we'll found again the first page in the LRU's last slot. The perfect candidate for eviction.
+
+If the table grows by one page the situation changes considerably. Running a SELECT with the shared buffer empty, loads again the entire table table in memory.
+However, this time when the page 1001 is read the page allocated in the LRU's bottom is evicted.
+
+A second run will cause another sequential scan on the table. The buffer manager will search in memory for the first page which was evicted by the page 1001.
+The first page will then be loaded from the disk, causing the second page to be evicted from the memory. The second page is then loaded from disk causing the third page eviction and so on.
+
+With the LRU adding an extra page in the table cause a dramatic performance degradation switching from 0\% IO to 100\% IO when accessing an already cached table.
 
 
 \subsection{PostgreSQL 8.0, the 2q}
-With the revolutionary PostgreSQL 8.0 were introduced a different memory manager, the two queues.\newline 
+The revolutionary PostgreSQL 8.0 changed the game, switching to the algorithm called 2q (two queues) for the memory manager.\newline 
 
-This algorithm uses three list of buffer page pointers called cache directory blocks (CDB). The lists T1,T2 are 
-actually pointing buffered pages. B1 lists pages been recently in the shared buffer. 
+This algorithm uses three list of buffer pointers which are called cache directory blocks (CDB). The lists T1 and T2 point actual buffers. 
+The list B1 is just a record of pages recently evicted from the shared buffer. 
 
 \begin{figure}[H]
 \includegraphics[scale=0.6]{images/shared_buffer_80.png}
@@ -121,33 +146,6 @@ circular buffer.
 
 \subsection{PostgreSQL 9.4, huge pages}
 
-\subsection{The tale of the buffer}
-I've read this interesting description years ago on the Bruce Momjian website and explains very well how a 
-minimal change can dramatically degrade the database performance.\newline
-
-Our tale will start with a PostgreSQL 7.4 with a 1000 buffers allocated into the shared memory. The page 
-size is the default, 8192 bytes. We have in total \begin{math}8192 * 1000 = 8192000\end{math} bytes. On the 
-data area we have a full packed table without indices which is consuming 1000 pages on the disk. If we run 
-a simple select from the table PostgreSQL  will execute the table's sequential scan in order to get the 
-buffers in memory. The sequential is a top to bottom operation. But the shared buffer stores the buffers in 
-reverse order. After the initial read, that will take some time because the disk IO, the table fits 
-completely into the shared buffer with the pages in reverse order. A second select will find start another 
-sequential scan. The buffer manager will search for the table's pages into the shared buffer and will find 
-the first table's page into the last slot of the LRU list. This will cause the page move from the last slot 
-to the first. The other buffers will shift by one slot all togheter and the second table's page will move 
-into the last LRU slot. The buffer manager will find the second table's page in memory and will move the 
-page into the first LRU slot causing the buffers shift again. The final result is a faster read because the 
-table is totally read from the memory.\newline
-
-Let's add a new row to our table. Because is fully packed this will cause a new page to be added to the 
-table which page's count becomes 1001. A select with the shared buffer empty will take the same time of the 
-previous condition with one notable exception. When the page 1001 is read from disk the first table's page 
-is evicted from the shared buffer to make room. The second select will search for the first table's page 
-and it will read from the disk, evicting the second page from the shared buffer. Which is read from disk a 
-moment later causing the third page eviction and so on. One single extra page causes the cache spoil. This 
-is a corner case of course but tells us an important lesson on the database nature. They are discreet 
-systems and most of their behaviour is triggered. Usually there is no soft transition between good and bad
-performance. 
 
 \subsection{The wal buffers}
 
