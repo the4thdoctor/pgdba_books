@@ -61,11 +61,12 @@ With the LRU adding an extra page in the table cause a dramatic performance degr
 
 
 \subsection{PostgreSQL 8.0, the 2q}
-The revolutionary PostgreSQL 8.0 changed the game, switching to the algorithm called 2q (two queues) for the memory manager.\newline 
+PostgreSQL 8.0 introduced an important change in the memory manager. The simple LRU list was replaced by the algorithm called 2q (two queues).\newline 
 
-This algorithm uses three list of buffer pointers which are called cache directory blocks (CDB). The lists T1 and T2 point actual buffers. 
-The list B1 is just a record of pages recently evicted from the shared buffer. 
+This new method used three list of buffer pointers called cache directory blocks (CDB), T1, T2 and B1. 
+The lists T1 and T2 pointed the actual buffers allocated in the shared buffer. However the list B1 was used only to track the just a record of pages recently evicted from the shared buffer. 
 
+The three lists behaviour is the same as the simple LRU seen with the 7.4. 
 \begin{figure}[H]
 \includegraphics[scale=0.6]{images/shared_buffer_80.png}
 
@@ -73,11 +74,11 @@ The list B1 is just a record of pages recently evicted from the shared buffer.
 
 \end{figure}
 
-The list T1 is used as LRU for the pages loaded from disk. The list T2 is used as LRU list for pages already cached 
-and evicted from the list T1. The list B1 is a LRU list of pages recently evicted from the shared buffer.
+The list T1 is used as LRU for the pages loaded from disk not been recently cached in the shared buffer. The list T2 is used as LRU list for pages already cached 
+in the shared buffer. The list B1 is a LRU list of pages recently evicted from the shared buffer.
 
-When a new page is read from disk is put initially at the beginning of T1. All the CDB in T1 are shifted and the 
-last element in T1 is evicted from the shared buffer, its CDB is put at the B1's top.\newline 
+When a not recent page is read from disk  is put initially at the beginning of the list T1. All the CDB in T1 are shifted and the 
+last element in T1 is evicted from the shared buffer. The CDB of the evicted page is put at the B1's top as a reminder.\newline 
 
 \begin{figure}[H]
 \includegraphics[scale=0.4]{images/2q_01.png}
@@ -86,8 +87,8 @@ last element in T1 is evicted from the shared buffer, its CDB is put at the B1's
 
 \end{figure}
 
-When a backend requests a page present in T1 its CDB is removed from T1 and placed at the T2's top. The last 
-element in T2 is  evicted from the shared buffer and its CDB is put at the B1's top.\newline
+When a backend requests a page which is already present in T1 its CDB is removed from the list T1 and placed at the T2's top. The last 
+element in T2 is  evicted from the shared buffer and the CDB is put at the B1's top as a reminder.\newline
 
 \begin{figure}[H]
 \includegraphics[scale=0.4]{images/2q_02.png}
@@ -96,7 +97,7 @@ element in T2 is  evicted from the shared buffer and its CDB is put at the B1's 
 
 \end{figure}
 
-When a backend requests a page in T2 the CDB is moved to the list's top.\newline
+When a backend finds a page already cached and listed in T2 the page's CDB is moved to the top of T2.\newline
 
 \begin{figure}[H]
 \includegraphics[scale=0.4]{images/2q_03.png}
@@ -105,7 +106,7 @@ When a backend requests a page in T2 the CDB is moved to the list's top.\newline
 
 \end{figure}
 
-Finally, when a page is read from the disk but its CDB is present in B1, then the page is put at the T2's 
+When a page is read from the disk but the CDB is already known because is present in B1, then the page's CDB is stored in the list T2's 
 top.\newline
 
 \begin{figure}[H]
@@ -115,28 +116,26 @@ top.\newline
 
 \end{figure}
 
-The list T1 is the LRU list where the pages requested only one time are evicted quickly from the shared buffer. 
-The list T2 is a MRU list where the pages are moved back on the top when required and where the pages from 
-T1 are stored if required before the eviction. The list B1 is used as extra cache to track pages 
-recently evicted from the shared buffer that need to stay in T2 if requested again.\newline
+Wrapping up the concept we have the following behaviour.
 
-Despite the interesting approach, this tricky process did not show good performances in production. Things changed 
-when the clock sweep was implemented in PostgreSQL 8.1.
+The list T1 is the LRU list where the pages requested only one time are evicted quickly from the shared buffer. 
+The list T2 acts like a most frequently used list where the pages are moved back on the top when required and where the pages from 
+T1 are stored if required more than once. The list B1 is used as extra cache to track frequently used pages that need to stay the MFU list T2 if requested again.\newline
+
+This complex is indeed very tricky and proved to perform not good as expected. Things changed again when the clock sweep algorithm was introduced with PostgreSQL 8.1.
 
 
 \subsubsection{the ARC}
-The 2q algorithm was an emergency implementation caused by a software patent held on the algorithm initially 
-chosen for the PostgreSQL 8.0's memory manager. Old books, printed meanwhile the 8.0 was in development, 
-wrongly list the ARC as memory manager. The ARC is an efficient algorithm which keeps in memory two 
-lists of page buffers, one for the LRU and for the MRU. Each list adapts dynamically with the different requests 
-of the cluster's activity. 
+Actually the 2q algorithm were not supposed to be used in PostgreSQL 8.0. It was adopted as replacement of the ARC memory manager because on that specific algorithm there was a software patent. 
+The acronym ARC stands for Adaptive Replacement Cache. It is an efficient algorithm which keeps in memory two lists of page buffers, one for the LRU and for the MRU. 
+Each list adapts its size dynamically following the cluster's activity. 
 
 \subsection{PostgreSQL 8.1, the clock sweep}
-The buffer manager used in PostgreSQL 8.1 was a success. Despite the algorithm simplicity offers an incredible 
-flexibility adapting constantly the shared buffer's contents to the cluster's activity.\newline
+The buffer manager introduced with PostgreSQL 8.1 was a game changer. The algorithm is based on few simple concepts and offers an incredible 
+flexibility to the different workloads. The shared buffer's contents are efficiently cached following the cluster's activity.\newline
 
-The clock sweep algorithm is based on two concepts. An usage counter for the buffer and a freelist managed by a 
-circular buffer. 
+The clock sweep algorithm takes its name from the circular function NextVictimBuffer() which scans constantly the shared buffer in search of buffers to evict.
+Each buffer have an usage counter which determines its importance in the shared buffer. There is also a free list managed by the NextVictimBuffer . 
 
 
 \subsection{PostgreSQL 8.2, the ring buffers}
@@ -145,6 +144,8 @@ circular buffer.
 %todo, the change of memory allocation method happened with the 9.3
 
 \subsection{PostgreSQL 9.4, huge pages}
+
+\subsection{PostgreSQL 9.5, improved pin management}
 
 
 \subsection{The wal buffers}

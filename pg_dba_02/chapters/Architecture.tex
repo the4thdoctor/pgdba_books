@@ -1,8 +1,7 @@
-\chapter{Architecture's overview}
-A PostgreSQL cluster is composed by a directory area initialised by init db and some processes 
-accessing the data on disk and into a shared memory segment, the shared buffer. Those concepts were 
-described briefly in the first volume. Now we'll see them in more details.
-
+\chapter{PostgreSQL's Architecture}
+A PostgreSQL cluster is a directory initialised by the program initdb plus the eventual tablespaces configured. 
+When the  postgres process is started the files composing the cluster are accessed in the startup process and, when this is complete
+the system is made accessible for usage.
 
 
 
